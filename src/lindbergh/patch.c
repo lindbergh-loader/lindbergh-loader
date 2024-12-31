@@ -22,6 +22,7 @@
 #include "securityboard.h"
 #include "shader_patches.h"
 #include "glxhooks.h"
+#include "../libulog/ulog.h"
 
 char elfID[4];
 void *amDipswContextAddr;
@@ -39,7 +40,7 @@ void setVariable(size_t address, size_t value)
     int prot = mprotect(toModify, pagesize, PROT_EXEC | PROT_WRITE);
     if (prot != 0)
     {
-        printf("Error: Cannot unprotect memory region to change variable (%d)\n", prot);
+        log_error("Cannot unprotect memory region to change variable (%d)\n", prot);
         return;
     }
     *variable = value;
@@ -72,7 +73,7 @@ void patchMemory(size_t address, char *value)
     int prot = mprotect(toModify, pagesize, PROT_EXEC | PROT_WRITE);
     if (prot != 0)
     {
-        printf("Error: Cannot unprotect memory region to change variable (%d)\n", prot);
+        log_error("Cannot unprotect memory region to change variable (%d)\n", prot);
         return;
     }
 
@@ -88,7 +89,7 @@ void detourFunction(size_t address, void *function)
     int prot = mprotect(toModify, pagesize, PROT_EXEC | PROT_WRITE);
     if (prot != 0)
     {
-        printf("Error: Cannot detour memory region to change variable (%d)\n", prot);
+        log_error("Cannot detour memory region to change variable (%d)\n", prot);
         return;
     }
 
@@ -115,7 +116,7 @@ void replaceCallAtAddress(size_t address, void *function)
     int prot = mprotect(toModify, pagesize, PROT_EXEC | PROT_WRITE);
     if (prot != 0)
     {
-        printf("Error: Cannot detour memory region to change variable (%d)\n", prot);
+        log_error("Cannot detour memory region to change variable (%d)\n", prot);
         return;
     }
 
@@ -312,6 +313,38 @@ int or2snprintf(char *s, size_t n, const char *format, ...)
 
     int ret = vsnprintf(s, n, format, args);
     va_end(args);
+
+    return ret;
+}
+
+// OR2 printf
+int or2printf(char *format,...)
+{
+    va_list args;
+    va_start(args, format);
+
+    if (format == NULL)
+        return 0;
+
+    // Call the original printf
+    // int ret = printf(format, args);
+    int ret = 0;
+    log_game(format, args);
+    va_end(args);
+
+    return ret;
+}
+
+// OR2 printf
+int or2puts(char *s)
+{
+    if (s == NULL)
+        return 0;
+
+    // Call the original puts
+    // int ret = puts(s);
+    int ret = 0;
+    log_game(s);
 
     return ret;
 }
@@ -624,6 +657,11 @@ int initPatch()
             setVariable(0x0893a4d8, 2); // amSysDataDebugLevel
             setVariable(0x0893a4e0, 2); // bcLibDebugLevel
         }
+        // Output/logs
+        detourFunction(0x0804c9a8, or2puts);
+        detourFunction(0x0804cfe8, or2printf);
+
+
         // Security
         detourFunction(0x08190e80, amDongleInit);
         detourFunction(0x08191201, amDongleIsAvailable);

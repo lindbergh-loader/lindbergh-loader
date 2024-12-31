@@ -12,6 +12,7 @@
 #include "evdevinput.h"
 #include "config.h"
 #include "jvs.h"
+#include "../libulog/ulog.h"
 
 int jvsBits = 10;
 
@@ -996,7 +997,7 @@ void *controllerThread(void *_args)
     int fd = open(args->controller->path, O_RDONLY);
     if (fd < 0)
     {
-        printf("Error: Failed to open device file descriptor %d \n", fd);
+        log_error("Failed to open device file descriptor %d \n", fd);
         free(args);
         return 0;
     }
@@ -1249,7 +1250,7 @@ ControllerStatus startControllerThreads(Controllers *controllers)
             ControllerStatus status = getArcadeInputByName(mapping, &input);
             if (status != CONTROLLER_STATUS_SUCCESS)
             {
-                printf("Warning: Couldn't find arcade mapping with title %s\n", mapping);
+                log_warn("Couldn't find arcade mapping with title %s\n", mapping);
                 continue;
             }
 

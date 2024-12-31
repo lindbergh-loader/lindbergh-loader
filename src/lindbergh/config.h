@@ -2,6 +2,7 @@
 #define CONFIG_H
 
 #include <stdint.h>
+#include <stdio.h>
 
 #define MAX_PATH_LENGTH 1024
 #define INPUT_STRING_LENGTH 256
@@ -270,5 +271,8 @@ char *getGameNativeResolutions();
 const char *getLindberghColourString(Colour lindberghColour);
 const char *getGameRegionString(GameRegion region);
 const char *getGpuTypeString(GpuType gpuType);
+
+int readConfig(FILE *configFile, EmulatorConfig *config);
+int initConfig();
 
 #endif

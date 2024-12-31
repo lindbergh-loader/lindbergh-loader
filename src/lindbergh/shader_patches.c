@@ -21,6 +21,7 @@
 #include <SDL2/SDL.h>
 
 #include "../libxdiff/xdiff/xdiff.h"
+#include "../libulog/ulog.h"
 #include "config.h"
 #include "patch.h"
 #include "shader_work/shaders.h"
@@ -313,7 +314,7 @@ void gsEvoElfShaderPatcher()
     int prot = mprotect((void *)0x820B000, 0x20000, PROT_EXEC | PROT_WRITE);
     if (prot != 0)
     {
-        printf("Error: Cannot unprotect memory region to change variable (%d)\n", prot);
+        log_error("Cannot unprotect memory region to change variable (%d)\n", prot);
         exit(1);
     }
     for (int i = 0; i < gsevoShaderOffsetsCount; i++)
@@ -391,7 +392,7 @@ void srtvElfShaderPatcher()
     int prot = mprotect((void *)0x854e000, 0x104000, PROT_EXEC | PROT_WRITE);
     if (prot != 0)
     {
-        printf("Error: Cannot unprotect memory region to change variable (%d)\n", prot);
+        log_error("Cannot unprotect memory region to change variable (%d)\n", prot);
         exit(1);
     }
     for (int i = 0; i < srtvShaderOffsetsCount; i++)
@@ -1443,7 +1444,7 @@ void loadLibCg()
 
     if (strcmp(libCgVersion, "2.0.0.12") != 0)
     {
-        printf("ERROR: Wrong libCg.so, version 2.0.0.12 is needed.\n");
+        log_error("Wrong libCg.so, version 2.0.0.12 is needed.\n");
         exit(1);
     }
     dlerror();

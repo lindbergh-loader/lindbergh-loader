@@ -34,7 +34,7 @@ ssize_t driveboardWrite(int fd, const void *buf, size_t count)
 
     if (count != 4)
     {
-        //printf("Error: Drive board count not what expected\n");
+        //log_error("Drive board count not what expected\n");
         return 1;
     }
 

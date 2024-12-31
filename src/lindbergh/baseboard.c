@@ -12,6 +12,7 @@
 #include "jvs.h"
 #include "serial.h"
 #include "passthrough.h"
+#include "../libulog/ulog.h"
 
 #define SERIAL_STRING "FE11-X018012022X"
 
@@ -71,7 +72,7 @@ int initBaseboard()
   // Create file if it doesn't exist
   if (sram == NULL)
   {
-    printf("Error: Cannot open %s\n", sramPath);
+    log_error("Cannot open %s\n", sramPath);
     return 1;
   }
   fclose(sram);
@@ -83,7 +84,7 @@ int initBaseboard()
     jvsFileDescriptor = openJVSSerial(getConfig()->jvsPath);
     if (jvsFileDescriptor < 0)
     {
-      printf("Error: Failed to open %s for JVS\n", getConfig()->jvsPath);
+      log_error("Failed to open %s for JVS\n", getConfig()->jvsPath);
       return -1;
     }
 
@@ -179,7 +180,7 @@ int baseboardIoctl(int fd, unsigned int request, void *data)
 
     case BASEBOARD_WRITE_FLASH: // bcCmdSysFlashWrite
     {
-      printf("Warning: The game attempted to write to the baseboard flash\n");
+      log_warn("The game attempted to write to the baseboard flash\n");
     }
     break;
 
@@ -217,7 +218,7 @@ int baseboardIoctl(int fd, unsigned int request, void *data)
       break;
 
     default:
-      printf("Error: Unknown baseboard command %X\n", _data[0]);
+      log_error("Unknown baseboard command %X\n", _data[0]);
     }
 
     // Acknowledge the command
@@ -269,7 +270,7 @@ int baseboardIoctl(int fd, unsigned int request, void *data)
     break;
 
     default:
-      printf("Error: Unknown baseboard receive command %X\n", _data[0] & 0xFFF);
+      log_error("Unknown baseboard receive command %X\n", _data[0] & 0xFFF);
     }
 
     // Acknowledge the command
@@ -280,7 +281,7 @@ int baseboardIoctl(int fd, unsigned int request, void *data)
   break;
 
   default:
-    printf("Error: Unknown baseboard ioctl %X\n", request);
+    log_error("Unknown baseboard ioctl %X\n", request);
   }
 
   return 0;

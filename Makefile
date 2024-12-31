@@ -1,7 +1,8 @@
+LANG = C
 CC = gcc -m32 -pthread
 CFLAGS = -g -fPIC -m32 -Wall -Werror -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unused-function -D_GNU_SOURCE -Wno-char-subscripts
 LD = g++ -m32
-LDFLAGS = -Wl,-z,defs -rdynamic -static-libgcc -lc -ldl -lGL -lglut -lX11 -lSDL2 -lm -lpthread -shared -nostdlib -lasound -L./src/libxdiff -lxdiff
+LDFLAGS = -Wl,-z,defs -rdynamic -static-libgcc -lc -ldl -lGL -lglut -lX11 -lSDL2 -lm -lpthread -shared -nostdlib -lasound -L./src/libxdiff -lxdiff -L./src/libulog -lulog
 
 BUILD = build
 
@@ -10,14 +11,17 @@ XDIFF_SRCS = xdiffi.c xprepare.c xpatchi.c xmerge3.c xemit.c xmissing.c xutils.c
 
 XDIFF_OBJS = $(patsubst %.c,src/libxdiff/xdiff/%.o,$(XDIFF_SRCS))
 
+ULOG_SRCS = ulog.c
+ULOG_OBJS = $(patsubst %.c,src/libulog/%.o,$(ULOG_SRCS))
+
 OBJS := $(patsubst %.c,%.o,$(wildcard src/lindbergh/*.c))
 OBJS := $(filter-out src/lindbergh/lindbergh.o, $(OBJS))
 
-all: lindbergh libxdiff.a lindbergh.so libsegaapi.so libkswapapi.so libposixtime.so
+all: cleanall libxdiff.a libulog.a lindbergh lindbergh.so libsegaapi.so libkswapapi.so libposixtime.so
 
-lindbergh: src/lindbergh/lindbergh.c src/lindbergh/jvs.c src/lindbergh/jvs.h src/lindbergh/config.h src/lindbergh/config.c src/lindbergh/evdevinput.h src/lindbergh/evdevinput.c
+lindbergh:  src/lindbergh/lindbergh.c src/lindbergh/jvs.c src/lindbergh/jvs.h src/lindbergh/config.h src/lindbergh/config.c src/lindbergh/evdevinput.h src/lindbergh/evdevinput.c
 	mkdir -p $(BUILD)
-	$(CC) src/lindbergh/lindbergh.c src/lindbergh/jvs.h src/lindbergh/jvs.c src/lindbergh/config.h src/lindbergh/config.c src/lindbergh/evdevinput.c src/lindbergh/evdevinput.h -o $(BUILD)/lindbergh -lm
+	$(CC) src/lindbergh/lindbergh.c src/lindbergh/jvs.h src/lindbergh/jvs.c src/lindbergh/config.h src/lindbergh/config.c src/lindbergh/evdevinput.c src/lindbergh/evdevinput.h src/libulog/ulog.c -o $(BUILD)/lindbergh -lm
 
 libxdiff.a: $(XDIFF_OBJS)
 	mkdir -p $(BUILD)
@@ -25,6 +29,16 @@ libxdiff.a: $(XDIFF_OBJS)
 
 src/libxdiff/xdiff/%.o: src/libxdiff/xdiff/%.c
 	$(CC) -DHAVE_CONFIG_H -fPIC -c $< -o $@
+
+
+libulog.a: $(ULOG_OBJS)
+	mkdir -p $(BUILD)
+	ar rcs src/libulog/libulog.a $(ULOG_OBJS)
+
+src/libulog/%.o: src/libulog/%.c
+	$(CC) -DHAVE_CONFIG_H -fPIC -c $< -o $@
+
+
 
 lindbergh.so: $(OBJS)
 	mkdir -p $(BUILD)
@@ -60,3 +74,5 @@ cleanall:
 	rm -f src/libkswapapi/*.o
 	rm -f src/libxdiff/*.a
 	rm -f src/libxdiff/xdiff/*.o
+	rm -f src/libulog/*.a
+	rm -f src/libulog/*.o

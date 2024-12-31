@@ -47,6 +47,7 @@
 #include "shader_patches.h"
 #include "fps_limiter.h"
 #include "evdevinput.h"
+#include "../libulog/ulog.h"
 
 #define HOOK_FILE_NAME "/dev/zero"
 
@@ -154,7 +155,7 @@ static void handleSegfault(int signal, siginfo_t *info, void *ptr)
     break;
 
     default:
-        repeat_printf("Warning: Skipping SEGFAULT %X\n", *code);
+        repeat_printf("Skipping SEGFAULT %X\n", *code);
         ctx->uc_mcontext.gregs[REG_EIP]++;
         // abort();
     }
@@ -259,7 +260,7 @@ void __attribute__((constructor)) hook_init()
         (getConfig()->crc32 == AFTER_BURNER_CLIMAX_SE) || (getConfig()->crc32 == AFTER_BURNER_CLIMAX_SE_REVA) ||
         (getConfig()->crc32 == INITIALD_5_JAP_REVA) || (getConfig()->crc32 == INITIALD_5_JAP_REVF) ||
         (getConfig()->crc32 == INITIALD_5_EXP_30) || (getConfig()->crc32 == INITIALD_5_EXP_40))) {
-            printf("WARNING: Game %s is unsupported in AMD GPU with ATI driver\n",getGameName());
+            log_warn("Game %s is unsupported in AMD GPU with ATI driver\n",getGameName());
     }
     if (getConfig()->lgjRenderWithMesa &&
         ((getConfig()->crc32 == LETS_GO_JUNGLE) || (getConfig()->crc32 == LETS_GO_JUNGLE_REVA) ||
@@ -328,7 +329,7 @@ int open(const char *pathname, int flags, ...)
             return -1;
 
         hooks[SERIAL0] = _open(HOOK_FILE_NAME, flags, mode);
-        printf("Warning: SERIAL0 Opened %d\n", hooks[SERIAL0]);
+        log_warn("SERIAL0 Opened %d\n", hooks[SERIAL0]);
         return hooks[SERIAL0];
     }
 
@@ -341,7 +342,7 @@ int open(const char *pathname, int flags, ...)
             return -1;
 
         hooks[SERIAL1] = _open(HOOK_FILE_NAME, flags, mode);
-        printf("Warning: SERIAL1 opened %d\n", hooks[SERIAL1]);
+        log_warn("SERIAL1 opened %d\n", hooks[SERIAL1]);
         return hooks[SERIAL1];
     }
 

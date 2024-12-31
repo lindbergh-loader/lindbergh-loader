@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include "rideboard.h"
+#include "../libulog/ulog.h"
 
 RideState rideState = {0};
 
@@ -55,7 +56,7 @@ int processInputPacket(char *packet, RideState *state)
 
     if (checksum != packet[INPUT_PACKET_SIZE - 1])
     {
-        printf("Error: Input checksum failed\n");
+        log_error("Input checksum failed\n");
         return 0;
     }
 

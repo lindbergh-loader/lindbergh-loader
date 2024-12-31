@@ -19,6 +19,7 @@
 #include "config.h"
 #include "securityboard.h"
 #include "fps_limiter.h"
+#include "../libulog/ulog.h"
 
 extern bool SDLGame;
 extern bool gettingGPUVendor;
@@ -141,7 +142,7 @@ int XF86VidModeGetAllModeLines(Display *display, int screen, int *modecount_retu
 
     if (_XF86VidModeGetAllModeLines(display, screen, modecount_return, modesinfo) != 1)
     {
-        printf("Error: Could not get list of screen modes.\n");
+        log_error("Could not get list of screen modes.\n");
         exit(1);
     }
     else

@@ -5,6 +5,7 @@
 #include <string.h>
 #include <math.h>
 #include <pthread.h> /* POSIX threads API to create and manage threads in the program */
+#include "../libulog/ulog.h"
 
 /* The in and out packets used to read and write to and from*/
 JVSPacket inputPacket, outputPacket;
@@ -504,7 +505,7 @@ JVSStatus processPacket(int *packetSize)
 
         default:
         {
-            printf("Error: JVS command not supported [0x%02hhX]\n", inputPacket.data[index]);
+            log_error("JVS command not supported [0x%02hhX]\n", inputPacket.data[index]);
         }
         }
         index += size;
