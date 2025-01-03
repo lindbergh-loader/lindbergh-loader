@@ -2,4 +2,3 @@
 #include <stddef.h>
 
 uint32_t get_crc32(const char *s, size_t  n);
-void repeat_printf(const char *format, ...);

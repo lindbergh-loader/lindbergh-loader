@@ -5,6 +5,7 @@
 
 #include "config.h"
 #include "gpuvendor.h"
+#include "log.h"
 
 EmulatorConfig config = {0};
 
@@ -993,7 +994,7 @@ int readConfig(FILE *configFile, EmulatorConfig *config)
             else
             {
                 // Print a warning and keep the default colour
-                printf("Warning: Unknown Lindbergh colour '%s'. Keeping default value.\n", colour);
+                log_warn("Unknown Lindbergh colour '%s'. Keeping default value.\n", colour);
             }
         }
 
@@ -1010,7 +1011,7 @@ int readConfig(FILE *configFile, EmulatorConfig *config)
             else
             {
                 // Print a warning and keep the default region
-                printf("Warning: Unknown Region '%s'. Keeping default value.\n", region);
+                log_warn("Unknown Region '%s'. Keeping default value.\n", region);
             }
         }
 
@@ -1311,7 +1312,7 @@ int initConfig()
     config.crc32 = elf_crc;
     if (detectGame(config.crc32) != 0)
     {
-        printf("Warning: Unsure what game with CRC 0x%X is. Please submit this new game to the GitHub repository: "
+        log_warn("Unsure what game with CRC 0x%X is. Please submit this new game to the GitHub repository: "
                "https://github.com/lindbergh-loader/lindbergh-loader/issues/"
                "new?title=Please+add+new+game+0x%X&body=I+tried+to+launch+the+following+game:\n",
                config.crc32, config.crc32);
@@ -1323,7 +1324,7 @@ int initConfig()
 
     if (configFile == NULL)
     {
-        printf("Warning: Cannot open %s, using default values.\n", CONFIG_PATH);
+        log_warn("Cannot open %s, using default values.\n", CONFIG_PATH);
         return 1;
     }
 

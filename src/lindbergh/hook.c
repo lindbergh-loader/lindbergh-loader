@@ -47,6 +47,7 @@
 #include "shader_patches.h"
 #include "fps_limiter.h"
 #include "evdevinput.h"
+#include "log.h"
 
 #define HOOK_FILE_NAME "/dev/zero"
 
@@ -154,7 +155,8 @@ static void handleSegfault(int signal, siginfo_t *info, void *ptr)
     break;
 
     default:
-        repeat_printf("Warning: Skipping SEGFAULT %X\n", *code);
+        // repeat_printf("Skipping SEGFAULT %X\n", *code);
+        log_warn("Skipping SEGFAULT %X\n", *code);
         ctx->uc_mcontext.gregs[REG_EIP]++;
         // abort();
     }
@@ -216,6 +218,8 @@ void __attribute__((constructor)) hook_init()
 
     if (initControllers(&controllers) != 0)
         exit(1);
+
+
 
     securityBoardSetDipResolution(getConfig()->width, getConfig()->height);
 
@@ -311,7 +315,7 @@ int open(const char *pathname, int flags, ...)
             return -1;
 
         hooks[SERIAL0] = _open(HOOK_FILE_NAME, flags, mode);
-        printf("Warning: SERIAL0 Opened %d\n", hooks[SERIAL0]);
+        log_warn("SERIAL0 Opened %d\n", hooks[SERIAL0]);
         return hooks[SERIAL0];
     }
 
@@ -324,7 +328,7 @@ int open(const char *pathname, int flags, ...)
             return -1;
 
         hooks[SERIAL1] = _open(HOOK_FILE_NAME, flags, mode);
-        printf("Warning: SERIAL1 opened %d\n", hooks[SERIAL1]);
+        log_warn("SERIAL1 opened %d\n", hooks[SERIAL1]);
         return hooks[SERIAL1];
     }
 
@@ -1031,106 +1035,4 @@ char *__strdup(const char *string)
         return ___strdup("default");
     }
     return ___strdup(string);
-}
-
-
-/**
- * @brief Prints formatted text in a way that avoids spamming identical lines.
- *
- * This function behaves similarly to printf, but tracks the last printed message.
- * If the newly formatted string is identical to the last one, the previous console
- * line is overwritten and a repetition counter "(xN)" is appended instead of
- * printing a new line.
- *
- * @details
- * Usage:
- *   1. Call `repeat_printf("Some message");` as you would call printf(...).
- *   2. If the next call uses the exact same message, the console line updates
- *      to "... (x2)", then "... (x3)", etc.
- *   3. If the next call uses a different message, the old message is finalized
- *      (a newline is printed) and the new message is printed on a fresh line.
- *   4. Calling `live_printf("")` or `repeat_printf(NULL)` finalizes the current
- *      message (if any) and resets the internal state.
- *
- * If the message ends with a newline ('\n'), the cursor is moved up one line
- * after printing. This allows consecutive identical lines that end with '\n'
- * to be updated in place, though note it may be visually confusing if your
- * terminal is at the top line.
- *
- * @param format  A printf-style format string, or NULL. If NULL or an empty
- *                string results from formatting, the current tracked message
- *                is finalized (a newline is printed, and the internal state
- *                is reset).
- * @param ...     Variadic arguments for the format string.
- *
- * @return        (void) No return value.
- */
-void repeat_printf(const char *format, ...)
-{
-    static char last_msg[256] = {0};
-    static u_int  repeat_count  = 0;
-
-    // If format is NULL, treat it as an empty string to trigger finalization.
-    if (format == NULL) {
-        format = "";
-    }
-
-    // Construct the new message using vsnprintf (like printf).
-    char msg[256];
-    va_list args;
-    va_start(args, format);
-    vsnprintf(msg, sizeof(msg), format, args);
-    va_end(args);
-
-    // If the constructed message is empty, finalize and reset.
-    if (msg[0] == '\0') {
-        if (repeat_count > 0) {
-            // Finalize the previous message with a newline.
-            printf("\n");
-            fflush(stdout);
-        }
-        // Reset tracking variables.
-        last_msg[0]  = '\0';
-        repeat_count = 0;
-        return;
-    }
-
-    // Check if the new message is the same as the last one.
-    if (strcmp(last_msg, msg) == 0) {
-        // Same message => increment counter, overwrite the line.
-        repeat_count++;
-
-        // If the message ends with new line, we go up one line
-        size_t len = strlen(msg);
-        int ends_with_newline = 0;
-        if (len > 0 && msg[len - 1] == '\n') {
-            printf("\033[1A");
-            ends_with_newline = 1;
-            msg[len - 1] = '\0';  // Remove the trailing '\n'
-        }
-        // Move cursor to the start of the line and clear it.
-        printf("\r\033[K");
-        // Print the message with the updated repeat count if > 1
-        if (repeat_count > 1) {
-            printf("%s (x%d)", msg, repeat_count);
-        } else {
-            // If repeat_count == 1, it means the first time for this message
-            // on this call. (Normally we shouldn't enter here with == 1 though.)
-            printf("%s", msg);
-        }
-        if (ends_with_newline) {
-            // Print a newline, then move cursor up one line
-            printf("\n");
-        }
-        fflush(stdout);
-    } else {
-        // Track the new message.
-        strncpy(last_msg, msg, sizeof(last_msg) - 1);
-        last_msg[sizeof(last_msg) - 1] = '\0';
-        repeat_count = 1;
-
-        // Print the new message on a fresh line.
-        printf("%s", msg);
-        fflush(stdout);
-    }
 }

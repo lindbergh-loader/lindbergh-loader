@@ -12,6 +12,7 @@
 #include "evdevinput.h"
 #include "config.h"
 #include "jvs.h"
+#include "log.h"
 
 int jvsBits = 10;
 
@@ -1249,7 +1250,7 @@ ControllerStatus startControllerThreads(Controllers *controllers)
             ControllerStatus status = getArcadeInputByName(mapping, &input);
             if (status != CONTROLLER_STATUS_SUCCESS)
             {
-                printf("Warning: Couldn't find arcade mapping with title %s\n", mapping);
+                log_warn("Couldn't find arcade mapping with title %s\n", mapping);
                 continue;
             }
 

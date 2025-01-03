@@ -12,6 +12,7 @@
 #include "jvs.h"
 #include "serial.h"
 #include "passthrough.h"
+#include "log.h"
 
 #define SERIAL_STRING "FE11-X018012022X"
 
@@ -179,7 +180,7 @@ int baseboardIoctl(int fd, unsigned int request, void *data)
 
     case BASEBOARD_WRITE_FLASH: // bcCmdSysFlashWrite
     {
-      printf("Warning: The game attempted to write to the baseboard flash\n");
+      log_warn("The game attempted to write to the baseboard flash\n");
     }
     break;
 

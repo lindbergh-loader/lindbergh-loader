@@ -22,6 +22,7 @@
 #include "securityboard.h"
 #include "shader_patches.h"
 #include "glxhooks.h"
+#include "log.h"
 
 char elfID[4];
 void *amDipswContextAddr;
@@ -312,6 +313,33 @@ int or2snprintf(char *s, size_t n, const char *format, ...)
 
     int ret = vsnprintf(s, n, format, args);
     va_end(args);
+
+    return ret;
+}
+
+
+// printf hook, used by OR2
+int patchedPrintf(char *format,...)
+{
+    if (format == NULL)
+        return 0;
+
+    va_list args;
+    va_start(args, format);
+    int ret = logVA_game(format, args);
+    va_end(args);
+
+    return ret;
+}
+
+// puts hook, used by OR2
+int patchedPuts(char *s)
+{
+    if (s == NULL)
+        return 0;
+
+    // Puts appends a new line by default, we add it ourselves
+    int ret = log_game("%s\n", s);
 
     return ret;
 }
@@ -624,6 +652,9 @@ int initPatch()
             setVariable(0x0893a4d8, 2); // amSysDataDebugLevel
             setVariable(0x0893a4e0, 2); // bcLibDebugLevel
         }
+        // Output/logs
+        detourFunction(0x0804c9a8, patchedPuts);
+        detourFunction(0x0804cfe8, patchedPrintf);
         // Security
         detourFunction(0x08190e80, amDongleInit);
         detourFunction(0x08191201, amDongleIsAvailable);

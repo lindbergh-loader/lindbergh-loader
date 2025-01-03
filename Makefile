@@ -15,9 +15,9 @@ OBJS := $(filter-out src/lindbergh/lindbergh.o, $(OBJS))
 
 all: lindbergh libxdiff.a lindbergh.so libsegaapi.so libkswapapi.so libposixtime.so
 
-lindbergh: src/lindbergh/lindbergh.c src/lindbergh/jvs.c src/lindbergh/jvs.h src/lindbergh/config.h src/lindbergh/config.c src/lindbergh/evdevinput.h src/lindbergh/evdevinput.c
+lindbergh: src/lindbergh/lindbergh.c src/lindbergh/log.c src/lindbergh/log.h src/lindbergh/jvs.c src/lindbergh/jvs.h src/lindbergh/config.h src/lindbergh/config.c src/lindbergh/evdevinput.h src/lindbergh/evdevinput.c
 	mkdir -p $(BUILD)
-	$(CC) src/lindbergh/lindbergh.c src/lindbergh/jvs.h src/lindbergh/jvs.c src/lindbergh/config.h src/lindbergh/config.c src/lindbergh/evdevinput.c src/lindbergh/evdevinput.h -o $(BUILD)/lindbergh -lm
+	$(CC) src/lindbergh/lindbergh.c src/lindbergh/log.h src/lindbergh/log.c src/lindbergh/jvs.h src/lindbergh/jvs.c src/lindbergh/config.h src/lindbergh/config.c src/lindbergh/evdevinput.c src/lindbergh/evdevinput.h -o $(BUILD)/lindbergh -lm
 
 libxdiff.a: $(XDIFF_OBJS)
 	mkdir -p $(BUILD)

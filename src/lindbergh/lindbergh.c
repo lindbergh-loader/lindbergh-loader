@@ -6,6 +6,7 @@
 
 #include "evdevinput.h"
 #include "version.h"
+#include "log.h"
 
 #define LD_LIBRARY_PATH "LD_LIBRARY_PATH"
 #define LD_PRELOAD "LD_PRELOAD"
@@ -182,7 +183,7 @@ int main(int argc, char *argv[])
 
     if (dir == NULL)
     {
-        printf("Error: Could not list files in current directory.\n");
+        log_error("Could not list files in current directory.");
         return EXIT_FAILURE;
     }
 
@@ -236,7 +237,7 @@ int main(int argc, char *argv[])
 
     if (!lindberghSharedObjectFound)
     {
-        printf("Error: The preload object lindbergh.so was not found in this directory.\n");
+        log_error("The preload object lindbergh.so was not found in this directory.");
         return EXIT_FAILURE;
     }
 
@@ -287,7 +288,7 @@ int main(int argc, char *argv[])
     {
         if (game == NULL)
         {
-            printf("Error: No lindbergh game found in this directory.\n");
+            log_error("No lindbergh game found in this directory.");
             return EXIT_FAILURE;
         }
         strcat(command, game);
@@ -304,7 +305,7 @@ int main(int argc, char *argv[])
         strcpy(command, temp);
     }
 
-    printf("$ %s\n", command);
+    log_info("Starting $ %s", command);
 
     return system(command);
 }

@@ -9,3 +9,6 @@ void stubReturn();
 int stubRetOne();
 int stubRetMinusOne();
 char stubRetZeroChar();
+
+int patchedPrintf(char *format,...);
+int patchedPuts(char *s);
