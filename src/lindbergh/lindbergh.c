@@ -8,6 +8,7 @@
 #include "version.h"
 
 #define LD_LIBRARY_PATH "LD_LIBRARY_PATH"
+#define LINDBERGH_CONFIG_PATH "LINDBERGH_CONFIG_PATH"
 #define LD_PRELOAD "LD_PRELOAD"
 #define PRELOAD_FILE_NAME "lindbergh.so"
 #define TEAM "bobbydilley, retrofan, dkeruza-neo, doozer, francesco, rolel, caviar-x"
@@ -117,6 +118,7 @@ void printUsage(char *argv[])
     printf("  --list-controllers  Lists available controllers and inputs\n");
     printf("  --version           Displays the version of the loader and team's names\n");
     printf("  --help              Displays this usage text\n");
+    printf("  --config | -c       Specifies configuration path\n");
 }
 
 /**
@@ -246,8 +248,10 @@ int main(int argc, char *argv[])
     int gdb = 0;
     int forceGame = 0;
     int segaboot = 0;
-
+    int extConfig = 0;
+    char envConfigPath[256] = {0};
     char forceGamePath[128] = {0};
+
     for (int i = 1; i < argc; i++)
     {
         if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--test") == 0)
@@ -267,12 +271,29 @@ int main(int argc, char *argv[])
             gdb = 1;
             continue;
         }
-
+        if (strcmp(argv[i], "--config") == 0 || strcmp(argv[i], "-c") == 0)
+        {
+            // prevent wild pointer
+            if (i+1 >= argc)
+            {
+                printf("Unable to read config file because it's the end of argument list\n");
+                break;
+            }
+            extConfig = 1;
+            strcpy(envConfigPath, argv[i+1]);
+            // skip the next argument
+            i += 1;
+            continue;
+        }
         // Treat the argument as the game name
         strcpy(forceGamePath, argv[i]);
         forceGame = 1;
     }
-
+    if (extConfig)
+    {
+        // always override the old environment
+        setenv(LINDBERGH_CONFIG_PATH, envConfigPath, 1);
+    }
     char command[128] = {0};
     strcpy(command, "./");
     if (forceGame)

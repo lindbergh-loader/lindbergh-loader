@@ -264,7 +264,7 @@ typedef struct
 } EmulatorConfig;
 
 KeyMapping getDefaultKeymap();
-int initConfig();
+int initConfig(const char* configPath);
 EmulatorConfig *getConfig();
 char *getGameName();
 char *getDVPName();

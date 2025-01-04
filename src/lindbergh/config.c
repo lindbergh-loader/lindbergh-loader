@@ -1297,7 +1297,7 @@ KeyMapping getDefaultKeymap()
     return defaultKeyMapping;
 }
 
-int initConfig()
+int initConfig(const char* configPath)
 {
     config.emulateRideboard = 0;
     config.emulateDriveboard = 0;
@@ -1349,13 +1349,20 @@ int initConfig()
 
     config.inputMode = 0; // Default to all inputs
 
-    configFile = fopen(CONFIG_PATH, "r");
-
-    if (configFile == NULL)
-    {
-        printf("Warning: Cannot open %s, using default values.\n", CONFIG_PATH);
-        return 1;
+    // first we try to read the external config path
+    configFile = fopen(configPath, "r");
+    if (configFile != NULL) {
+        printf("Found lindbergh loader config at %s in system environment\n",configPath);
+    } else {
+        // then we try to read through default config path
+        configFile = fopen(CONFIG_PATH, "r");
+        if (configFile == NULL)
+        {
+            printf("Warning: Cannot open %s, using default values.\n", CONFIG_PATH);
+            return 1;
+        }
     }
+
 
     readConfig(configFile, &config);
 
