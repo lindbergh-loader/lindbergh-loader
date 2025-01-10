@@ -4,7 +4,6 @@
 
 #include <stdarg.h>
 #include <stdio.h>
-#include <time.h>
 
 
 // Structure to hold the formatted message and its size

@@ -174,7 +174,9 @@ void __attribute__((constructor)) hook_init()
     act.sa_flags = SA_SIGINFO;
     sigaction(SIGSEGV, &act, NULL);
 
-    initConfig();
+    char *(*_getenv)(const char *name) = dlsym(RTLD_NEXT, "getenv");
+    char* envPath = _getenv("LINDBERGH_CONFIG_PATH");
+    initConfig(envPath);
 
     if (getConfig()->fpsLimiter == 1)
     {
