@@ -30,6 +30,8 @@ extern void *customCursor;
 extern void *phTouchCursor;
 
 int glutInitialized = 0;
+extern SDL_GameController **controllers;
+extern int numControllers;
 
 void GLAPIENTRY openglDebugCallback2(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
                                      const GLchar *message, const void *userParam)
@@ -173,6 +175,17 @@ void initSDL(int *argcp, char **argv)
 void sdlQuit()
 {
     SDL_DestroyWindow(SDLwindow);
+    
+    // Close each controller
+    for (int i = 0; i < numControllers; i++) {
+        if (controllers[i]) {
+            SDL_GameControllerClose(controllers[i]);
+        }
+    }
+
+    // Free the allocated memory
+    free(controllers);
+    
     SDL_Quit();
     exit(0);
 }
@@ -187,19 +200,25 @@ void pollEvents()
         case SDL_QUIT:
             sdlQuit();
             break;
+
         case SDL_KEYDOWN:
         case SDL_KEYUP:
         case SDL_MOUSEBUTTONDOWN:
         case SDL_MOUSEBUTTONUP:
         case SDL_MOUSEMOTION:
+        case SDL_CONTROLLERBUTTONDOWN:
+        case SDL_CONTROLLERBUTTONUP:
+        case SDL_CONTROLLERAXISMOTION:
             handleSdlEvents(&event);
             break;
+
         case SDL_WINDOWEVENT:
             if (event.window.event == SDL_WINDOWEVENT_CLOSE)
             {
                 SDL_Quit();
             }
             break;
+
         default:
             break;
         }

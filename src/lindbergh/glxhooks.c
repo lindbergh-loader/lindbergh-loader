@@ -41,6 +41,9 @@ void glXSwapBuffers(Display *dpy, GLXDrawable drawable)
 
     EmulatorConfig *config = getConfig();
 
+    // SDL2 controller polling for X11 rendered games
+    pollEvents();
+
     if (config->borderEnabled)
         drawGameBorder(config->width, config->height, config->whiteBorderPercentage, config->blackBorderPercentage);
 
