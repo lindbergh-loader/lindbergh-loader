@@ -279,7 +279,7 @@ typedef struct
     char or2Netmask[16];
     float cpuFreqGhz;
     ArcadeInputs arcadeInputs;
-    int inputMode;  // 0 = both, 1 = SDL/X11 only, 2 = EVDEV only
+    int inputMode;  // 0 = Keyboard with SDL Controllers, 1 = Keyboard with EVDEV, 2 = EVDEV only
     int skipOutrunCabinetCheck;
     float whiteBorderPercentage;
     float blackBorderPercentage;
