@@ -12,7 +12,7 @@
 #define LD_PRELOAD "LD_PRELOAD"
 #define PRELOAD_FILE_NAME "lindbergh.so"
 #define PRELOAD_FILE_FLATPAK "/app/lib32/lindbergh.so"
-#define TEAM "bobbydilley, retrofan, dkeruza-neo, doozer, francesco, rolel, caviar-x"
+#define TEAM "bobbydilley, retrofan, dkeruza-neo, doozer, francesco, rolel, caviar-x, dmanlfc"
 #define LINDBERGH_CONFIG_PATH "LINDBERGH_CONFIG_PATH"
 
 uint32_t elf_crc = 0;
