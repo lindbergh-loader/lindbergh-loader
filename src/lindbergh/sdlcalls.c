@@ -20,6 +20,9 @@ SDL_GLContext SDLcontext;
 char SDLgameTitle[256] = {0};
 extern fps_limit fpsLimit;
 
+extern SDL_GameController **controllers;
+extern int numControllers;
+
 void GLAPIENTRY openglDebugCallback2(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
                                      const GLchar *message, const void *userParam)
 {
@@ -98,24 +101,35 @@ void glutInitSDL(int *argcp, char **argv)
         exit(1);
     }
 
-        SDLcontext = SDL_GL_CreateContext(SDLwindow);
-        if (!SDLcontext)
-        {
-            fprintf(stderr, "OpenGL context could not be created! SDL_Error: %s\n", SDL_GetError());
-            exit(1);
-        }
+    SDLcontext = SDL_GL_CreateContext(SDLwindow);
+    if (!SDLcontext)
+    {
+        fprintf(stderr, "OpenGL context could not be created! SDL_Error: %s\n", SDL_GetError());
+        exit(1);
+    }
 
-        printf("  SDL RESOLUTION: %dx%d\n\n", getConfig()->width, getConfig()->height);
+    printf("  SDL RESOLUTION: %dx%d\n\n", getConfig()->width, getConfig()->height);
 
-        if (getConfig()->fullscreen)
-        {
-            SDL_SetWindowFullscreen(SDLwindow, SDL_WINDOW_FULLSCREEN);
-        }
+    if (getConfig()->fullscreen)
+    {
+        SDL_SetWindowFullscreen(SDLwindow, SDL_WINDOW_FULLSCREEN);
+    }
 }
 
 void sdlQuit()
 {
     SDL_DestroyWindow(SDLwindow);
+    
+    // Close each controller
+    for (int i = 0; i < numControllers; i++) {
+        if (controllers[i]) {
+            SDL_GameControllerClose(controllers[i]);
+        }
+    }
+
+    // Free the allocated memory
+    free(controllers);
+    
     SDL_Quit();
     exit(0);
 }
@@ -135,6 +149,11 @@ void pollEvents()
         case SDL_MOUSEBUTTONDOWN:
         case SDL_MOUSEBUTTONUP:
         case SDL_MOUSEMOTION:
+            handleSdlEvents(&event);
+            break;
+        case SDL_CONTROLLERBUTTONDOWN:
+        case SDL_CONTROLLERBUTTONUP:
+        case SDL_CONTROLLERAXISMOTION:
             handleSdlEvents(&event);
             break;
         case SDL_WINDOWEVENT:
