@@ -85,9 +85,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameID = "SBLC";
         config.gameDVP = "DVP-0003A";
         config.gameReleaseYear = "2005";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "640x480, 1280x768";
         config.gameType = SHOOTING;
         config.gameStatus = WORKING;
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
@@ -99,9 +101,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameID = "SBLC";
         config.gameDVP = "DVP-0003B";
         config.gameReleaseYear = "2005";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "640x480, 1280x768";
         config.gameType = SHOOTING;
         config.gameStatus = WORKING;
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
@@ -113,9 +117,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameID = "SBLC";
         config.gameDVP = "DVP-0003C";
         config.gameReleaseYear = "2005";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "640x480, 1280x768";
         config.gameType = SHOOTING;
         config.gameStatus = WORKING;
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
@@ -128,7 +134,7 @@ static int detectGame(uint32_t elf_crc)
         config.gameID = "SBLS";
         config.gameDVP = "DVP-0010";
         config.gameReleaseYear = "2006";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1024x768";
         config.gameStatus = WORKING;
         config.gameType = SHOOTING;
         config.width = 1024;
@@ -145,7 +151,7 @@ static int detectGame(uint32_t elf_crc)
         config.gameID = "SBLS";
         config.gameDVP = "DVP-0010B";
         config.gameReleaseYear = "2006";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1024x768";
         config.gameStatus = WORKING;
         config.gameType = SHOOTING;
         config.width = 1024;
@@ -164,7 +170,9 @@ static int detectGame(uint32_t elf_crc)
         config.gameID = "SBRC";
         config.gameDVP = "DVP-0063";
         config.gameReleaseYear = "2008";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1280x768";
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
@@ -177,11 +185,13 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0015A";
         config.gameID = "SBMB";
         config.gameReleaseYear = "2006";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "800x480";
         config.emulateDriveboard = 1;
         config.emulateMotionboard = 1;
         config.gameStatus = WORKING;
         config.gameType = DRIVING;
+        config.width = 800;
+        config.height = 480;
         return 0;
     }
     break;
@@ -193,11 +203,13 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0015";
         config.gameID = "SBMB";
         config.gameReleaseYear = "2006";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "800x480";
         config.emulateDriveboard = 1;
         config.emulateMotionboard = 1;
         config.gameStatus = WORKING;
         config.gameType = DRIVING;
+        config.width = 800;
+        config.height = 480;
         return 0;
     }
     break;
@@ -208,9 +220,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0008";
         config.gameID = "SBLM";
         config.gameReleaseYear = "2005";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1280x768";
         config.gameStatus = WORKING;
         config.gameType = FIGHTING;
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
@@ -221,9 +235,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0008A";
         config.gameID = "SBLM";
         config.gameReleaseYear = "2005";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1280x768";
         config.gameStatus = WORKING;
         config.gameType = FIGHTING;
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
@@ -234,9 +250,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0008B";
         config.gameID = "SBLM";
         config.gameReleaseYear = "2005";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1280x768";
         config.gameStatus = WORKING;
         config.gameType = FIGHTING;
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
@@ -247,9 +265,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0008E";
         config.gameID = "SBLM";
         config.gameReleaseYear = "2005";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1280x768";
         config.gameStatus = WORKING;
         config.gameType = FIGHTING;
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
@@ -260,9 +280,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0043";
         config.gameID = "SBLM";
         config.gameReleaseYear = "2005";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1280x768";
         config.gameStatus = WORKING;
         config.gameType = FIGHTING;
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
@@ -273,9 +295,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-XXXX";
         config.gameID = "SBQU";
         config.gameReleaseYear = "2008";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1280x768";
         config.gameStatus = WORKING;
         config.gameType = FIGHTING;
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
@@ -286,9 +310,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-XXXX";
         config.gameID = "SBQU";
         config.gameReleaseYear = "2008";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1280x768";
         config.gameStatus = WORKING;
         config.gameType = FIGHTING;
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
@@ -299,9 +325,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-XXXX";
         config.gameID = "SBQU";
         config.gameReleaseYear = "2008";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1280x768";
         config.gameStatus = WORKING;
         config.gameType = FIGHTING;
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
@@ -312,9 +340,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-SBUV";
         config.gameID = "SBUV";
         config.gameReleaseYear = "2010";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1280x768";
         config.gameType = FIGHTING;
         config.gameStatus = WORKING;
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
@@ -325,9 +355,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-5019A";
         config.gameID = "SBUV";
         config.gameReleaseYear = "2010";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1280x768";
         config.gameType = FIGHTING;
         config.gameStatus = WORKING;
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
@@ -338,9 +370,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-5019B";
         config.gameID = "SBUV";
         config.gameReleaseYear = "2010";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1280x768";
         config.gameType = FIGHTING;
         config.gameStatus = WORKING;
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
@@ -351,9 +385,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-5020";
         config.gameID = "SBUV";
         config.gameReleaseYear = "2010";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1280x768";
         config.gameType = FIGHTING;
         config.gameStatus = WORKING;
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
@@ -364,7 +400,7 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0011";
         config.gameID = "SBLU";
         config.gameReleaseYear = "2006";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1360x768";
         config.gameType = SHOOTING;
         config.gameStatus = WORKING;
         config.width = 1360;
@@ -380,7 +416,7 @@ static int detectGame(uint32_t elf_crc)
         config.gameID = "SBNR";
         config.gameDVP = "DVP-0036";
         config.gameReleaseYear = "2007";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1024x768";
         config.gameType = SHOOTING;
         config.gameStatus = WORKING;
         config.width = 1024;
@@ -395,10 +431,12 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0009";
         config.gameID = "SBLR";
         config.gameReleaseYear = "2006";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "640x480";
         config.gameStatus = WORKING;
         config.jvsIOType = SEGA_TYPE_1;
         config.gameType = ABC;
+        config.width = 640;
+        config.height = 480;
         return 0;
     }
     break;
@@ -409,10 +447,12 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0009A";
         config.gameID = "SBLR";
         config.gameReleaseYear = "2006";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "640x480";
         config.gameStatus = WORKING;
         config.jvsIOType = SEGA_TYPE_1;
         config.gameType = ABC;
+        config.width = 640;
+        config.height = 480;
         return 0;
     }
     break;
@@ -423,10 +463,12 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0009B";
         config.gameID = "SBLR";
         config.gameReleaseYear = "2006";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "640x480";
         config.gameStatus = WORKING;
         config.jvsIOType = SEGA_TYPE_1;
         config.gameType = ABC;
+        config.width = 640;
+        config.height = 480;
         return 0;
     }
     break;
@@ -437,10 +479,12 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0018-SDX";
         config.gameID = "SBMN";
         config.gameReleaseYear = "2006 ?";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1280x768";
         config.gameStatus = WORKING;
         config.jvsIOType = SEGA_TYPE_1;
         config.gameType = ABC;
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
@@ -451,10 +495,12 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0018A-SDX";
         config.gameID = "SBMN";
         config.gameReleaseYear = "2006 ?";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1280x768";
         config.gameStatus = WORKING;
         config.jvsIOType = SEGA_TYPE_1;
         config.gameType = ABC;
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
@@ -493,9 +539,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameID = "SBML";
         config.gameDVP = "DVP-0019A";
         config.gameReleaseYear = "2007";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1360x768";
         config.gameStatus = WORKING;
         config.gameType = DRIVING;
+        config.width = 1360;
+        config.height = 768;
         return 0;
     }
     break;
@@ -506,9 +554,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameID = "SBML";
         config.gameDVP = "DVP-0019B";
         config.gameReleaseYear = "2007";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1360x768";
         config.gameStatus = WORKING;
         config.gameType = DRIVING;
+        config.width = 1360;
+        config.height = 768;
         return 0;
     }
     break;
@@ -519,9 +569,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameID = "SBML";
         config.gameDVP = "DVP-0019C";
         config.gameReleaseYear = "2007";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1360x768";
         config.gameStatus = WORKING;
         config.gameType = DRIVING;
+        config.width = 1360;
+        config.height = 768;
         return 0;
     }
     break;
@@ -532,9 +584,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameID = "SBML";
         config.gameDVP = "DVP-0019D";
         config.gameReleaseYear = "2007";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1360x768";
         config.gameStatus = WORKING;
         config.gameType = DRIVING;
+        config.width = 1360;
+        config.height = 768;
         return 0;
     }
     break;
@@ -545,9 +599,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameID = "SBML";
         config.gameDVP = "DVP-0019G";
         config.gameReleaseYear = "2007";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1360x768";
         config.gameStatus = WORKING;
         config.gameType = DRIVING;
+        config.width = 1360;
+        config.height = 768;
         return 0;
     }
     break;
@@ -558,9 +614,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameID = "SBNK";
         config.gameDVP = "DVP-0030B";
         config.gameReleaseYear = "2007";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1360x768";
         config.gameStatus = WORKING;
         config.gameType = DRIVING;
+        config.width = 1360;
+        config.height = 768;
         return 0;
     }
     break;
@@ -571,9 +629,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameID = "SBNK";
         config.gameDVP = "DVP-0030C";
         config.gameReleaseYear = "2007";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1360x768";
         config.gameStatus = WORKING;
         config.gameType = DRIVING;
+        config.width = 1360;
+        config.height = 768;
         return 0;
     }
     break;
@@ -584,9 +644,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameID = "SBNK";
         config.gameDVP = "DVP-0030D";
         config.gameReleaseYear = "2007";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1360x768";
         config.gameStatus = WORKING;
         config.gameType = DRIVING;
+        config.width = 1360;
+        config.height = 768;
         return 0;
     }
     break;
@@ -598,11 +660,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0044";
         config.gameID = "SBPF";
         config.gameReleaseYear = "2008";
-        config.gameNativeResolutions = "1280x768";
+        config.gameNativeResolutions = "640x480";
         config.gameStatus = WORKING;
         config.gameType = DRIVING;
-        config.width = 1280;
-        config.height = 768;
+        config.width = 640;
+        config.height = 480;
         return 0;
     }
     break;
@@ -613,10 +675,12 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0069";
         config.gameID = "SBQL";
         config.gameReleaseYear = "2008";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "640x480, 1360x768";
         config.gameLindberghColour = REDEX;
         config.gameType = SHOOTING;
         config.gameStatus = WORKING;
+        config.width = 1360;
+        config.height = 768;
         return 0;
     }
     break;
@@ -627,10 +691,12 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0060";
         config.gameID = "SBQW";
         config.gameReleaseYear = "2008";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "640x480";
         config.emulateDriveboard = 1;
         config.gameStatus = WORKING;
         config.gameType = DRIVING;
+        config.width = 640;
+        config.height = 480;
         return 0;
     }
     break;
@@ -642,10 +708,12 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0027A";
         config.gameID = "SBMV";
         config.gameReleaseYear = "2008";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "640x480, 1280x768";
         config.gameLindberghColour = RED;
         config.gameStatus = WORKING;
         config.gameType = SHOOTING;
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
@@ -657,8 +725,10 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0005";
         config.gameID = "SBKX";
         config.gameReleaseYear = "2006";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "640x480, 1360x768";
         config.gameStatus = WORKING;
+        config.width = 1360;
+        config.height = 768;
         return 0;
     }
     break;
@@ -670,9 +740,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0005A";
         config.gameID = "SBKX";
         config.gameReleaseYear = "2006";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "640x480, 1360x768";
         config.gameType = FIGHTING;
         config.gameStatus = WORKING;
+        config.width = 1360;
+        config.height = 768;
         return 0;
     }
     break;
@@ -684,9 +756,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0005B";
         config.gameID = "SBKX";
         config.gameReleaseYear = "2006";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "640x480, 1360x768";
         config.gameType = FIGHTING;
         config.gameStatus = WORKING;
+        config.width = 1360;
+        config.height = 768;
         return 0;
     }
     break;
@@ -698,9 +772,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0005C";
         config.gameID = "SBKX";
         config.gameReleaseYear = "2006";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "640x480, 1360x768";
         config.gameType = FIGHTING;
         config.gameStatus = WORKING;
+        config.width = 1360;
+        config.height = 768;
         return 0;
     }
     break;
@@ -711,10 +787,12 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0048A";
         config.gameID = "SBPP";
         config.gameReleaseYear = "2008";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "640x480";
         config.gameLindberghColour = RED;
         config.gameStatus = WORKING;
         config.gameType = SHOOTING;
+        config.width = 640;
+        config.height = 480;
         return 0;
     }
     break;
@@ -726,10 +804,12 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0029A";
         config.gameID = "SBNJ";
         config.gameReleaseYear = "2007";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "640x480";
         config.gameLindberghColour = RED;
         config.gameType = SHOOTING;
         config.jvsIOType = SEGA_TYPE_1;
+        config.width = 640;
+        config.height = 480;
         return 0;
     }
     break;
@@ -740,9 +820,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0070A";
         config.gameID = "SBQZ";
         config.gameReleaseYear = "2009";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1360x768";
         config.gameStatus = WORKING;
         config.gameType = DRIVING;
+        config.width = 1360;
+        config.height = 768;
         return 0;
     }
     break;
@@ -753,9 +835,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0070F";
         config.gameID = "SBQZ";
         config.gameReleaseYear = "2009";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1360x768";
         config.gameStatus = WORKING;
         config.gameType = DRIVING;
+        config.width = 1360;
+        config.height = 768;
         return 0;
     }
     break;
@@ -767,8 +851,10 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0075";
         config.gameID = "SBTS";
         config.gameReleaseYear = "2009";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1360x768";
         config.gameType = DRIVING;
+        config.width = 1360;
+        config.height = 768;
         return 0;
     }
     break;
@@ -779,9 +865,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0084A";
         config.gameID = "SBQN";
         config.gameReleaseYear = "2009";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1360x768";
         config.gameStatus = WORKING;
         config.gameType = DRIVING;
+        config.width = 1360;
+        config.height = 768;
         return 0;
     }
     break;
@@ -792,9 +880,11 @@ static int detectGame(uint32_t elf_crc)
         config.gameID = "SBQN";
         config.gameDVP = "DVP-0057B";
         config.gameReleaseYear = "2008";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1280x768";
         config.gameType = DRIVING;
         config.gameStatus = WORKING;
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
@@ -831,7 +921,7 @@ static int detectGame(uint32_t elf_crc)
         config.gameID = "SBST";
         config.gameDVP = "DVP-0083";
         config.gameReleaseYear = "2009";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1280x768";
         config.gameType = DRIVING;
         config.gameStatus = WORKING;
         return 0;
@@ -844,7 +934,7 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-0011A";
         config.gameID = "SBLU";
         config.gameReleaseYear = "2006";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1360x768";
         config.gameType = SHOOTING;
         config.gameStatus = WORKING;
         config.width = 1360;
@@ -859,10 +949,12 @@ static int detectGame(uint32_t elf_crc)
         config.gameDVP = "DVP-5007";
         config.gameID = "SBRG";
         config.gameReleaseYear = "2009";
-        config.gameNativeResolutions = "";
+        config.gameNativeResolutions = "1360x768";
         config.gameLindberghColour = RED;
         config.gameType = HARLEY;
         config.gameStatus = WORKING;
+        config.width = 1360;
+        config.height = 768;
         return 0;
     }
     break;
