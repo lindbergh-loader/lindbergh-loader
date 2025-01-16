@@ -16,16 +16,41 @@
 #include <math.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include "log.h"
 
 GameType gameType = SHOOTING;
 int jvsAnalogueInBits = 10;
 extern int phX, phY, phW, phH;
+
+// SDL2 controllers
+extern SDL_GameController **controllers;
+int numControllers;
+const int16_t DEADZONE = 8000; // Standard SDL2 deadzone value
+const float AXIS_MAX = 32767.0f; // Maximum value for SDL2 axis
 
 int initInput()
 {
     gameType = getConfig()->gameType;
     jvsAnalogueInBits = getJVSIO()->capabilities.analogueInBits;
 
+    if (SDL_Init(SDL_INIT_GAMECONTROLLER) != 0) {
+        log_warn("SDL_Init failed: %s\n", SDL_GetError());
+        return -1;
+    }
+
+    // Get the number of available controllers
+    numControllers = SDL_NumJoysticks();
+
+    // Allocate memory for the controllers array
+    controllers = (SDL_GameController **)malloc(numControllers * sizeof(SDL_GameController *));
+
+    // Open each controller
+    for (int i = 0; i < numControllers; i++) {
+        controllers[i] = SDL_GameControllerOpen(i);
+        if (!controllers[i]) {
+            log_warn("Failed to open controller %d: %s\n", i, SDL_GetError());
+        }
+    }
     /* Center Steering wheel in racing games (need to add a check for when using real analog devices)*/
     if (gameType == DRIVING)
     {
@@ -447,10 +472,280 @@ void sdlEventDriving(SDL_Event *event)
             setSwitch(PLAYER_2, BUTTON_UP, event->type == SDL_KEYDOWN);
     }
     break;
+
+    // SDL2 Controllers
+    case SDL_CONTROLLERBUTTONDOWN:
+    case SDL_CONTROLLERBUTTONUP:
+    {
+        bool isPress = (event->type == SDL_CONTROLLERBUTTONDOWN);
+
+        switch (event->cbutton.button)
+        {
+            case SDL_CONTROLLER_BUTTON_A:
+                if (getConfig()->crc32 == INITIALD_4_REVA ||
+                    getConfig()->crc32 == INITIALD_4_REVB || 
+                    getConfig()->crc32 == INITIALD_4_REVC || 
+                    getConfig()->crc32 == INITIALD_4_REVD || 
+                    getConfig()->crc32 == INITIALD_4_REVG || 
+                    getConfig()->crc32 == INITIALD_4_EXP_REVB || 
+                    getConfig()->crc32 == INITIALD_4_EXP_REVC || 
+                    getConfig()->crc32 == INITIALD_4_EXP_REVD || 
+                    getConfig()->crc32 == INITIALD_5_JAP_REVA || 
+                    getConfig()->crc32 == INITIALD_5_JAP_REVF || 
+                    getConfig()->crc32 == INITIALD_5_EXP_30 || 
+                    getConfig()->crc32 == INITIALD_5_EXP_40) {
+                        setSwitch(PLAYER_1, BUTTON_1, isPress); // View Change Initial D
+                }
+                else
+                {
+                    setSwitch(PLAYER_1, BUTTON_DOWN, isPress); // View Change others
+                }
+                break;
+            case SDL_CONTROLLER_BUTTON_B:
+                if (getConfig()->crc32 == HUMMER || getConfig()->crc32 == HUMMER_SDLX || getConfig()->crc32 == HUMMER_EXTREME || getConfig()->crc32 == HUMMER_EXTREME_MDX)
+                {
+                    setSwitch(PLAYER_2, BUTTON_DOWN, isPress); // Hummer Boost
+                }
+                else if (getConfig()->crc32 == SEGA_RACE_TV)
+                {
+                    setSwitch(PLAYER_2, BUTTON_1, isPress); // SegaTV Boost
+                }
+                else if (getConfig()->crc32 == R_TUNED)
+                {
+                    setSwitch(PLAYER_1, BUTTON_RIGHT, isPress); // R-Tuned Boost right
+                }
+                else
+                {
+                    setSwitch(PLAYER_1, BUTTON_2, isPress);
+                }
+                break;
+            case SDL_CONTROLLER_BUTTON_X:
+                if (getConfig()->crc32 == R_TUNED)
+                {
+                    setSwitch(PLAYER_2, BUTTON_1, isPress); // R-Tuned Boost left
+                }
+                else
+                {
+                    setSwitch(PLAYER_1, BUTTON_3, isPress);
+                }                
+                break;
+            case SDL_CONTROLLER_BUTTON_Y:
+                setSwitch(PLAYER_1, BUTTON_4, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_UP:
+                setSwitch(PLAYER_1, BUTTON_UP, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+                setSwitch(PLAYER_1, BUTTON_DOWN, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+                setSwitch(PLAYER_1, BUTTON_LEFT, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+                setSwitch(PLAYER_1, BUTTON_RIGHT, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_START:
+                setSwitch(PLAYER_1, BUTTON_START, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_GUIDE:
+                setSwitch(PLAYER_1, BUTTON_SERVICE, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_BACK:
+                incrementCoin(PLAYER_1, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_MISC1:
+                setSwitch(SYSTEM, BUTTON_TEST, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
+                setSwitch(PLAYER_2, BUTTON_DOWN, isPress);  // Gear Down
+                break;
+            case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
+                setSwitch(PLAYER_2, BUTTON_UP, isPress); // Gear Down Up
+                break;
+        }
+    }
+    break;
+
+    case SDL_CONTROLLERAXISMOTION:
+    {
+        float normalizedValue;
+        // Left stick X axis
+        if (event->caxis.axis == SDL_CONTROLLER_AXIS_LEFTX) {
+            if (abs(event->caxis.value) > DEADZONE) {
+                normalizedValue = event->caxis.value / AXIS_MAX;
+                setAnalogue(ANALOGUE_1, (normalizedValue + 1.0f) * (pow(2, jvsAnalogueInBits) - 1) / 2);
+            } else {
+                setAnalogue(ANALOGUE_1, pow(2, jvsAnalogueInBits) / 2); // Center when in deadzone
+            }
+        }
+        // Left trigger (we use for Brake)
+        else if (event->caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT) {
+            if (abs(event->caxis.value) > DEADZONE) {
+                normalizedValue = event->caxis.value / AXIS_MAX;
+                setAnalogue(ANALOGUE_3, (normalizedValue + 1.0f) * (pow(2, jvsAnalogueInBits) - 1) / 2);
+            } else {
+                setAnalogue(ANALOGUE_3, 0); // Release when in deadzone
+            }
+        }
+        // Right trigger (we use for Gas)
+        else if (event->caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT) {
+            if (abs(event->caxis.value) > DEADZONE) {
+                normalizedValue = event->caxis.value / AXIS_MAX;
+                setAnalogue(ANALOGUE_2, (normalizedValue + 1.0f) * (pow(2, jvsAnalogueInBits) - 1) / 2);
+            } else {
+                setAnalogue(ANALOGUE_2, 0); // Release when in deadzone
+            }
+        }
+    }
+    break;
+
     default:
         break;
     }
 }
+
+void sdlEventHarley(SDL_Event *event)
+{
+    switch (event->type)
+    {
+    case SDL_KEYDOWN:
+    case SDL_KEYUP:
+    {
+        if (event->key.keysym.sym == SDLK_t)
+            setSwitch(SYSTEM, BUTTON_TEST, event->type == SDL_KEYDOWN);
+        else if (event->key.keysym.sym == SDLK_s)
+            setSwitch(PLAYER_1, BUTTON_SERVICE, event->type == SDL_KEYDOWN);
+        else if (event->key.keysym.sym == SDLK_5)
+            incrementCoin(PLAYER_1, event->type == SDL_KEYDOWN);
+        else if (event->key.keysym.sym == SDLK_1)
+            setSwitch(PLAYER_1, BUTTON_START, event->type == SDL_KEYDOWN);
+        else if (event->key.keysym.sym == SDLK_UP)
+            setAnalogue(ANALOGUE_2, event->type == SDL_KEYDOWN ? pow(2, jvsAnalogueInBits) - 1 : 0);
+        else if (event->key.keysym.sym == SDLK_DOWN)
+            setAnalogue(ANALOGUE_3, event->type == SDL_KEYDOWN ? pow(2, jvsAnalogueInBits) - 1 : 0);
+        else if (event->key.keysym.sym == SDLK_LEFT)
+            setAnalogue(ANALOGUE_1,
+                        event->type == SDL_KEYDOWN ? pow(2, jvsAnalogueInBits) * 0.2 : pow(2, jvsAnalogueInBits) * 0.5);
+        else if (event->key.keysym.sym == SDLK_RIGHT)
+            setAnalogue(ANALOGUE_1,
+                        event->type == SDL_KEYDOWN ? pow(2, jvsAnalogueInBits) * 0.8 : pow(2, jvsAnalogueInBits) * 0.5);
+        else if (event->key.keysym.sym == SDLK_q)
+            setSwitch(PLAYER_1, BUTTON_1, event->type == SDL_KEYDOWN);
+        else if (event->key.keysym.sym == SDLK_w)
+            setSwitch(PLAYER_1, BUTTON_2, event->type == SDL_KEYDOWN);
+        else if (event->key.keysym.sym == SDLK_e)
+            setSwitch(PLAYER_1, BUTTON_3, event->type == SDL_KEYDOWN);
+        else if (event->key.keysym.sym == SDLK_r)
+            setSwitch(PLAYER_1, BUTTON_4, event->type == SDL_KEYDOWN);
+        else if (event->key.keysym.sym == SDLK_z)
+            setSwitch(PLAYER_1, BUTTON_DOWN, event->type == SDL_KEYDOWN); // Hummer - SegaTV view change
+
+        else if (event->key.keysym.sym == SDLK_x)
+            setSwitch(PLAYER_1, BUTTON_UP, event->type == SDL_KEYDOWN);
+
+        else if (event->key.keysym.sym == SDLK_c)
+            setSwitch(PLAYER_1, BUTTON_LEFT, event->type == SDL_KEYDOWN);
+
+        else if (event->key.keysym.sym == SDLK_v)
+            setSwitch(PLAYER_1, BUTTON_RIGHT, event->type == SDL_KEYDOWN);
+
+        else if (event->key.keysym.sym == SDLK_a)
+            setSwitch(PLAYER_2, BUTTON_1, event->type == SDL_KEYDOWN); // SegaTV boost
+
+        else if (event->key.keysym.sym == SDLK_LCTRL)
+            setSwitch(PLAYER_2, BUTTON_DOWN, event->type == SDL_KEYDOWN); // Hummer boost
+
+        else if (event->key.keysym.sym == SDLK_SPACE)
+            setSwitch(PLAYER_2, BUTTON_UP, event->type == SDL_KEYDOWN);
+    }
+    break;
+
+    // SDL2 Controllers
+    case SDL_CONTROLLERBUTTONDOWN:
+    case SDL_CONTROLLERBUTTONUP:
+    {
+        bool isPress = (event->type == SDL_CONTROLLERBUTTONDOWN);
+
+        switch (event->cbutton.button)
+        {
+            case SDL_CONTROLLER_BUTTON_A:
+                setSwitch(PLAYER_1, BUTTON_2, isPress); // View
+                break;
+            case SDL_CONTROLLER_BUTTON_B:
+                setSwitch(PLAYER_1, BUTTON_1, isPress); // Change Music           
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_UP:
+                setSwitch(PLAYER_1, BUTTON_UP, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+                setSwitch(PLAYER_1, BUTTON_DOWN, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+                setSwitch(PLAYER_1, BUTTON_LEFT, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+                setSwitch(PLAYER_1, BUTTON_RIGHT, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_START:
+                setSwitch(PLAYER_1, BUTTON_START, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_GUIDE:
+                setSwitch(PLAYER_1, BUTTON_SERVICE, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_BACK:
+                incrementCoin(PLAYER_1, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_MISC1:
+                setSwitch(SYSTEM, BUTTON_TEST, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
+                setSwitch(PLAYER_1, BUTTON_4, isPress);  // Gear Down
+                break;
+            case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
+                setSwitch(PLAYER_1, BUTTON_3, isPress); // Gear Down Up
+                break;
+        }
+    }
+    break;
+
+    case SDL_CONTROLLERAXISMOTION:
+    {
+        float normalizedValue;
+        // Left stick X axis (Handle)
+        if (event->caxis.axis == SDL_CONTROLLER_AXIS_LEFTX) {
+            if (abs(event->caxis.value) > DEADZONE) {
+                normalizedValue = event->caxis.value / AXIS_MAX;
+                setAnalogue(ANALOGUE_2, (normalizedValue + 1.0f) * (pow(2, jvsAnalogueInBits) - 1) / 2);
+            } else {
+                setAnalogue(ANALOGUE_2, pow(2, jvsAnalogueInBits) / 2); // Center when in deadzone
+            }
+        }
+        // Left trigger (we use for Brake)
+        else if (event->caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT) {
+            if (abs(event->caxis.value) > DEADZONE) {
+                normalizedValue = event->caxis.value / AXIS_MAX;
+                setAnalogue(ANALOGUE_4, (normalizedValue + 1.0f) * (pow(2, jvsAnalogueInBits) - 1) / 2);
+            } else {
+                setAnalogue(ANALOGUE_4, 0); // Release when in deadzone
+            }
+        }
+        // Right trigger (we use for Gas)
+        else if (event->caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT) {
+            if (abs(event->caxis.value) > DEADZONE) {
+                normalizedValue = event->caxis.value / AXIS_MAX;
+                setAnalogue(ANALOGUE_1, (normalizedValue + 1.0f) * (pow(2, jvsAnalogueInBits) - 1) / 2);
+            } else {
+                setAnalogue(ANALOGUE_1, 0); // Release when in deadzone
+            }
+        }
+    }
+    break;
+
+    default:
+        break;
+    }
+}
+
 void sdlEventShooting(SDL_Event *event)
 {
     KeyMapping keymap = getConfig()->keymap;
@@ -581,6 +876,7 @@ void sdlEventShooting(SDL_Event *event)
         }
     }
     break;
+
     case SDL_MOUSEBUTTONDOWN:
     case SDL_MOUSEBUTTONUP:
     {
@@ -594,6 +890,85 @@ void sdlEventShooting(SDL_Event *event)
             setSwitch(PLAYER_1, BUTTON_3, event->type == SDL_MOUSEBUTTONDOWN);
     }
     break;
+
+    // SDL2 Controllers
+    case SDL_CONTROLLERBUTTONDOWN:
+    case SDL_CONTROLLERBUTTONUP:
+    {
+        bool isPress = (event->type == SDL_CONTROLLERBUTTONDOWN);
+
+        switch (event->cbutton.button)
+        {
+            case SDL_CONTROLLER_BUTTON_A:
+                setSwitch(PLAYER_1, BUTTON_1, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_B:
+                setSwitch(PLAYER_1, BUTTON_2, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_X:
+                setSwitch(PLAYER_1, BUTTON_3, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_Y:
+                setSwitch(PLAYER_1, BUTTON_4, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_UP:
+                setSwitch(PLAYER_1, BUTTON_UP, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+                setSwitch(PLAYER_1, BUTTON_DOWN, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+                setSwitch(PLAYER_1, BUTTON_LEFT, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+                setSwitch(PLAYER_1, BUTTON_RIGHT, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_START:
+                setSwitch(PLAYER_1, BUTTON_START, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_GUIDE:
+                setSwitch(PLAYER_1, BUTTON_SERVICE, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_BACK:
+                incrementCoin(PLAYER_1, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_MISC1:
+                setSwitch(SYSTEM, BUTTON_TEST, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
+                setSwitch(PLAYER_1, BUTTON_5, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
+                setSwitch(PLAYER_1, BUTTON_6, isPress);
+                break;
+        }
+    }
+    break;
+
+    case SDL_CONTROLLERAXISMOTION:
+    {
+        float normalizedValue;
+        // Left stick X axis
+        if (event->caxis.axis == SDL_CONTROLLER_AXIS_LEFTX) {
+            if (abs(event->caxis.value) > DEADZONE) {
+                normalizedValue = event->caxis.value / AXIS_MAX;
+                setAnalogue(ANALOGUE_1, (normalizedValue + 1.0f) * (pow(2, jvsAnalogueInBits) - 1) / 2);
+            } else {
+                setAnalogue(ANALOGUE_1, pow(2, jvsAnalogueInBits) / 2); // Center when in deadzone
+            }
+        }
+        // Left stick X axis
+        if (event->caxis.axis == SDL_CONTROLLER_AXIS_LEFTY) {
+            if (abs(event->caxis.value) > DEADZONE) {
+                normalizedValue = event->caxis.value / AXIS_MAX;
+                setAnalogue(ANALOGUE_2, (normalizedValue + 1.0f) * (pow(2, jvsAnalogueInBits) - 1) / 2);
+            } else {
+                setAnalogue(ANALOGUE_2, pow(2, jvsAnalogueInBits) / 2); // Center when in deadzone
+            }
+        }
+    }
+    break;
+
     default:
         break;
     }
@@ -649,6 +1024,85 @@ void sdlEventABC(SDL_Event *event)
             setSwitch(PLAYER_1, BUTTON_RIGHT, event->type == SDL_KEYDOWN);
     }
     break;
+
+    // SDL2 Controllers
+    case SDL_CONTROLLERBUTTONDOWN:
+    case SDL_CONTROLLERBUTTONUP:
+    {
+        bool isPress = (event->type == SDL_CONTROLLERBUTTONDOWN);
+
+        switch (event->cbutton.button)
+        {
+            case SDL_CONTROLLER_BUTTON_A:
+                setSwitch(PLAYER_1, BUTTON_1, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_B:
+                setSwitch(PLAYER_1, BUTTON_2, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_X:
+                setSwitch(PLAYER_1, BUTTON_3, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_Y:
+                setSwitch(PLAYER_1, BUTTON_4, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_UP:
+                setSwitch(PLAYER_1, BUTTON_UP, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+                setSwitch(PLAYER_1, BUTTON_DOWN, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+                setSwitch(PLAYER_1, BUTTON_LEFT, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+                setSwitch(PLAYER_1, BUTTON_RIGHT, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_START:
+                setSwitch(PLAYER_1, BUTTON_START, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_GUIDE:
+                setSwitch(PLAYER_1, BUTTON_SERVICE, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_BACK:
+                incrementCoin(PLAYER_1, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_MISC1:
+                setSwitch(SYSTEM, BUTTON_TEST, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
+                setSwitch(PLAYER_1, BUTTON_5, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
+                setSwitch(PLAYER_1, BUTTON_6, isPress);
+                break;
+        }
+    }
+    break;
+
+    case SDL_CONTROLLERAXISMOTION:
+    {
+        float normalizedValue;
+        // Left stick X axis
+        if (event->caxis.axis == SDL_CONTROLLER_AXIS_LEFTX) {
+            if (abs(event->caxis.value) > DEADZONE) {
+                normalizedValue = event->caxis.value / AXIS_MAX;
+                setAnalogue(ANALOGUE_1, (normalizedValue + 1.0f) * (pow(2, jvsAnalogueInBits) - 1) / 2);
+            } else {
+                setAnalogue(ANALOGUE_1, pow(2, jvsAnalogueInBits) / 2); // Center when in deadzone
+            }
+        }
+        // Left stick Y axis
+        if (event->caxis.axis == SDL_CONTROLLER_AXIS_LEFTY) {
+            if (abs(event->caxis.value) > DEADZONE) {
+                normalizedValue = event->caxis.value / AXIS_MAX;
+                setAnalogue(ANALOGUE_2, (normalizedValue + 1.0f) * (pow(2, jvsAnalogueInBits) - 1) / 2);
+            } else {
+                setAnalogue(ANALOGUE_2, pow(2, jvsAnalogueInBits) / 2); // Center when in deadzone
+            }
+        }
+    }
+    break;
+
     default:
         break;
     }
@@ -740,6 +1194,61 @@ void sdlEventMahjong(SDL_Event *event)
             setSwitch(PLAYER_2, BUTTON_7, event->type == SDL_KEYDOWN);
     }
     break;
+
+    // SDL2 Controllers
+    case SDL_CONTROLLERBUTTONDOWN:
+    case SDL_CONTROLLERBUTTONUP:
+    {
+        bool isPress = (event->type == SDL_CONTROLLERBUTTONDOWN);
+
+        switch (event->cbutton.button)
+        {
+            case SDL_CONTROLLER_BUTTON_A:
+                setSwitch(PLAYER_1, BUTTON_1, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_B:
+                setSwitch(PLAYER_1, BUTTON_2, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_X:
+                setSwitch(PLAYER_1, BUTTON_3, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_Y:
+                setSwitch(PLAYER_1, BUTTON_4, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_UP:
+                setSwitch(PLAYER_1, BUTTON_UP, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+                setSwitch(PLAYER_1, BUTTON_DOWN, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+                setSwitch(PLAYER_1, BUTTON_LEFT, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+                setSwitch(PLAYER_1, BUTTON_RIGHT, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_START:
+                setSwitch(PLAYER_1, BUTTON_START, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_GUIDE:
+                setSwitch(PLAYER_1, BUTTON_SERVICE, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_BACK:
+                incrementCoin(PLAYER_1, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_MISC1:
+                setSwitch(SYSTEM, BUTTON_TEST, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
+                setSwitch(PLAYER_1, BUTTON_5, isPress);
+                break;
+            case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
+                setSwitch(PLAYER_1, BUTTON_6, isPress);
+                break;
+        }
+    }
+    break;
+
     default:
         break;
     }
@@ -758,6 +1267,9 @@ void handleSdlEvents(SDL_Event *event)
     {
     case DRIVING:
         sdlEventDriving(event);
+        break;
+    case HARLEY:
+        sdlEventHarley(event);
         break;
     case SHOOTING:
     case FIGHTING:
