@@ -31,6 +31,9 @@ typedef struct
     int maxEnabled;
 
     int isAnalogue;
+    int isNeg; // reversed axis
+
+    int isCoin;
 } ArcadeInput;
 
 typedef enum
@@ -49,6 +52,8 @@ typedef enum {
 typedef struct
 {
     char inputName[SIZE];
+    char inputTechName[SIZE];
+    char inputTechNegName[SIZE];
     int evType;
     int evCode;
     SpecialFunction specialFunction;

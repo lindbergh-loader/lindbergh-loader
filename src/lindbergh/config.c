@@ -1316,6 +1316,8 @@ int readConfig(FILE *configFile, EmulatorConfig *config)
             strncpy(config->arcadeInputs.player1_button_9, getNextToken(NULL, " ", &saveptr), INPUT_STRING_LENGTH - 1);
         else if (strcmp(command, "PLAYER_1_BUTTON_10") == 0)
             strncpy(config->arcadeInputs.player1_button_10, getNextToken(NULL, " ", &saveptr), INPUT_STRING_LENGTH - 1);
+        else if (strcmp(command, "PLAYER_1_COIN") == 0)
+            strncpy(config->arcadeInputs.player1_coin, getNextToken(NULL, " ", &saveptr), INPUT_STRING_LENGTH - 1);
 
         // Player 2 controls
         else if (strcmp(command, "PLAYER_2_BUTTON_START") == 0)
