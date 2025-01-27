@@ -981,6 +981,17 @@ static ControllerStatus listControllers(Controllers *controllers)
                       // hum ok, truncated value
                     }
 
+		    ControllerInput *shakeControllerInput =
+		      &controllers->controller[i].inputs[controllers->controller[i].inputCount++];
+                    shakeControllerInput->evType = EV_ABS;
+                    shakeControllerInput->evCode = code;
+                    shakeControllerInput->specialFunction = ANALOGUE_SHAKE;
+                    strcpy(shakeControllerInput->inputName, controllerInput->inputName);
+                    strcat(shakeControllerInput->inputName, "_SHAKE");
+                    if(snprintf(shakeControllerInput->inputTechName, SIZE, "%s:ABS:%i:SHAKE", controllers->controller[i].path, code) >= 1024) {
+                      // hum ok, truncated value
+                    }
+
                     struct input_absinfo absoluteFeatures;
                     ioctl(controller, EVIOCGABS(code), &absoluteFeatures);
                     controllers->controller[i].absMin[code] = absoluteFeatures.minimum;
@@ -1119,6 +1130,17 @@ void *controllerThread(void *_args)
                        setAnalogue(channel, scaled > 0.8 ? pow(2, jvsBits) * 0.8 : pow(2, jvsBits) * 0.5);
                     }
                 }
+		if (args->controller->absTriggers[event.code].shakeEnabled)
+		  {
+		    int channel = args->controller->absTriggers[event.code].shakeChannel;
+		    if( (scaled > args->controller->absTriggers[event.code].shakePreviousScaled &&  scaled - args->controller->absTriggers[event.code].shakePreviousScaled > 0.1) ||
+			(scaled < args->controller->absTriggers[event.code].shakePreviousScaled && -scaled + args->controller->absTriggers[event.code].shakePreviousScaled > 0.1)) {
+		      setAnalogue(channel, 0);
+		    } else {
+		      setAnalogue(channel, pow(2, jvsBits) / 2);
+		    }
+		    args->controller->absTriggers[event.code].shakePreviousScaled = scaled;
+		  }
             }
             break;
 
@@ -1269,6 +1291,7 @@ ControllerStatus startControllerThreads(Controllers *controllers)
             controllers->controller[i].absTriggers[j].enabled = 0;
             controllers->controller[i].absTriggers[j].minEnabled = 0;
             controllers->controller[i].absTriggers[j].maxEnabled = 0;
+            controllers->controller[i].absTriggers[j].shakeEnabled = 0;
             controllers->controller[i].absTriggers[j].isNeg = 0;
         }
 
@@ -1347,6 +1370,18 @@ ControllerStatus startControllerThreads(Controllers *controllers)
                     controllers->controller[i].absTriggers[controllers->controller[i].inputs[j].evCode].minPlayer =
                         input.player;
                     controllers->controller[i].absTriggers[controllers->controller[i].inputs[j].evCode].isNeg = negabs;
+                }
+                break;
+
+                case ANALOGUE_SHAKE:
+                {
+                    controllers->controller[i].absTriggers[controllers->controller[i].inputs[j].evCode].shakeEnabled = 1;
+                    controllers->controller[i].absTriggers[controllers->controller[i].inputs[j].evCode].shakeChannel =
+                        input.channel;
+                    strcpy(controllers->controller[i].absTriggers[controllers->controller[i].inputs[j].evCode].shakeName,
+                           input.name);
+                    controllers->controller[i].absTriggers[controllers->controller[i].inputs[j].evCode].shakePlayer =
+                        input.player;
                 }
                 break;
 
