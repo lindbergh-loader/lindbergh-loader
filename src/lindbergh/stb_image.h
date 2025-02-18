@@ -702,14 +702,14 @@ static int stbi__sse2_available()
 
 static int stbi__sse2_available()
 {
-#if defined(__GNUC__) && (__GNUC__ * 100 + __GNUC_MINOR__) >= 408 // GCC 4.8 or later
+//#if defined(__GNUC__) && (__GNUC__ * 100 + __GNUC_MINOR__) >= 408 // GCC 4.8 or later
    // GCC 4.8+ has a nice way to do this
-   return __builtin_cpu_supports("sse2");
-#else
+   //return __builtin_cpu_supports("sse2");
+//#else
    // portable way to do this, preferably without using GCC inline ASM?
    // just bail for now.
    return 0;
-#endif
+//#endif
 }
 #endif
 #endif
