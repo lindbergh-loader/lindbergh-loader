@@ -1,7 +1,7 @@
-CC = gcc -m32 -pthread
-CFLAGS = -g -fPIC -m32 -Wall -Werror -Wno-misleading-indentation -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unused-function -D_GNU_SOURCE -Wno-char-subscripts
-LD = g++ -m32
-LDFLAGS = -Wl,-z,defs -rdynamic -static-libgcc -lc -ldl -lGL -lglut -lX11 -lSDL2 -lm -lpthread -shared -nostdlib -lasound -L./src/libxdiff -lxdiff
+CC ?= gcc
+CFLAGS = -g -fPIC -m32 -pthread -Wall -Werror -Wno-misleading-indentation -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unused-function -D_GNU_SOURCE -Wno-char-subscripts
+LD ?= g++
+LDFLAGS = -m32 -Wl,-z,defs -rdynamic -static-libgcc -lc -ldl -lGL -lglut -lX11 -lXcursor -lSDL2 -lm -lpthread -shared -nostdlib -lasound -L./src/libxdiff -lxdiff
 
 BUILD = build
 
@@ -15,9 +15,9 @@ OBJS := $(filter-out src/lindbergh/lindbergh.o, $(OBJS))
 
 all: lindbergh libxdiff.a lindbergh.so libsegaapi.so libkswapapi.so libposixtime.so
 
-lindbergh: src/lindbergh/lindbergh.c src/lindbergh/log.c src/lindbergh/log.h src/lindbergh/jvs.c src/lindbergh/jvs.h src/lindbergh/config.h src/lindbergh/config.c src/lindbergh/evdevinput.h src/lindbergh/evdevinput.c
+lindbergh: src/lindbergh/lindbergh.c src/lindbergh/log.c src/lindbergh/hw210.c src/lindbergh/log.h src/lindbergh/jvs.c src/lindbergh/jvs.h src/lindbergh/config.h src/lindbergh/config.c src/lindbergh/evdevinput.h src/lindbergh/evdevinput.c
 	mkdir -p $(BUILD)
-	$(CC) src/lindbergh/lindbergh.c src/lindbergh/log.h src/lindbergh/log.c src/lindbergh/jvs.h src/lindbergh/jvs.c src/lindbergh/config.h src/lindbergh/config.c src/lindbergh/evdevinput.c src/lindbergh/evdevinput.h -o $(BUILD)/lindbergh -lm
+	$(CC) -m32 src/lindbergh/lindbergh.c src/lindbergh/log.h src/lindbergh/hw210.c src/lindbergh/log.c src/lindbergh/jvs.h src/lindbergh/jvs.c src/lindbergh/config.h src/lindbergh/config.c src/lindbergh/evdevinput.c src/lindbergh/evdevinput.h -o $(BUILD)/lindbergh -lm
 
 libxdiff.a: $(XDIFF_OBJS)
 	mkdir -p $(BUILD)
@@ -34,7 +34,7 @@ lindbergh.so: $(OBJS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 libsegaapi.so: src/libsegaapi/libsegaapi.o
-	$(CC) -m32 -O0 -g src/libsegaapi/libsegaapi.c -lFAudio -L/app/lib32 -fPIC -shared -o $(BUILD)/libsegaapi.so
+	$(CC) -m32 -O0 -g src/libsegaapi/libsegaapi.c -lFAudio -fPIC -shared -o $(BUILD)/libsegaapi.so
 
 libkswapapi.so: src/libkswapapi/libkswapapi.o
 	$(CC) src/libkswapapi/libkswapapi.o -fPIC -shared -o $(BUILD)/libkswapapi.so
