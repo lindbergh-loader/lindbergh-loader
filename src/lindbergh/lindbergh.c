@@ -233,7 +233,7 @@ void testModePath(char *name)
  * Makes sure the environment variables are set correctly
  * to run the game.
  */
-void setEnvironmentVariables(int isFlatpak)
+void setEnvironmentVariables(int isFlatpak, int zink)
 {
     // Ensure the library path is set correctly
     char libraryPath[128] = {0};
@@ -254,6 +254,9 @@ void setEnvironmentVariables(int isFlatpak)
         setenv(LD_PRELOAD, PRELOAD_FILE_NAME, 1);
     else
         setenv(LD_PRELOAD, PRELOAD_FILE_FLATPAK, 1);
+  
+    if(zink)
+        setenv("MESA_LOADER_DRIVER_OVERRIDE", "zink", 1);
 }
 
 /**
@@ -400,13 +403,11 @@ int main(int argc, char *argv[])
         }
     }
 
-    // Ensure environment variables are set correctly
-    setEnvironmentVariables(isFlatpak);
-
     // Build up the command to start the game
 
     int testMode = 0;
     int gdb = 0;
+    int zink = 0;
     int forceGame = 0;
     int segaboot = 0;
     char extConfigPath[PATH_MAX] = {0};
@@ -431,6 +432,13 @@ int main(int argc, char *argv[])
             gdb = 1;
             continue;
         }
+
+        if (strcmp(argv[i], "--zink") == 0)
+        {
+            zink = 1;
+            continue;
+        }
+      
         if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--config") == 0)
         {
             if (i+1 >= argc)
@@ -446,6 +454,9 @@ int main(int argc, char *argv[])
         forceGame = 1;
     }
 
+    // Ensure environment variables are set correctly
+    setEnvironmentVariables(isFlatpak, zink);
+  
     char command[128] = {0};
     strcpy(command, "./");
     if (forceGame)
