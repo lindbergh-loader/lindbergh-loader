@@ -2,7 +2,7 @@ CC ?= gcc
 CFLAGS = -g -fPIC -m32 -pthread -Wall -Werror -Wno-misleading-indentation -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unused-function -D_GNU_SOURCE -Wno-char-subscripts
 CXX ?= g++
 LD = $(CXX) 
-LDFLAGS = -m32 -Wl,-z,defs -rdynamic -static-libgcc -lc -ldl -lGL -lglut -lX11 -lXcursor -lSDL2 -lm -lpthread -shared -nostdlib -lasound -L./src/libxdiff -lxdiff
+LDFLAGS = -m32 -Wl,-z,defs -rdynamic -static-libgcc -lc -ldl -lGL -lglut -lX11 -lXcursor -lSDL2 -lm -lpthread -shared -nostdlib -lasound -L./src/libxdiff -lxdiff -L/app/lib32
 
 BUILD = build
 
