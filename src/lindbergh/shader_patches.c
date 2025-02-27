@@ -1435,9 +1435,13 @@ void loadLibCg()
     void *handle = dlopen("./libCg.so", RTLD_NOW);
     if (!handle)
     {
-        fprintf(stderr, "Error: Unable to load library libCg.so %s\n", dlerror());
-        fprintf(stderr, "Error: libCg.so version 2.0 is needed to compile the shaders in the game's folder.\n");
-        exit(1);
+        handle = dlopen("/app/lib32/libCg2.so", RTLD_NOW);
+        if (!handle)
+        {
+            fprintf(stderr, "Error: Unable to load library libCg.so %s\n", dlerror());
+            fprintf(stderr, "Error: libCg.so version 2.0 is needed to compile the shaders in the game's folder.\n");
+            exit(1);
+        }
     }
 
     char libCgVersion[9];
