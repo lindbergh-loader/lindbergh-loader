@@ -11,6 +11,7 @@
 #define LD_LIBRARY_PATH "LD_LIBRARY_PATH"
 #define LD_PRELOAD "LD_PRELOAD"
 #define PRELOAD_FILE_NAME "lindbergh.so"
+#define PRELOAD_FILE_FLATPAK "/app/lib32/lindbergh.so"
 #define TEAM "bobbydilley, retrofan, dkeruza-neo, doozer, francesco, rolel, caviar-x"
 #define LINDBERGH_CONFIG_PATH "LINDBERGH_CONFIG_PATH"
 
@@ -232,7 +233,7 @@ void testModePath(char *name)
  * Makes sure the environment variables are set correctly
  * to run the game.
  */
-void setEnvironmentVariables()
+void setEnvironmentVariables(int isFlatpak)
 {
     // Ensure the library path is set correctly
     char libraryPath[128] = {0};
@@ -249,7 +250,10 @@ void setEnvironmentVariables()
     setenv(LD_LIBRARY_PATH, libraryPath, 1);
 
     // Ensure the preload path is set correctly
-    setenv(LD_PRELOAD, PRELOAD_FILE_NAME, 1);
+    if (!isFlatpak)
+        setenv(LD_PRELOAD, PRELOAD_FILE_NAME, 1);
+    else
+        setenv(LD_PRELOAD, PRELOAD_FILE_FLATPAK, 1);
 }
 
 /**
@@ -316,9 +320,6 @@ void printVersion() {
  */
 int main(int argc, char *argv[])
 {
-    // Ensure environment variables are set correctly
-    setEnvironmentVariables();
-
     // Check for --version before directory operations
     if (argc > 1 && strcmp(argv[1], "--version") == 0) {
         printVersion();
@@ -338,6 +339,7 @@ int main(int argc, char *argv[])
     char *game = NULL;
 
     int lindberghSharedObjectFound = 0;
+    int isFlatpak = 0;
 
     while ((ent = readdir(dir)) != NULL)
     {
@@ -385,9 +387,21 @@ int main(int argc, char *argv[])
 
     if (!lindberghSharedObjectFound)
     {
-        log_error("The preload object lindbergh.so was not found in this directory.");
-        return EXIT_FAILURE;
+        FILE *file = fopen(PRELOAD_FILE_FLATPAK, "r");
+        if (file)
+        {
+            fclose(file);
+            isFlatpak = 1;
+        }
+        else
+        {
+            log_error("The preload object lindbergh.so was not found in this directory.");
+            return EXIT_FAILURE;
+        }
     }
+
+    // Ensure environment variables are set correctly
+    setEnvironmentVariables(isFlatpak);
 
     // Build up the command to start the game
 
