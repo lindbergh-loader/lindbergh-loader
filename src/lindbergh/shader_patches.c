@@ -1432,6 +1432,7 @@ int parseCgcArgs(const char *input, const char ***compilerArgs, const char **out
 
 void loadLibCg()
 {
+    int isFlatpak = 0;
     void *handle = dlopen("./libCg.so", RTLD_NOW);
     if (!handle)
     {
@@ -1442,10 +1443,19 @@ void loadLibCg()
             fprintf(stderr, "Error: libCg.so version 2.0 is needed to compile the shaders in the game's folder.\n");
             exit(1);
         }
+        else
+        {
+            isFlatpak = 1;
+        }
     }
 
     char libCgVersion[9];
-    FILE *libF = fopen("./libCg.so", "r");
+    FILE *libF;
+    if (isFlatpak)
+        libF = fopen("/app.lib32/libCg.so", "r");
+    else
+        libF = fopen("./libCg.so", "r");
+
     fseek(libF, 0x226d84, SEEK_SET);
     fread(libCgVersion, 9, 1, libF);
     fclose(libF);
