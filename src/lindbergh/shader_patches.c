@@ -1452,7 +1452,7 @@ void loadLibCg()
     char libCgVersion[9];
     FILE *libF;
     if (isFlatpak)
-        libF = fopen("/app.lib32/libCg.so", "r");
+        libF = fopen("/app/lib32/libCg2.so", "r");
     else
         libF = fopen("./libCg.so", "r");
 
