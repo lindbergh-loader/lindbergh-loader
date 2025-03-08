@@ -183,6 +183,7 @@ typedef struct {
     char player1_button_8[INPUT_STRING_LENGTH];
     char player1_button_9[INPUT_STRING_LENGTH];
     char player1_button_10[INPUT_STRING_LENGTH];
+    char player1_coin[INPUT_STRING_LENGTH];
 
     // Player 2 controls
     char player2_button_start[INPUT_STRING_LENGTH];

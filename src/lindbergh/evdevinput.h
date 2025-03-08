@@ -31,6 +31,15 @@ typedef struct
     int maxEnabled;
 
     int isAnalogue;
+    int isNeg; // reversed axis
+
+    char shakeName[SIZE];
+    int shakeChannel;
+    int shakeEnabled;
+    int shakePlayer;
+    double shakePreviousScaled;
+
+    int isCoin;
 } ArcadeInput;
 
 typedef enum
@@ -43,12 +52,15 @@ typedef enum {
     NO_SPECIAL_FUNCTION = 0,
     ANALOGUE_TO_DIGITAL_MAX,
     ANALOGUE_TO_DIGITAL_MIN,
-    DIGITAL_TO_ANALOGUE
+    DIGITAL_TO_ANALOGUE,
+    ANALOGUE_SHAKE
 } SpecialFunction;
 
 typedef struct
 {
     char inputName[SIZE];
+    char inputTechName[SIZE];
+    char inputTechNegName[SIZE];
     int evType;
     int evCode;
     SpecialFunction specialFunction;
