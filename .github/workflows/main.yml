@@ -40,8 +40,8 @@ jobs:
           NEW_RUN_NUMBER=$(( ${{ github.run_number }} + 161 ))
           echo "NEW_RUN_NUMBER=$NEW_RUN_NUMBER" >> $GITHUB_ENV
 
-      - name: Display Updated Number
-        run: echo "Updated Run Number: ${{ env.NEW_RUN_NUMBER }}"
+#      - name: Display Updated Number
+#        run: echo "Updated Run Number: ${{ env.NEW_RUN_NUMBER }}"
 
       - name: Create Preview Release
         if: github.ref == 'refs/heads/master'
