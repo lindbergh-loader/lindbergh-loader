@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "config.h"
 #include "eeprom_settings.h"
 
 uint32_t crc32_table[255];

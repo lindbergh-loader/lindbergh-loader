@@ -1,0 +1,323 @@
+app-id: com.github.lindberghloader
+runtime: org.freedesktop.Platform
+runtime-version: &runtime-version '24.08'
+x-gl-version: &gl-version '1.4'
+x-gl-versions: &gl-versions 24.08;1.4
+x-gl-merge-dirs: &gl-merge-dirs vulkan/icd.d;glvnd/egl_vendor.d;egl/egl_external_platform.d;OpenCL/vendors;lib/dri;lib/d3d;lib/gbm;vulkan/explicit_layer.d;vulkan/implicit_layer.d
+sdk: org.freedesktop.Sdk
+command: lindbergh
+
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.toolchain-i386
+  - org.freedesktop.Sdk.Compat.i386
+
+x-arch-build-options:
+  i386: &i386-build-options
+    libdir: /app/lib32
+    env:
+      CC: /usr/lib/sdk/toolchain-i386/bin/i686-unknown-linux-gnu-gcc
+      CXX: /usr/lib/sdk/toolchain-i386/bin/i686-unknown-linux-gnu-g++
+      LD: /usr/lib/sdk/toolchain-i386/bin/i686-unknown-linux-gnu-ld
+      LDFLAGS: "-L/app/lib32"
+
+finish-args:
+  - --env=LD_LIBRARY_PATH=/app/lib32:$LD_LIBRARY_PATH
+  - --env=LDFLAGS="-L/app/lib32"
+  - --env=PATH=/app/bin:/usr/bin
+  - --allow=multiarch
+  - --share=ipc
+  - --share=network
+  - --socket=x11
+  - --socket=wayland
+  - --device=all
+  - --socket=pulseaudio
+  - --filesystem=~/Games
+
+add-extensions:
+  org.freedesktop.Platform.Compat.i386:
+    directory: lib/i386-linux-gnu
+    version: *runtime-version
+    no-autodownload: true
+
+  org.freedesktop.Platform.Compat.i386.Debug:
+    directory: lib/debug/lib/i386-linux-gnu
+    version: *runtime-version
+    no-autodownload: true
+
+  org.freedesktop.Platform.GL32:
+    directory: lib/i386-linux-gnu/GL
+    version: *gl-version
+    versions: *gl-versions
+    subdirectories: true
+    no-autodownload: true
+    autodelete: false
+    add-ld-path: lib
+    merge-dirs: *gl-merge-dirs
+    download-if: active-gl-driver
+    enable-if: active-gl-driver
+    autoprune-unless: active-gl-driver
+
+  org.freedesktop.Platform.GL32.Debug:
+    directory: lib/debug/lib/i386-linux-gnu/GL
+    version: *gl-version
+    versions: *gl-versions
+    subdirectories: true
+    no-autodownload: true
+    merge-dirs: *gl-merge-dirs
+    enable-if: active-gl-driver
+    autoprune-unless: active-gl-driver
+
+modules:
+  - name: libstdcxx5
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/lib32
+      - install -Dm644 libstdc++.so.5 /app/lib32/libstdc++.so.5
+    sources:
+      - type: file
+        path: ./assets/libstdc++.so.5
+
+  - name: libGLU
+    buildsystem: autotools
+    config-opts:
+      - --host=i686-unknown-linux-gnu
+      - --prefix=/app
+    build-options:
+      arch:
+        x86_64: *i386-build-options
+    sources:
+      - type: archive
+        url: https://mesa.freedesktop.org/archive/glu/glu-9.0.2.tar.xz
+        sha256: 6e7280ff585c6a1d9dfcdf2fca489251634b3377bfc33c29e4002466a38d02d4
+
+  - name: freeglut
+    buildsystem: cmake
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_PREFIX=/app
+    sources:
+      - type: archive
+        url: https://downloads.sourceforge.net/freeglut/freeglut-3.2.2.tar.gz
+        sha256: c5944a082df0bba96b5756dddb1f75d0cd72ce27b5395c6c1dde85c2ff297a50
+    build-options:
+      arch:
+        x86_64: *i386-build-options
+
+  - name: libFAudio-Dynamic
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_PREFIX=/app
+      - -DBUILD_SDL3=off
+      - -DCMAKE_INSTALL_LIBDIR=/app/lib32
+    build-options:
+      arch:
+        x86_64: *i386-build-options
+      env:
+        CFLAGS: "-m32 -mstackrealign"
+        CXXFLAGS: "-m32 -mstackrealign"
+    sources:
+      - type: git
+        url: https://github.com/FNA-XNA/FAudio.git
+        tag: "24.12"
+
+  - name: libxmu
+    buildsystem: autotools
+    config-opts:
+      - --libdir=/app/lib32
+      - --with-shared
+    sources:
+      - type: archive
+        url: https://xorg.freedesktop.org/releases/individual/lib/libXmu-1.2.1.tar.gz
+        sha256: bf0902583dd1123856c11e0a5085bd3c6e9886fbbd44954464975fd7d52eb599
+    build-options:
+#      arch:
+#        x86_64: *i386-build-options
+      env:
+        CC: /usr/lib/sdk/toolchain-i386/bin/i686-unknown-linux-gnu-gcc
+        CXX: /usr/lib/sdk/toolchain-i386/bin/i686-unknown-linux-gnu-g++
+        LD: /usr/lib/sdk/toolchain-i386/bin/i686-unknown-linux-gnu-ld
+      libdir: /app/lib32
+
+  - name: libmd
+    buildsystem: autotools
+    config-opts:
+      - --libdir=/app/lib32
+    sources:
+      - type: archive
+        url: https://archive.hadrons.org/software/libmd/libmd-1.1.0.tar.xz
+        sha256: 1bd6aa42275313af3141c7cf2e5b964e8b1fd488025caf2f971f43b00776b332
+    build-options:
+      arch:
+        x86_64: *i386-build-options
+
+  - name: libbsd
+    buildsystem: autotools
+    config-opts:
+      - --libdir=/app/lib32
+    sources:
+      - type: archive
+        url: https://libbsd.freedesktop.org/releases/libbsd-0.12.2.tar.xz
+        sha256: b88cc9163d0c652aaf39a99991d974ddba1c3a9711db8f1b5838af2a14731014
+    build-options:
+      arch:
+        x86_64: *i386-build-options
+
+  - name: ncurses
+    buildsystem: autotools
+    config-opts:
+      - --libdir=/app/lib32
+      - --with-shared
+      - --without-debug
+    sources:
+      - type: archive
+        url: https://ftp.gnu.org/pub/gnu/ncurses/ncurses-5.9.tar.gz
+        sha256: 9046298fb440324c9d4135ecea7879ffed8546dd1b58e59430ea07a4633f563b
+      - type: patch
+        path: ./assets/ncurses-5.9.patch
+    build-options:
+      arch:
+        x86_64: *i386-build-options
+      env:
+        CPPFLAGS: "-P"
+        CXXFLAGS: "-std=c++14"
+        
+  - name: nvidia-cg-toolkit
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 usr/lib/libCg.so /app/lib32/libCg.so
+      - install -Dm755 usr/lib/libCgGL.so /app/lib32/libCgGL.so
+    sources:
+      - type: archive
+        url: http://developer.download.nvidia.com/cg/Cg_3.1/Cg-3.1_April2012_x86.tgz
+        sha256: cef3591e436f528852db0e8c145d3842f920e0c89bcfb219c466797cb7b18879
+
+  - name: libsndio-dynamic
+    buildsystem: autotools
+    config-opts:
+      - --libdir=/app/lib32
+      - --enable-dynamic
+      - --enable-alsa
+    sources:
+      - type: archive
+        url: https://www.sndio.org/sndio-1.10.0.tar.gz
+        sha256: bebd3bfd01c50c9376cf3e7814b9379bed9e17d0393b5113b7eb7a3d0d038c54
+    build-options:
+      arch:
+        x86_64: *i386-build-options
+
+  - name: libsndio-static
+    buildsystem: autotools
+    config-opts:
+      - --libdir=/app/lib32
+      - --enable-static
+      - --enable-alsa
+    sources:
+      - type: archive
+        url: https://www.sndio.org/sndio-1.10.0.tar.gz
+        sha256: bebd3bfd01c50c9376cf3e7814b9379bed9e17d0393b5113b7eb7a3d0d038c54
+    build-options:
+      arch:
+        x86_64: *i386-build-options
+
+  - name: libopenal
+    buildsystem: cmake
+    config-opts:
+      - -DCMAKE_INSTALL_LIBDIR=/app/lib32
+      - -DALSOFT_BACKEND_PULSEAUDIO=ON
+      - -DALSOFT_BACKEND_ALSA=ON
+      - -DALSOFT_BACKEND_JACK=OFF
+      - -DALSOFT_BACKEND_SNDIO=ON
+      - -DSOUNDIO_INCLUDE_DIR=/app/include
+      - -DSOUNDIO_LIBRARY=/app/lib32/libsndio.so
+    sources:
+      - type: archive
+        url: https://github.com/kcat/openal-soft/archive/refs/tags/openal-soft-1.17.2.tar.gz
+        sha256: 11ea176f6cbf9763dbce0953dd77ab72d032b4ad95f07afffb91844abb174033
+    build-options:
+      arch:
+        x86_64: *i386-build-options
+      env:
+        CFLAGS: "-m32 -mstackrealign"
+        CXXFLAGS: "-m32 -std=c++14 -mstackrealign"
+
+  - name: openssl
+    buildsystem: simple
+    build-commands:
+      - ./Configure --prefix=/app --openssldir=/app/etc/ssl shared 386 no-asm no-krb5 linux-pentium
+      - make CC=/usr/lib/sdk/toolchain-i386/bin/i686-unknown-linux-gnu-gcc RANLIB=/usr/lib/sdk/toolchain-i386/bin/i686-unknown-linux-gnu-ranlib
+      - mv libcrypto.* /app/lib32
+      - mv libssl.* /app/lib32
+    sources:
+      - type: archive
+        url: https://github.com/openssl/openssl/archive/refs/tags/OpenSSL_0_9_7.tar.gz
+        sha256: 14e3a90f75994689e8c1bef098a97021f225a1a1623a7b8012079bd8b2eca1e8
+
+  - name: libpcsclite
+    buildsystem: meson
+    config-opts:
+      - --libdir=/app/lib32
+      - -Dpolkit=false
+      - -Dlibsystemd=false
+    build-options:
+      arch:
+        x86_64: *i386-build-options
+      env:
+        CFLAGS: "-m32"
+        CXXFLAGS: "-m32"
+        LDFLAGS: "-m32"
+        PKG_CONFIG_PATH: "/app/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig"
+        LD_LIBRARY_PATH: "/app/lib32:/usr/lib/i386-linux-gnu/pkgconfig:$LD_LIBRARY_PATH"
+    sources:
+      - type: archive
+        url: https://pcsclite.apdu.fr/files/pcsc-lite-2.3.1.tar.xz
+        sha256: a641d44d57affe1edd8365dd75307afc307e7eefb4e7ad839f6f146baa41ed56
+
+  - name: lindbergh-loader
+    buildsystem: simple
+    build-commands:
+      - export LD_LIBRARY_PATH=/app/lib32:$LD_LIBRARY_PATH
+      - make
+      - mkdir -p /app/bin
+      - mkdir -p /app/lib/i386-linux-gnu
+      - mkdir -p /app/lib/i386-linux-gnu/GL
+      - install -Dm755 ./build/lindbergh /app/bin/
+      - install -Dm755 ./build/lindbergh.so /app/lib32/
+      - install -Dm755 ./build/libsegaapi.so /app/lib32/
+      - install -Dm755 ./build/libkswapapi.so /app/lib32/
+      - install -Dm755 ./build/libposixtime.so /app/lib32/
+      - install -Dm755 ./libs/libCg.so /app/lib32/libCg2.so
+      - ln -s -f libposixtime.so /app/lib32/libposixtime.so.1
+      - ln -s -f libposixtime.so /app/lib32/libposixtime.so.2.4
+      - ln -s -f libopenal.so /app/lib32/libopenal.so.0
+      - ln -s -f libkswapapi.so /app/lib32/libGLcore.so.1
+      - ln -s -f libkswapapi.so /app/lib32/libnvidia-tls.so.1
+      - mv /app/lib/libopenal* /app/lib32/
+    build-options:
+      arch:
+        x86_64: *i386-build-options
+    sources:
+      - type: dir
+        path: ../..
+
+  - name: bundle-setup
+    buildsystem: simple
+    build-commands:
+      - install -Dm644 -t /app/etc ld.so.conf
+    sources:
+      - type: file
+        path: ./assets/ld.so.conf
+
+  - name: cleanup
+    buildsystem: simple
+    build-commands:
+      - find /app/lib /app/lib32 -name '*.a' -type f -delete
+      - find /app/lib /app/lib32 -name '*.la' -type f -delete
+      - find /app/bin -mindepth 1  ! -name "lindbergh*" -exec rm -f {} \;
+      - rm -d /app/lib/terminfo
+      - rm -rf /app/lib/pkgconfig /app/lib32/pkgconfig /app/share/pkgconfig /app/lib32/cmake /app/lib/debug /app/include /app/man /app/share
+      - rm /app/lib32/libmenu.*
+      - rm /app/lib32/libform.*
+      - rm /app/lib32/libpanel.*
+      - rm /app/lib32/libXmuu.*
+      - rm /app/lib32/libbsd.so

@@ -202,7 +202,8 @@ typedef struct {
     char player2_button_8[INPUT_STRING_LENGTH];
     char player2_button_9[INPUT_STRING_LENGTH];
     char player2_button_10[INPUT_STRING_LENGTH];
-    
+    char player2_coin[INPUT_STRING_LENGTH];
+
     // Analogue inputs
     char analogue_1[INPUT_STRING_LENGTH];
     char analogue_2[INPUT_STRING_LENGTH];
@@ -225,6 +226,7 @@ typedef struct
     int emulateDriveboard;
     int emulateMotionboard;
     int emulateCardreader;
+    int emulateTouchscreen;
     char cardFile1[MAX_PATH_LENGTH];
     char cardFile2[MAX_PATH_LENGTH];
     int emulateJVS;
@@ -236,6 +238,7 @@ typedef struct
     char serial2Path[MAX_PATH_LENGTH];
     int width;
     int height;
+    int boostRenderRes;
     Colour lindberghColour;
     GameStatus gameStatus;
     GameType gameType;
@@ -268,6 +271,9 @@ typedef struct
     char customCursor[MAX_PATH_LENGTH];
     int customCursorWidth;
     int customCursorHeight;
+    char phTouchCursor[MAX_PATH_LENGTH];
+    int phTouchCursorWidth;
+    int phTouchCursorHeight;
     int mj4EnabledAtT;
     char or2IP[16];
     char or2Netmask[16];

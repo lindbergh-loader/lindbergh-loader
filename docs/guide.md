@@ -4,31 +4,67 @@
 
 The follow list of games are supported. It is worth noting that there are multiple releases of these games, and some specific releases may not be supported.
 
-| Game Name                       | Game ID | DVP      | NVidia | Intel (Mesa) | AMD (Mesa) | AMD (proprietary) |
-|---------------------------------|---------|----------|--------|--------------|------------|-------------------|
-| 2 Spicy                         | SBMV    | DVP-0027 | ✓      | ✓            | ✓          | ✓                 |
-| After Burner Climax             | SBLR    | DVP-0009 | ✓      | ✓            | ✓          |                   |
-| Ghost Squad Evolution           | SBNJ    | DVP-0029 | ✓      | ✓            | ✓          | ✓                 |
-| Harley Davidson                 | SBRG    | DVP-5007 | ✓      | ✓            | ✓          | ✓                 |
-| Hummer Extreme                  | SBST    | DVP-0079 | ✓      | ✓            | ✓          | ✓                 |
-| Hummer                          | SBQN    | DVP-0057 | ✓      | ✓            | ✓          | ✓                 |
-| Let's Go Jungle                 | SBLU    | DVP-0011 | ✓      | ✓            | ✓          |                   |
-| Let's Go Jungle Special         | SBNR    | DVP-0036 | ✓      | ✓            | ✓          |                   |
-| Outrun 2 SP SDX                 | SBMB    | DVP-0015 | ✓      | ✓            | ✓          | ✓                 |
-| R-Tuned                         | SBQW    | DVP-0060 | ✓      | ✓            | ✓          | ✓                 |
-| Race TV                         | SBPF    | DVP-0044 | ✓      | ✓            | ✓          | ✓                 |
-| Rambo                           | SBQL    | DVP-0069 | ✓      | ✓            | ✓          | ✓                 |
-| The House of the Dead 4         | SBLC    | DVP-0003 | ✓      | ✓            | ✓          | ✓                 |
-| The House of the Dead 4 Special | SBLS    | DVP-0010 | ✓      | ✓            | ✓          | ✓                 |
-| The House of the Dead Ex        | SBRC    | DVP-0063 | ✓      | ✓            | ✓          | ✓                 |
-| Virtua Fighter 5                | SBLM    | DVP-0008 | ✓      | ✓            | ✓          | ✓                 |
-| Virtua Fighter 5 R              | SBQU    | DVP-5004 | ✓      | ✓            | ✓          | ✓                 |
-| Virtua Fighter 5 FS             | SBUV    | DVP-5019 | ✓      | ✓            | ✓          | ✓                 |
-| Initial D 4                     | SBNK    | DVP-0030 | ✓      | ✓            | ✓          | ✓                 |
-| Initial D 5                     | SBTS    | DVP-0075 | ✓      | ✓            | ✓          |                   |
-| Virtua Tennis 3                 | SBKX    | DVP-0005 | ✓      | ✓            | ✓          | ✓                 |
-| Primeval Hunt                   | SBPP    | DVP-0048 | ✓      | ✓            | ✓          | ✓                 |
-
+| Game Name                                        | Game ID | DVP       | NVidia | Intel (Mesa) | AMD (Mesa) | AMD (proprietary) |
+|--------------------------------------------------|---------|-----------|--------|--------------|------------|-------------------|
+| After Burner Climax                              | SBLR    | DVP-0009  | ✓      | ✓            | ✓          |                   |
+| After Burner Climax Rev A                        | SBLR    | DVP-0009A | ✓      | ✓            | ✓          |                   |
+| After Burner Climax Rev B                        | SBLR    | DVP-0009B | ✓      | ✓            | ✓          |                   |
+| After Burner Climax SDX                          | SBMN    | DVP-0018  | ✓      | ✓            | ✓          |                   |
+| After Burner Climax SDX Rev A                    | SBMN    | DVP-0018A | ✓      | ✓            | ✓          |                   |
+| After Burner Climax SE                           | SBLR    | DVP-0031  | ✓      | ✓            | ✓          |                   |
+| After Burner Climax SE Rev A                     | SBLR    | DVP-0031A | ✓      | ✓            | ✓          |                   |
+| Ghost Squad Evolution                            | SBNJ    | DVP-0029  | ✓      | ✓            | ✓          | ✓                 |
+| Harley Davidson                                  | SBRG    | DVP-5007  | ✓      | ✓            | ✓          | ✓                 |
+| Hummer                                           | SBQN    | DVP-0057B | ✓      | ✓            | ✓          | ✓                 |
+| Hummer SDLX                                      | SBST    | DVP-0057  | ✓      | ✓            | ✓          | ✓                 |
+| Hummer Extreme                                   | SBST    | DVP-0079  | ✓      | ✓            | ✓          | ✓                 |
+| Hummer Extreme MDX                               | SBST    | DVP-0083  | ✓      | ✓            | ✓          | ✓                 |
+| Initial D Arcade Stage 4 Rev A                   | SBML    | DVP-0019A | ✓      | ✓            | ✓          | ✓                 |
+| Initial D Arcade Stage 4 Rev B                   | SBML    | DVP-0019B | ✓      | ✓            | ✓          | ✓                 |
+| Initial D Arcade Stage 4 Rev C                   | SBML    | DVP-0019C | ✓      | ✓            | ✓          | ✓                 |
+| Initial D Arcade Stage 4 Rev D                   | SBML    | DVP-0019D | ✓      | ✓            | ✓          | ✓                 |
+| Initial D Arcade Stage 4 Rev G                   | SBML    | DVP-0019G | ✓      | ✓            | ✓          | ✓                 |
+| Initial D Arcade Stage 4 Export Rev B            | SBNK    | DVP-0030B | ✓      | ✓            | ✓          | ✓                 |
+| Initial D Arcade Stage 4 Export Rev C            | SBNK    | DVP-0030C | ✓      | ✓            | ✓          | ✓                 |
+| Initial D Arcade Stage 4 Export Rev D            | SBNK    | DVP-0030D | ✓      | ✓            | ✓          | ✓                 |
+| Initial D 5 EXP                                  | SBRY    | DVP-0075  | ✓      | ✓            | ✓          |                   |
+| Initial D 5 EXP 2.0                              | SBTS    | DVP-0084  | ✓      | ✓            | ✓          |                   |
+| Initial D 5 EXP 2.0 Rev A                        | SBQN    | DVP-0084A | ✓      | ✓            | ✓          |                   |
+| Initial D Arcade Stage 5 Rev A                   | SBQZ    | DVP-0070A | ✓      | ✓            | ✓          |                   |
+| Initial D Arcade Stage 5 Rev F                   | SBQZ    | DVP-0070F | ✓      | ✓            | ✓          |                   |
+| Let's Go Jungle                                  | SBLU    | DVP-0011  | ✓      | ✓            | ✓          |                   |
+| Let's Go Jungle!  Rev A                          | SBLU    | DVP-0011A | ✓      | ✓            | ✓          |                   |
+| Let's Go Jungle Special                          | SBNR    | DVP-0036  | ✓      | ✓            | ✓          |                   |
+| SEGA Network Taisen Mahjong MJ4                  | SBPN    | DVP-0049G | ✓      | ✓            | ✓          | ✓                 |
+| SEGA Network Taisen Mahjong MJ4 Evolution        | SBTA    | DVP-0081  | ✓      | ✓            | ✓          | ✓                 |
+| Outrun 2 SP SDX                                  | SBMB    | DVP-0015  | ✓      | ✓            | ✓          | ✓                 |
+| Outrun 2 SP SDX Rev A                            | SBMB    | DVP-0015A | ✓      | ✓            | ✓          | ✓                 |
+| Primeval Hunt                                    | SBPP    | DVP-0048  | ✓      | ✓            | ✓          | ✓                 |
+| Rambo                                            | SBQL    | DVP-0069  | ✓      | ✓            | ✓          | ✓                 |
+| R-Tuned                                          | SBQW    | DVP-0060  | ✓      | ✓            | ✓          | ✓                 |
+| Sega Race TV                                     | SBPF    | DVP-0044  | ✓      | ✓            | ✓          | ✓                 |
+| The House of the Dead 4 Rev A                    | SBLC    | DVP-0003A | ✓      | ✓            | ✓          | ✓                 |
+| The House of the Dead 4 Rev B                    | SBLC    | DVP-0003B | ✓      | ✓            | ✓          | ✓                 |
+| The House of the Dead 4 Rev C                    | SBLC    | DVP-0003C | ✓      | ✓            | ✓          | ✓                 |
+| The House of the Dead 4 Special                  | SBLS    | DVP-0010  | ✓      | ✓            | ✓          | ✓                 |
+| The House of the Dead 4 Special Rev B            | SBLS    | DVP-0010B | ✓      | ✓            | ✓          | ✓                 |
+| The House of the Dead Ex                         | SBRC    | DVP-0063  | ✓      | ✓            | ✓          | ✓                 |
+| Too Spicy                                        | SBMV    | DVP-0027  | ✓      | ✓            | ✓          | ✓                 |
+| Virtua Fighter 5                                 | SBLM    | DVP-0008  | ✓      | ✓            | ✓          | ✓                 |
+| Virtua Fighter 5 Rev A                           | SBLM    | DVP-0008A | ✓      | ✓            | ✓          | ✓                 |
+| Virtua Fighter 5 Rev B                           | SBLM    | DVP-0008B | ✓      | ✓            | ✓          | ✓                 |
+| Virtua Fighter 5 Rev E (Public Version C)        | SBLM    | DVP-0008E | ✓      | ✓            | ✓          | ✓                 |
+| Virtua Fighter 5 Export                          | SBLM    | DVP-0043  | ✓      | ✓            | ✓          | ✓                 |
+| Virtua Fighter 5 Final Showdown REV A            | SBUV    | DVP-5019  | ✓      | ✓            | ✓          | ✓                 |
+| Virtua Fighter 5 Final Showdown REV B            | SBXX    | DVP-5020  | ✓      | ✓            | ✓          | ✓                 |
+| Virtua Fighter 5 Final Showdown REV B ver 6.0000 | SBXX    | DVP-5020  | ✓      | ✓            | ✓          | ✓                 |
+| Virtua Fighter 5 R                               | SBQU    | DVP-5004  | ✓      | ✓            | ✓          | ✓                 |
+| Virtua Fighter 5 R Rev D                         | SBQU    | DVP-5004D | ✓      | ✓            | ✓          | ✓                 |
+| Virtua Fighter 5 R Rev G                         | SBQU    | DVP-5004G | ✓      | ✓            | ✓          | ✓                 |
+| Virtua Tennis 3                                  | SBKX    | DVP-0005  | ✓      | ✓            | ✓          | ✓                 |
+| Virtua Tennis 3 Rev A                            | SBKX    | DVP-0005A | ✓      | ✓            | ✓          | ✓                 |
+| Virtua Tennis 3 Rev B                            | SBKX    | DVP-0005B | ✓      | ✓            | ✓          | ✓                 |
+| Virtua Tennis 3 Rev C                            | SBKX    | DVP-0005C | ✓      | ✓            | ✓          | ✓                 |
 
 ## Game Issues & Fixes
 
@@ -48,26 +84,11 @@ sudo ln -s /lib/i386-linux-gnu/libglut.so /lib/i386-linux-gnu/libglut.so.3
 
 ### Let's Go Jungle Rev A
 
-The game must be run in export mode to have the stereo sound option.
+- The game must be run in export mode to have the stereo sound option.
 
 ### Outrun 2 SP SDX
 
-You need to set `SKIP_OUTRUN_CABINET_CHECK` to 1 in `lindbergh.conf` to play in DX, SDX or Standard cabinet types.
-
-### Ghost Squad / 2Spicy
-
-You may have sound issues such as the game complaining that the system cannot open `/dev[/sound]/dsp`. You **must not** use the `libopenal.so.0` files that came with the game, please delete those if you've moved them into your game folder. Do the following:
-
-```
-sudo apt install pipewire-audio-client-libraries:i386
-sudo cp /usr/share/doc/pipewire/examples/alsa.conf.d/99-pipewire-default.conf /etc/alsa/conf.d/
-```
-
-Then in the game folder you must create a symlink to the `libopenal.so.1` library installed on your system:
-
-```
-ln -s /usr/lib/i386-linux-gnu/libopenal.so.1 libopenal.so.0
-```
+- You need to set `SKIP_OUTRUN_CABINET_CHECK` to 1 in `lindbergh.conf` to play in DX, SDX or Standard cabinet types.
 
 ## Configuration File : lindbergh.conf
 
@@ -135,3 +156,67 @@ Will cause input on analogue input 1 to be clamped as follows:
 
 There are currently no audio options that you can set. If you have a stereo sound card installed then the audio will be downmixed to stereo. If you have a 5.1 sound card installed and the game supports surround sound, each surround channel should be passed through properly and should play sound as it was originally intended.
 
+
+## Installing and Running the Flatpak
+
+### Prerequisites
+
+Before installing the main package, ensure that Flatpak is set up on your system. If Flatpak is not installed, follow the official [Flatpak setup guide](https://flatpak.org/setup/).
+
+### Installation
+
+Once downloaded, install Lindbergh Loader by running the following command in your terminal:
+
+```
+flatpak install lindbergh-loader-dev.flatpak
+```
+
+Additionally, install the required dependencies:
+
+```
+flatpak install org.freedesktop.Platform.Compat.i386//24.08
+flatpak install org.freedesktop.Platform.GL32.default//24.08
+```
+Intel GPU Users (VAAPI Support):
+
+```
+flatpak install org.freedesktop.Platform.VAAPI.Intel.i386//24.08
+```
+
+NVIDIA GPU Users (Driver Support):
+
+If your system uses an NVIDIA GPU, you need to install the matching NVIDIA driver package for your system.
+To check your NVIDIA driver version, run:
+
+```
+nvidia-smi
+```
+Then, install the corresponding Flatpak package, replacing 570-86-16 with your actual driver version:
+
+```
+flatpak install org.freedesktop.Platform.GL32.nvidia-570-86-16
+```
+
+### Running Lindbergh Loader
+
+Once installed, launch the application with:
+
+```
+flatpak run com.github.lindberghloader.dev
+```
+
+### Managing Game Locations
+
+By default, games should be added to:
+
+```
+~/Games
+```
+
+If you need to add more locations, install Flatseal:
+
+```
+flatpak install com.github.tchx84.Flatseal
+```
+
+Then, run Flatseal and grant Lindbergh Loader access to additional directories.

@@ -619,6 +619,7 @@ static int detectGame(uint32_t elf_crc)
         config.gameReleaseYear = "2008";
         config.gameNativeResolutions = "640x480";
         config.emulateDriveboard = 1;
+        config.emulateCardreader = 1;
         config.gameStatus = WORKING;
         config.gameType = DRIVING;
         config.width = 640;
@@ -947,6 +948,7 @@ static int detectGame(uint32_t elf_crc)
         config.gameID = "SBKX";
         config.gameReleaseYear = "2006";
         config.gameNativeResolutions = "640x480, 1360x768";
+        config.emulateCardreader = 1;
         config.gameStatus = WORKING;
         config.width = 1360;
         config.height = 768;
@@ -962,6 +964,7 @@ static int detectGame(uint32_t elf_crc)
         config.gameID = "SBKX";
         config.gameReleaseYear = "2006";
         config.gameNativeResolutions = "640x480, 1360x768";
+        config.emulateCardreader = 1;
         config.gameType = FIGHTING;
         config.gameStatus = WORKING;
         config.width = 1360;
@@ -978,6 +981,7 @@ static int detectGame(uint32_t elf_crc)
         config.gameID = "SBKX";
         config.gameReleaseYear = "2006";
         config.gameNativeResolutions = "640x480, 1360x768";
+        config.emulateCardreader = 1;
         config.gameType = FIGHTING;
         config.gameStatus = WORKING;
         config.width = 1360;
@@ -994,6 +998,7 @@ static int detectGame(uint32_t elf_crc)
         config.gameID = "SBKX";
         config.gameReleaseYear = "2006";
         config.gameNativeResolutions = "640x480, 1360x768";
+        config.emulateCardreader = 1;
         config.gameType = FIGHTING;
         config.gameStatus = WORKING;
         config.width = 1360;
@@ -1069,7 +1074,7 @@ int getNextIntOrAuto(char *saveptr, int defaultValue) {
     strcpy(nextToken, getNextToken(NULL, " ", &saveptr));
     toLowerCase(nextToken);
 
-    if(strcmp(nextToken, "auto") == 0)
+    if (strcmp(nextToken, "auto") == 0)
         return defaultValue;
 
     return atoi(nextToken);
@@ -1099,6 +1104,9 @@ int readConfig(FILE *configFile, EmulatorConfig *config)
             config->height = getNextIntOrAuto(saveptr, defaultValue);
         }
 
+        else if (strcmp(command, "BOOST_RENDER_RES") == 0)
+            config->boostRenderRes = atoi(getNextToken(NULL, " ", &saveptr));
+
         else if (strcmp(command, "EEPROM_PATH") == 0)
             strcpy(config->eepromPath, getNextToken(NULL, " ", &saveptr));
 
@@ -1121,7 +1129,13 @@ int readConfig(FILE *configFile, EmulatorConfig *config)
         }
 
         else if (strcmp(command, "EMULATE_CARDREADER") == 0)
-            config->emulateCardreader = atoi(getNextToken(NULL, " ", &saveptr));
+        {
+            int defaultValue = config->emulateCardreader;
+            config->emulateCardreader = getNextIntOrAuto(saveptr, defaultValue);
+        }
+
+        else if (strcmp(command, "EMULATE_TOUCHSCREEN") == 0)
+            config->emulateTouchscreen = atoi(getNextToken(NULL, " ", &saveptr));
 
         else if (strcmp(command, "CARDFILE_01") == 0)
             strcpy(config->cardFile1, getNextToken(NULL, " ", &saveptr));
@@ -1236,6 +1250,15 @@ int readConfig(FILE *configFile, EmulatorConfig *config)
 
         else if (strcmp(command, "CUSTOM_CURSOR_HEIGHT") == 0)
             config->customCursorHeight = atoi(getNextToken(NULL, " ", &saveptr));
+
+        else if (strcmp(command, "PH_TOUCH_CURSOR") == 0)
+            strcpy(config->phTouchCursor, getNextToken(NULL, " ", &saveptr));
+
+        else if (strcmp(command, "PH_TOUCH_CURSOR_WIDTH") == 0)
+            config->phTouchCursorWidth = atoi(getNextToken(NULL, " ", &saveptr));
+
+        else if (strcmp(command, "PH_TOUCH_CURSOR_HEIGHT") == 0)
+            config->phTouchCursorHeight = atoi(getNextToken(NULL, " ", &saveptr));
 
         else if (strcmp(command, "MJ4_ENABLED_ALL_THE_TIME") == 0)
             config->phMode = atoi(getNextToken(NULL, " ", &saveptr));
@@ -1380,6 +1403,8 @@ int readConfig(FILE *configFile, EmulatorConfig *config)
             strncpy(config->arcadeInputs.player2_button_9, getNextToken(NULL, " ", &saveptr), INPUT_STRING_LENGTH - 1);
         else if (strcmp(command, "PLAYER_2_BUTTON_10") == 0)
             strncpy(config->arcadeInputs.player2_button_10, getNextToken(NULL, " ", &saveptr), INPUT_STRING_LENGTH - 1);
+        else if (strcmp(command, "PLAYER_2_COIN") == 0)
+            strncpy(config->arcadeInputs.player2_coin, getNextToken(NULL, " ", &saveptr), INPUT_STRING_LENGTH - 1);
 
         // Analogue inputs
         else if (strcmp(command, "ANALOGUE_1") == 0)
@@ -1496,6 +1521,7 @@ int initConfig(const char* configFilePath)
     config.emulateDriveboard = 0;
     config.emulateMotionboard = 0;
     config.emulateCardreader = 0;
+    config.emulateTouchscreen = 0;
     strcpy(config.cardFile1, "Card_01.crd");
     strcpy(config.cardFile2, "Card_02.crd");
     config.emulateJVS = 1;
@@ -1508,6 +1534,7 @@ int initConfig(const char* configFilePath)
     strcpy(config.serial2Path, "/dev/ttyS1");
     config.width = 640;
     config.height = 480;
+    config.boostRenderRes = 1;
     config.region = EX;
     config.freeplay = -1;
     config.showDebugMessages = 0;
@@ -1528,13 +1555,16 @@ int initConfig(const char* configFilePath)
     config.fpsLimiter = 0;
     config.fpsTarget = 60;
     config.noSDL = 0;
-    config.phMode = 1;
+    config.phMode = 2;
     config.disableBuiltinFont = 0;
     config.disableBuiltinLogos = 0;
     config.hideCursor = 1;
     strcpy(config.customCursor, "");
     config.customCursorWidth = 32;
     config.customCursorHeight = 32;
+    strcpy(config.phTouchCursor, "");
+    config.phTouchCursorWidth = 32;
+    config.phTouchCursorHeight = 32;
     config.mj4EnabledAtT = 0;
 
      strcpy(config.or2IP, "");

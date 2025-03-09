@@ -1,13 +1,11 @@
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
-#include <SDL2/SDL_events.h>
 #endif
 #include <time.h>
 #define GL_GLEXT_PROTOTYPES
 #include "patch.h"
 
 #include <GL/glx.h>
-#include <SDL2/SDL.h>
 
 #include <dlfcn.h>
 #include <stdarg.h>
@@ -24,12 +22,18 @@
 #include "shader_patches.h"
 #include "glxhooks.h"
 #include "log.h"
+#include "customcursor.h"
 
+extern uint32_t gId;
 char elfID[4];
 void *amDipswContextAddr;
 extern void *glVertex3fPatchRetAddrABC[4];
 extern void *glVertex3fNoPatchRetAddrABC[4];
 void *hod4CursorHideShowCAVEAddress;
+
+extern void *customCursor;
+extern void *phTouchCursor;
+extern void *blankCursor;
 
 void setVariable(size_t address, size_t value)
 {
@@ -175,7 +179,6 @@ int amDongleUpdate()
 
 int amDongleUserInfoEx(int a, int b, char *_arcadeContext)
 {
-    uint32_t gId = getConfig()->crc32;
     char *gameID;
     switch (gId)
     {
@@ -322,9 +325,8 @@ int or2snprintf(char *s, size_t n, const char *format, ...)
     return ret;
 }
 
-
 // printf hook, used by OR2
-int patchedPrintf(char *format,...)
+int patchedPrintf(char *format, ...)
 {
     if (format == NULL)
         return 0;
@@ -370,7 +372,7 @@ void hod4CursorHideShow(int param1)
         {
             if (hod4PrevValue != 3 || hod4InTutorial)
             {
-                SDL_ShowCursor(SDL_DISABLE);
+                hideCursor();
             }
             hod4PrevValue = 0;
         }
@@ -379,7 +381,7 @@ void hod4CursorHideShow(int param1)
         {
             if (!hod4InTutorial)
             {
-                SDL_ShowCursor(SDL_ENABLE);
+                showCursor();
                 hod4PrevValue = 3;
             }
         }
@@ -392,7 +394,7 @@ void hod4CursorHideShow(int param1)
         case 5:
         case 11:
         {
-            SDL_ShowCursor(SDL_DISABLE);
+            hideCursor();
         }
         }
     }
@@ -421,8 +423,9 @@ int hod4VsPrintf(char *str, const char *format, va_list arg)
 int initPatch()
 {
     EmulatorConfig *config = getConfig();
+    int GPUVendor = getConfig()->GPUVendor;
 
-    switch (config->crc32)
+    switch (gId)
     {
     case AFTER_BURNER_CLIMAX: // DVP-0009
     {
@@ -440,7 +443,7 @@ int initPatch()
         detourFunction(0x081e2a9c, amDipswInit);
         detourFunction(0x081e2b38, amDipswExit);
 
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0804e1e4, gl_ProgramStringARB);
         }
@@ -462,7 +465,7 @@ int initPatch()
         detourFunction(0x081e31e4, amDipswInit);
         detourFunction(0x081e3280, amDipswExit);
 
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0804e1e4, gl_ProgramStringARB);
         }
@@ -484,7 +487,7 @@ int initPatch()
         detourFunction(0x081e3248, amDipswInit);
         detourFunction(0x081e32e4, amDipswExit);
 
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0804e1ec, gl_ProgramStringARB);
         }
@@ -505,7 +508,7 @@ int initPatch()
         detourFunction(0x081e47a4, amDipswInit);
         detourFunction(0x081e4840, amDipswExit);
 
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0804e244, gl_ProgramStringARB);
         }
@@ -527,7 +530,7 @@ int initPatch()
         detourFunction(0x081e478c, amDipswInit);
         detourFunction(0x081e4828, amDipswExit);
 
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0804e24c, gl_ProgramStringARB);
         }
@@ -549,7 +552,7 @@ int initPatch()
         detourFunction(0x081e3294, amDipswInit);
         detourFunction(0x081e3330, amDipswExit);
 
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0804e1e4, gl_ProgramStringARB);
         }
@@ -571,7 +574,7 @@ int initPatch()
         detourFunction(0x081e327c, amDipswInit);
         detourFunction(0x081e3318, amDipswExit);
 
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0804e1ec, gl_ProgramStringARB);
         }
@@ -601,7 +604,7 @@ int initPatch()
         detourFunction(0x080e7f94, stubRetZero);
 
         cacheModedShaderFiles();
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             gsEvoElfShaderPatcher();
             detourFunction(0x0804c334, gl_ProgramStringARB);
@@ -623,7 +626,7 @@ int initPatch()
         detourFunction(0x08394825, amDipswGetData);
         detourFunction(0x08395da5, amDongleUserInfoEx);
 
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             cacheModedShaderFiles();
             loadLibCg();
@@ -910,7 +913,7 @@ int initPatch()
         setVariable(0x0857f0e9, 0x000126e9);    // Avoid Full Screen set from Game
         patchMemory(0x087bc56c, "ab");          // Skips initialization
 
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x08078860, gl_MultiTexCoord2fARB);
             detourFunction(0x080788d0, gl_Color4ub);
@@ -965,7 +968,7 @@ int initPatch()
         setVariable(0x0857ee69, 0x000126e9);    // Avoid Full Screen set from Game
         patchMemory(0x087bc2ec, "eb");          // Skips initialization
 
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x08078860, gl_MultiTexCoord2fARB);
             detourFunction(0x080788d0, gl_Color4ub);
@@ -1020,7 +1023,7 @@ int initPatch()
         setVariable(0x08580979, 0x000126e9);     // Avoid Full Screen set from Game
         patchMemory(0x087beb6c, "5b");           // Skips initialization
 
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x080788ec, gl_MultiTexCoord2fARB);
             detourFunction(0x0807895c, gl_Color4ub);
@@ -1076,7 +1079,7 @@ int initPatch()
         patchMemory(0x08799adc, "df");          // Skips initialization
         setVariable(0x085593c9, 0x000126e9);    // Avoid Full Screen set from Game
 
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x08078980, gl_MultiTexCoord2fARB);
             detourFunction(0x080789f0, gl_Color4ub);
@@ -1132,7 +1135,7 @@ int initPatch()
         patchMemory(0x08799d9c, "cf");          // Skips initialization
         setVariable(0x08559609, 0x000126e9);    // Avoid Full Screen set from Game
 
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x080789a4, gl_MultiTexCoord2fARB);
             detourFunction(0x08078a14, gl_Color4ub);
@@ -1188,7 +1191,7 @@ int initPatch()
         patchMemory(0x087a2efc, "ff");          // Skips initialization
         setVariable(0x08561e79, 0x000126e9);    // Avoid Full Screen set from Game
 
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x080789a4, gl_MultiTexCoord2fARB);
             detourFunction(0x08078a14, gl_Color4ub);
@@ -1244,7 +1247,7 @@ int initPatch()
         patchMemory(0x087a025c, "6f");          // Skips initialization
         setVariable(0x0855f519, 0x000126e9);    // Avoid Full Screen set from Game
 
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x080789a4, gl_MultiTexCoord2fARB);
             detourFunction(0x08078a14, gl_Color4ub);
@@ -1300,7 +1303,7 @@ int initPatch()
         patchMemory(0x087e9ebc, "3f36");        // Skips initialization
         setVariable(0x08599819, 0x000126e9);    // Avoid Full Screen set from Game
 
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0807a298, gl_MultiTexCoord2fARB);
             detourFunction(0x0807a308, gl_Color4ub);
@@ -1358,7 +1361,7 @@ int initPatch()
         patchMemory(0x08789a49, "e92601000090");   // Prevents Full Screen set from the game
 
         // Mesa Patches
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0807a3f0, gl_MultiTexCoord2fARB);
             detourFunction(0x0807a470, gl_Color4ub);
@@ -1424,7 +1427,7 @@ int initPatch()
         detourFunction(0x089382e0, stubRetZero); // Eliminates amsInit Function
 
         // Mesa Patches
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0807a6c0, gl_MultiTexCoord2fARB);
             detourFunction(0x0807a740, gl_Color4ub);
@@ -1490,7 +1493,7 @@ int initPatch()
         detourFunction(0x08938530, stubRetZero); // Eliminates amsInit Function
 
         // Mesa Patches
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0807a6c0, gl_MultiTexCoord2fARB);
             detourFunction(0x0807a740, gl_Color4ub);
@@ -1548,7 +1551,7 @@ int initPatch()
         patchMemory(0x08441f99, "eb60"); // tickInitAddress
 
         // Mesa Patches
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0807a3f0, gl_MultiTexCoord2fARB);
             detourFunction(0x0807a470, gl_Color4ub);
@@ -1613,7 +1616,7 @@ int initPatch()
         detourFunction(0x0850fba0, stubRetZero); // isUseServerBox
 
         // Mesa Patches
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0807a42c, gl_MultiTexCoord2fARB);
             detourFunction(0x0807a4ac, gl_Color4ub);
@@ -1627,54 +1630,6 @@ int initPatch()
         detourFunction(0x08397aa4, stubRetOne); // isExistNewerSource
         detourFunction(0x0807b3bc, gl_XGetProcAddressARB);
         patchMemory(0x0875e1ae, "00"); // Fix cutscenes
-    }
-    break;
-    case LETS_GO_JUNGLE_REVA:
-    {
-        if (config->showDebugMessages == 1)
-        {
-            setVariable(0x08c10604, 2);              // amBackupDebugLevel
-            setVariable(0x08c10620, 2);              // amCreditDebugLevel
-            setVariable(0x08c10878, 2);              // amDipswDebugLevel
-            setVariable(0x08c1087c, 2);              // amDongleDebugLevel
-            setVariable(0x08c10880, 2);              // amEepromDebugLevel
-            setVariable(0x08c10884, 2);              // amHwmonitorDebugLevel
-            setVariable(0x08c10888, 2);              // amJvsDebugLevel
-            setVariable(0x08c1088c, 2);              // amLibDebugLevel
-            setVariable(0x08c10890, 2);              // amMiscDebugLevel
-            setVariable(0x08c10898, 2);              // amSysDataDebugLevel
-            setVariable(0x08c108a0, 2);              // bcLibDebugLevel
-            setVariable(0x08c10894, 2);              // amOsinfoDebugLevel
-            setVariable(0x08c108a4, 0x0FFFFFFF);     // s_logMask
-            detourFunction(0x08074a8c, _putConsole); // Debug Messages
-        }
-        // Security
-        detourFunction(0x084e9fbc, amDongleInit);
-        detourFunction(0x084ea378, amDongleIsAvailable);
-        detourFunction(0x084ea29c, amDongleUpdate);
-        patchMemory(0x0807b86a, "9090"); // Patch initializeArcadeBackup
-        // Fixes
-        amDipswContextAddr = (void *)0x08c43e08; // Address of amDipswContext
-        detourFunction(0x084e9de0, amDipswInit);
-        detourFunction(0x084e9e7c, amDipswExit);
-        detourFunction(0x084e9ef2, amDipswGetData);
-        detourFunction(0x084e9f6a, amDipswSetLed);
-        patchMemory(0x084125f0, "9090"); // No full screen
-
-        // Mesa Patches
-        if (getConfig()->GPUVendor != NVIDIA_GPU || getConfig()->lgjRenderWithMesa)
-        {
-            detourFunction(0x08071790, gl_MultiTexCoord2fARB);
-            detourFunction(0x08071800, gl_Color4ub);
-            detourFunction(0x08071a30, gl_Vertex3f);
-            detourFunction(0x08072080, gl_TexCoord2f);
-            detourFunction(0x08072110, cg_GLIsProfileSupported);
-            detourFunction(0x08071e50, gl_ProgramStringARB);
-            cacheModedShaderFiles();
-        }
-        detourFunction(0x080722e0, gl_ProgramParameters4fvNV);
-        // patchMemory(0x083f4626, "909090909090");
-        detourFunction(0x08072520, gl_XGetProcAddressARB);
     }
     break;
     case LETS_GO_JUNGLE:
@@ -1710,7 +1665,7 @@ int initPatch()
         patchMemory(0x0840d858, "9090"); // No full screen
 
         // Mesa Patches
-        if (getConfig()->GPUVendor != NVIDIA_GPU || getConfig()->lgjRenderWithMesa)
+        if (GPUVendor != NVIDIA_GPU || getConfig()->lgjRenderWithMesa)
         {
             detourFunction(0x080716e4, gl_MultiTexCoord2fARB);
             detourFunction(0x08071754, gl_Color4ub);
@@ -1723,6 +1678,54 @@ int initPatch()
         detourFunction(0x08072214, gl_ProgramParameters4fvNV);
         // patchMemory(0x083ef88e, "909090909090");
         detourFunction(0x08072454, gl_XGetProcAddressARB);
+    }
+    break;
+    case LETS_GO_JUNGLE_REVA:
+    {
+        if (config->showDebugMessages == 1)
+        {
+            setVariable(0x08c10604, 2);              // amBackupDebugLevel
+            setVariable(0x08c10620, 2);              // amCreditDebugLevel
+            setVariable(0x08c10878, 2);              // amDipswDebugLevel
+            setVariable(0x08c1087c, 2);              // amDongleDebugLevel
+            setVariable(0x08c10880, 2);              // amEepromDebugLevel
+            setVariable(0x08c10884, 2);              // amHwmonitorDebugLevel
+            setVariable(0x08c10888, 2);              // amJvsDebugLevel
+            setVariable(0x08c1088c, 2);              // amLibDebugLevel
+            setVariable(0x08c10890, 2);              // amMiscDebugLevel
+            setVariable(0x08c10898, 2);              // amSysDataDebugLevel
+            setVariable(0x08c108a0, 2);              // bcLibDebugLevel
+            setVariable(0x08c10894, 2);              // amOsinfoDebugLevel
+            setVariable(0x08c108a4, 0x0FFFFFFF);     // s_logMask
+            detourFunction(0x08074a8c, _putConsole); // Debug Messages
+        }
+        // Security
+        detourFunction(0x084e9fbc, amDongleInit);
+        detourFunction(0x084ea378, amDongleIsAvailable);
+        detourFunction(0x084ea29c, amDongleUpdate);
+        patchMemory(0x0807b86a, "9090"); // Patch initializeArcadeBackup
+        // Fixes
+        amDipswContextAddr = (void *)0x08c43e08; // Address of amDipswContext
+        detourFunction(0x084e9de0, amDipswInit);
+        detourFunction(0x084e9e7c, amDipswExit);
+        detourFunction(0x084e9ef2, amDipswGetData);
+        detourFunction(0x084e9f6a, amDipswSetLed);
+        patchMemory(0x084125f0, "9090"); // No full screen
+
+        // Mesa Patches
+        if (GPUVendor != NVIDIA_GPU || getConfig()->lgjRenderWithMesa)
+        {
+            detourFunction(0x08071790, gl_MultiTexCoord2fARB);
+            detourFunction(0x08071800, gl_Color4ub);
+            detourFunction(0x08071a30, gl_Vertex3f);
+            detourFunction(0x08072080, gl_TexCoord2f);
+            detourFunction(0x08072110, cg_GLIsProfileSupported);
+            detourFunction(0x08071e50, gl_ProgramStringARB);
+            cacheModedShaderFiles();
+        }
+        detourFunction(0x080722e0, gl_ProgramParameters4fvNV);
+        // patchMemory(0x083f4626, "909090909090");
+        detourFunction(0x08072520, gl_XGetProcAddressARB);
     }
     break;
     case LETS_GO_JUNGLE_SPECIAL:
@@ -1758,7 +1761,7 @@ int initPatch()
         patchMemory(0x08438954, "9090"); // No full screen
 
         // Mesa Patches
-        if (getConfig()->GPUVendor != NVIDIA_GPU || getConfig()->lgjRenderWithMesa)
+        if (GPUVendor != NVIDIA_GPU || getConfig()->lgjRenderWithMesa)
         {
             detourFunction(0x080718e0, gl_MultiTexCoord2fARB);
             detourFunction(0x08071950, gl_Color4ub);
@@ -1771,6 +1774,32 @@ int initPatch()
         detourFunction(0x08072480, gl_ProgramParameters4fvNV);
         patchMemory(0x0841a98a, "909090909090");
         detourFunction(0x080726c0, gl_XGetProcAddressARB);
+    }
+    break;
+    case MJ4_EVO:
+    {
+        detourFunction(0x08840b61, amDongleInit);
+        detourFunction(0x0883f3ed, amDongleIsAvailable);
+        detourFunction(0x0883f40a, amDongleIsDevelop);
+        detourFunction(0x0883ff0e, amDongleUpdate);
+
+        // Fixes and patches to bypss network check
+        amDipswContextAddr = (void *)0x0af8ff3c; // Address of amDipswContext
+        detourFunction(0x0883f180, amDipswInit);
+        detourFunction(0x0883f204, amDipswExit);
+        detourFunction(0x0883f279, amDipswGetData);
+        detourFunction(0x0883f2ef, amDipswSetLed);
+
+        patchMemory(0x080ea0d1, "909090909090");
+        detourFunction(0x080e327c, stubRetZero); // skip checks
+        detourFunction(0x080ee4fa, stubRetZero);
+        patchMemory(0x080ea0bf, "75");
+        patchMemory(0x08c035b8, "00");
+
+        if (GPUVendor != NVIDIA_GPU)
+        {
+            detourFunction(0x08051314, gl_ProgramStringARB);
+        }
     }
     break;
     case MJ4_REVG:
@@ -1818,35 +1847,9 @@ int initPatch()
         patchMemory(0x08732fd3, "2e2f00");                         // Patch /home/disk2 folder
 
         // Mesa Patches
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x08050ebc, gl_ProgramStringARB);
-        }
-    }
-    break;
-    case MJ4_EVO:
-    {
-        detourFunction(0x08840b61, amDongleInit);
-        detourFunction(0x0883f3ed, amDongleIsAvailable);
-        detourFunction(0x0883f40a, amDongleIsDevelop);
-        detourFunction(0x0883ff0e, amDongleUpdate);
-
-        // Fixes and patches to bypss network check
-        amDipswContextAddr = (void *)0x0af8ff3c; // Address of amDipswContext
-        detourFunction(0x0883f180, amDipswInit);
-        detourFunction(0x0883f204, amDipswExit);
-        detourFunction(0x0883f279, amDipswGetData);
-        detourFunction(0x0883f2ef, amDipswSetLed);
-
-        patchMemory(0x080ea0d1, "909090909090");
-        detourFunction(0x080e327c, stubRetZero); // skip checks
-        detourFunction(0x080ee4fa, stubRetZero);
-        patchMemory(0x080ea0bf, "75");
-        patchMemory(0x08c035b8, "00");
-
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
-        {
-            detourFunction(0x08051314, gl_ProgramStringARB);
         }
     }
     break;
@@ -1888,7 +1891,7 @@ int initPatch()
 
         // Shader Patches
         detourFunction(0x0804ca98, gl_ProgramStringARB);
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0804cf38, glGenProgramsARB);             // Replaces glGenProgramsNV
             detourFunction(0x0804c548, gl_BindProgramNV);             // Replaces glBindProgramNV
@@ -1904,26 +1907,6 @@ int initPatch()
             detourFunction(0x0804d0a8, gl_BeginOcclusionQueryNV);     // Replaces glBeginOcclusionQueryNV
         }
         detourFunction(0x0804d148, or2snprintf); // Fixes a bug in snprintf libc 2.39??
-    }
-    break;
-    case OUTRUN_2_SP_SDX_TEST:
-    {
-        // Security
-        detourFunction(0x08066204, amDongleInit);
-        detourFunction(0x08066585, amDongleIsAvailable);
-        detourFunction(0x080664a9, amDongleUpdate);
-        detourFunction(0x080665a5, amDongleIsDevelop);
-
-        // Fixes
-        amDipswContextAddr = (void *)0x080980e8; // Address of amDipswContext
-        detourFunction(0x08066028, amDipswInit);
-        detourFunction(0x080660c4, amDipswExit);
-        detourFunction(0x0806613a, amDipswGetData);
-        detourFunction(0x080661b2, amDipswSetLed); // Stub amDipswSetLed
-        detourFunction(0x08066028, amDipswInit);
-
-        // Patch to allow selection of all cabinet types
-        patchMemory(0x08054a88, "9090909090");
     }
     break;
     case OUTRUN_2_SP_SDX_REVA:
@@ -1967,7 +1950,7 @@ int initPatch()
 
         // Shader Patches
         detourFunction(0x0804ca98, gl_ProgramStringARB);
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0804cf38, glGenProgramsARB);             // Replaces glGenProgramsNV
             detourFunction(0x0804c548, gl_BindProgramNV);             // Replaces glBindProgramNV
@@ -2014,6 +1997,26 @@ int initPatch()
         patchMemory(0x08054ac4, "9090909090");
     }
     break;
+    case OUTRUN_2_SP_SDX_TEST:
+    {
+        // Security
+        detourFunction(0x08066204, amDongleInit);
+        detourFunction(0x08066585, amDongleIsAvailable);
+        detourFunction(0x080664a9, amDongleUpdate);
+        detourFunction(0x080665a5, amDongleIsDevelop);
+
+        // Fixes
+        amDipswContextAddr = (void *)0x080980e8; // Address of amDipswContext
+        detourFunction(0x08066028, amDipswInit);
+        detourFunction(0x080660c4, amDipswExit);
+        detourFunction(0x0806613a, amDipswGetData);
+        detourFunction(0x080661b2, amDipswSetLed); // Stub amDipswSetLed
+        detourFunction(0x08066028, amDipswInit);
+
+        // Patch to allow selection of all cabinet types
+        patchMemory(0x08054a88, "9090909090");
+    }
+    break;
     case PRIMEVAL_HUNT:
     {
         // Security
@@ -2052,7 +2055,7 @@ int initPatch()
         detourFunction(0x082c3103, amDipswSetLed);
         cacheModedShaderFiles();
         // Mesa Patches
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             loadLibCg();
             cacheNnstdshader();
@@ -2087,7 +2090,7 @@ int initPatch()
         patchMemory(0x838C498, "2e2f524f4d5f4c414e472f656e00");   // Patch /home/disk0 folder
 
         // Mesa Patches
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x080507e8, gl_ProgramStringARB);
         }
@@ -2143,7 +2146,7 @@ int initPatch()
         srtvElfShaderPatcher();
 
         // Mesa Patches
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             patchMemory(0x082d3ce9, "9090"); // Force GL_NVX_conditional_render
         }
@@ -2406,22 +2409,6 @@ int initPatch()
         }
     }
     break;
-    case THE_HOUSE_OF_THE_DEAD_4_SPECIAL_TEST:
-    {
-        detourFunction(0x0806e9ec, amDongleInit);
-        detourFunction(0x0806ecff, amDongleIsAvailable);
-        detourFunction(0x0806ec66, amDongleUpdate);
-        // Fixes
-        amDipswContextAddr = (void *)0x080b2e88; // Address of amDipswContext
-        detourFunction(0x0806e794, amDipswInit);
-        detourFunction(0x0806e829, amDipswExit);
-        detourFunction(0x0806e89f, amDipswGetData);
-        detourFunction(0x0806e917, amDipswSetLed);
-
-        // CPU patch to support AMD processors
-        patchMemory(0x08054bf0, "9090909090"); //__intel_new_proc_init_P
-    }
-    break;
     case THE_HOUSE_OF_THE_DEAD_4_SPECIAL_REVB:
     {
         detourFunction(0x08363438, amDongleInit);
@@ -2464,6 +2451,22 @@ int initPatch()
         patchMemory(0x08054820, "9090909090"); //__intel_new_proc_init_P
     }
     break;
+    case THE_HOUSE_OF_THE_DEAD_4_SPECIAL_TEST:
+    {
+        detourFunction(0x0806e9ec, amDongleInit);
+        detourFunction(0x0806ecff, amDongleIsAvailable);
+        detourFunction(0x0806ec66, amDongleUpdate);
+        // Fixes
+        amDipswContextAddr = (void *)0x080b2e88; // Address of amDipswContext
+        detourFunction(0x0806e794, amDipswInit);
+        detourFunction(0x0806e829, amDipswExit);
+        detourFunction(0x0806e89f, amDipswGetData);
+        detourFunction(0x0806e917, amDipswSetLed);
+
+        // CPU patch to support AMD processors
+        patchMemory(0x08054bf0, "9090909090"); //__intel_new_proc_init_P
+    }
+    break;
     case THE_HOUSE_OF_THE_DEAD_EX:
     {
         detourFunction(0x084ba886, amDongleInit);
@@ -2482,7 +2485,7 @@ int initPatch()
         patchMemory(0x0804e4a7, "9090909090"); //__intel_new_proc_init_P
 
         // Mesa Patches
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             patchMemory(0x08503bfa, "6d657361"); // Rename compile folder to compmesa
             cacheModedShaderFiles();
@@ -2528,6 +2531,7 @@ int initPatch()
         patchMemory(0x08210f3c, "9090909090909090");
         patchMemory(0x08210f45, "01");
         patchMemory(0x08210f49, "909090");
+        patchMemory(0x082ef5d0, "9090909090");
         // Fixes
         amDipswContextAddr = (void *)0x0c8ed0cc;
         detourFunction(0x08318f84, amDipswInit);
@@ -2543,7 +2547,7 @@ int initPatch()
         detourFunction(0x081cbcd2, stubRetOne);
 
         // Mesa Patches
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             loadLibCg();
             cacheNnstdshader();
@@ -2607,7 +2611,7 @@ int initPatch()
         patchMemory(0x080a36de, "9090909090");
         patchMemory(0x080a35ed, "ffffffff");
         patchMemory(0x080a3620, "ffffffff");
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x08051b9c, gl_ProgramStringARB);
         }
@@ -2630,7 +2634,7 @@ int initPatch()
         detourFunction(0x08094d28, stubRetZero);
         patchMemory(0x080a29a5, "EB");
 
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0805160c, gl_ProgramStringARB);
         }
@@ -2661,11 +2665,11 @@ int initPatch()
         patchMemory(0x88AB0C1, "2e2f666f6f3100");                 // Patch /home/disk2 folder
         patchMemory(0x88AB0D2, "2e2f666f6f3200");                 // Patch /home/disk2 folder
         patchMemory(0x89C8F24, "2e2f00");                         // Patch /home/disk2 folder
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x08052aa4, gl_ProgramStringARB);
         }
-        if (getConfig()->GPUVendor != NVIDIA_GPU || getConfig()->GPUVendor == ATI_GPU)
+        if (GPUVendor != NVIDIA_GPU || GPUVendor == ATI_GPU)
         {
             hookVf5FSExposure(0x08148279, 0x0814844a, 0x08148b42, 0x08148d52);
         }
@@ -2696,11 +2700,11 @@ int initPatch()
         patchMemory(0x88CACBD, "2e2f666f6f3100");                 // Patch /home/disk2 folder
         patchMemory(0x88CACCE, "2e2f666f6f3200");                 // Patch /home/disk2 folder
         patchMemory(0x89DE5AA, "2e2f00");                         // Patch /home/disk2 folder
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x08052840, gl_ProgramStringARB);
         }
-        if (getConfig()->GPUVendor != NVIDIA_GPU || getConfig()->GPUVendor == ATI_GPU)
+        if (GPUVendor != NVIDIA_GPU || GPUVendor == ATI_GPU)
         {
             hookVf5FSExposure(0x08148a47, 0x08148c18, 0x08149310, 0x08149520);
         }
@@ -2732,11 +2736,11 @@ int initPatch()
         patchMemory(0x88CD4AE, "2e2f666f6f3200");                 // Patch /home/disk2 folder
         patchMemory(0x89ED9C4, "2e2f00");                         // Patch /home/disk2 folder
 
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x08052b20, gl_ProgramStringARB);
         }
-        if (getConfig()->GPUVendor != NVIDIA_GPU || getConfig()->GPUVendor == ATI_GPU)
+        if (GPUVendor != NVIDIA_GPU || GPUVendor == ATI_GPU)
         {
             hookVf5FSExposure(0x081489f7, 0x08148bc8, 0x081492c0, 0x081494d0);
         }
@@ -2769,7 +2773,7 @@ int initPatch()
         patchMemory(0x0810030c, "ffffffff");
         patchMemory(0x08100313, "ffffffff");
 
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x08052a68, gl_ProgramStringARB);
         }
@@ -2802,7 +2806,7 @@ int initPatch()
         patchMemory(0x08119204, "ffffffff");
         patchMemory(0x0811920b, "ffffffff");
 
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x08052a84, gl_ProgramStringARB);
         }
@@ -2835,7 +2839,7 @@ int initPatch()
         patchMemory(0x08119384, "ffffffff");
         patchMemory(0x0811938b, "ffffffff");
 
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x08052a70, gl_ProgramStringARB);
         }
@@ -2873,7 +2877,7 @@ int initPatch()
         patchMemory(0x080a6356, "9090909090");
         patchMemory(0x080a6265, "ffffffff");
         patchMemory(0x080a6298, "ffffffff");
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x08051c4c, gl_ProgramStringARB);
         }
@@ -2909,7 +2913,7 @@ int initPatch()
         patchMemory(0x080b5682, "9090909090");
         patchMemory(0x080B5591, "ffffffff");
         patchMemory(0x080B55C4, "ffffffff");
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x08052088, gl_ProgramStringARB);
         }
@@ -2946,7 +2950,7 @@ int initPatch()
         patchMemory(0x080e16b6, "9090909090");
         patchMemory(0x080e15bd, "ffffffff");
         patchMemory(0x080e15f7, "ffffffff");
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x08052fbc, gl_ProgramStringARB);
         }
@@ -2954,7 +2958,6 @@ int initPatch()
         patchMemory(0x080e173c, "B810000000");
     }
     break;
-
     case VIRTUA_TENNIS_3:
     {
         if (config->showDebugMessages == 1)
@@ -2972,12 +2975,12 @@ int initPatch()
         detourFunction(0x0831beb9, amDipswExit);
         detourFunction(0x0831bf2f, amDipswGetData);
         detourFunction(0x0831bfa7, stubRetZero);
-        setVariable(0x0827a7c7, 0x34891beb);     // Disable Fullscreen set from the game
+        setVariable(0x0827a7c7, 0x34891beb); // Disable Fullscreen set from the game
 
         detourFunction(0x08177acc, stubRetOne); // Patch seterror
 
         // Mesa
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0804d458, cg_GLGetLatestProfile);
             detourFunction(0x0804dcd8, cg_GLIsProfileSupported);
@@ -2991,37 +2994,6 @@ int initPatch()
             replaceCallAtAddress(0x0819caa6, vt3_tellg);
             replaceCallAtAddress(0x0819caf4, vt3_read);
             replaceCallAtAddress(0x0819cb3a, vt3_close);
-        }
-    }
-    break;
-    case VIRTUA_TENNIS_3_TEST:
-    {
-        if (config->showDebugMessages == 1)
-        {
-            // Debug
-            detourFunction(0x08054c64, _putConsole); // Debug Messages
-        }
-        // Security
-        detourFunction(0x0815f060, amDongleInit);
-        detourFunction(0x0815f373, amDongleIsAvailable);
-        detourFunction(0x0815f2da, amDongleUpdate);
-        // Fixes
-        amDipswContextAddr = (void *)0x085e4a6c; // Address of amDipswContext
-        detourFunction(0x0815c9b0, amDipswInit);
-        detourFunction(0x0815ca45, amDipswExit);
-        detourFunction(0x0815cabb, amDipswGetData);
-        detourFunction(0x0815cb33, amDipswSetLed);
-        patchMemory(0x0806f983, "EB"); // Avoid Full Screen set from Game
-
-        // Mesa Patches
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
-        {
-            detourFunction(0x0804ce54, cg_GLIsProfileSupported);
-            detourFunction(0x0804c724, gl_Color4ub);
-            detourFunction(0x0804c8b4, gl_Vertex3f);
-            detourFunction(0x0804cdc4, gl_TexCoord2f);
-            patchMemory(0x0806a01a, "31FF90");
-            cacheModedShaderFiles();
         }
     }
     break;
@@ -3042,11 +3014,11 @@ int initPatch()
         detourFunction(0x0831bf5d, amDipswExit);
         detourFunction(0x0831bfd3, amDipswGetData);
         detourFunction(0x0831c04b, stubRetZero);
-        setVariable(0x0827a7f7, 0x34891beb);     // Disable Fullscreen set from the game
-        detourFunction(0x08177afc, stubRetOne);  // Patch seterror
+        setVariable(0x0827a7f7, 0x34891beb);    // Disable Fullscreen set from the game
+        detourFunction(0x08177afc, stubRetOne); // Patch seterror
 
         // Mesa
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0804d458, cg_GLGetLatestProfile);
             detourFunction(0x0804dcd8, cg_GLIsProfileSupported);
@@ -3083,7 +3055,7 @@ int initPatch()
         patchMemory(0x0806fd8f, "EB"); // Avoid Full Screen set from Game
 
         // Mesa Patches
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0804ce54, cg_GLIsProfileSupported);
             detourFunction(0x0804c724, gl_Color4ub);
@@ -3111,11 +3083,11 @@ int initPatch()
         detourFunction(0x0831c149, amDipswExit);
         detourFunction(0x0831c1bf, amDipswGetData);
         detourFunction(0x0831c237, stubRetZero);
-        setVariable(0x0827a9e3, 0x34891beb);     // Disable Fullscreen set from the game
-        detourFunction(0x08177bf0, stubRetOne);  // Patch seterror
+        setVariable(0x0827a9e3, 0x34891beb);    // Disable Fullscreen set from the game
+        detourFunction(0x08177bf0, stubRetOne); // Patch seterror
 
         // Mesa
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0804d458, cg_GLGetLatestProfile);
             detourFunction(0x0804dcd8, cg_GLIsProfileSupported);
@@ -3152,7 +3124,7 @@ int initPatch()
         patchMemory(0x0806fa33, "EB"); // Avoid Full Screen set from Game
 
         // Mesa Patches
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0804ce54, cg_GLIsProfileSupported);
             detourFunction(0x0804c724, gl_Color4ub);
@@ -3180,11 +3152,11 @@ int initPatch()
         detourFunction(0x0831c561, amDipswExit);
         detourFunction(0x0831c5d7, amDipswGetData);
         detourFunction(0x0831c64f, stubRetZero);
-        setVariable(0x0827ae1b, 0x34891beb);     // Disable Fullscreen set from the game
-        detourFunction(0x08177c1c, stubRetOne);  // Patch seterror
+        setVariable(0x0827ae1b, 0x34891beb);    // Disable Fullscreen set from the game
+        detourFunction(0x08177c1c, stubRetOne); // Patch seterror
 
         // Mesa
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0804d458, cg_GLGetLatestProfile);
             detourFunction(0x0804dcd8, cg_GLIsProfileSupported);
@@ -3228,13 +3200,44 @@ int initPatch()
         patchMemory(0x0806fe3f, "EB"); // Avoid Full Screen set from Game
 
         // Mesa Patches
-        if (getConfig()->GPUVendor != NVIDIA_GPU)
+        if (GPUVendor != NVIDIA_GPU)
         {
             detourFunction(0x0804ce54, cg_GLIsProfileSupported);
             detourFunction(0x0804c724, gl_Color4ub);
             detourFunction(0x0804c8b4, gl_Vertex3f);
             detourFunction(0x0804cdc4, gl_TexCoord2f);
             patchMemory(0x0806a0ca, "31FF90");
+            cacheModedShaderFiles();
+        }
+    }
+    break;
+    case VIRTUA_TENNIS_3_TEST:
+    {
+        if (config->showDebugMessages == 1)
+        {
+            // Debug
+            detourFunction(0x08054c64, _putConsole); // Debug Messages
+        }
+        // Security
+        detourFunction(0x0815f060, amDongleInit);
+        detourFunction(0x0815f373, amDongleIsAvailable);
+        detourFunction(0x0815f2da, amDongleUpdate);
+        // Fixes
+        amDipswContextAddr = (void *)0x085e4a6c; // Address of amDipswContext
+        detourFunction(0x0815c9b0, amDipswInit);
+        detourFunction(0x0815ca45, amDipswExit);
+        detourFunction(0x0815cabb, amDipswGetData);
+        detourFunction(0x0815cb33, amDipswSetLed);
+        patchMemory(0x0806f983, "EB"); // Avoid Full Screen set from Game
+
+        // Mesa Patches
+        if (GPUVendor != NVIDIA_GPU)
+        {
+            detourFunction(0x0804ce54, cg_GLIsProfileSupported);
+            detourFunction(0x0804c724, gl_Color4ub);
+            detourFunction(0x0804c8b4, gl_Vertex3f);
+            detourFunction(0x0804cdc4, gl_TexCoord2f);
+            patchMemory(0x0806a01a, "31FF90");
             cacheModedShaderFiles();
         }
     }

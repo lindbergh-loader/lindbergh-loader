@@ -2,7 +2,7 @@
 
 #include <linux/input-event-codes.h>
 
-#define SIZE 1024
+#define SIZE 128
 #define CONTROLLER_THREAD_MAX 256
 
 
@@ -69,12 +69,12 @@ typedef struct
 typedef struct
 {
     char name[SIZE];
-    char path[SIZE];
-    char physicalLocation[SIZE];
+    char path[320];
+    char physicalLocation[128];
     int absMax[ABS_MAX];
     int absMin[ABS_MAX];
 
-    ControllerInput inputs[SIZE];
+    ControllerInput inputs[320];
     int inputCount;
 
     ArcadeInput keyTriggers[KEY_MAX];

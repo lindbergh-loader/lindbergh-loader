@@ -1,11 +1,15 @@
 #ifndef __i386__
 #define __i386__
+#include "customcursor.h"
 #endif
 #undef __x86_64__
 #include <SDL2/SDL.h>
 
 #include "jvs.h"
 #include "config.h"
+#include "customcursor.h"
+#include "patch.h"
+#include "touchscreen.h"
 
 #include <GL/freeglut.h>
 #include <GL/glx.h>
@@ -20,6 +24,12 @@
 GameType gameType = SHOOTING;
 int jvsAnalogueInBits = 10;
 extern int phX, phY, phW, phH;
+extern int phX2, phY2, phW2, phH2;
+int phIsDragging = 0;
+
+extern void *customCursor;
+extern void *phTouchCursor;
+extern bool phShowCursorInGame;
 
 int initInput()
 {
@@ -33,6 +43,105 @@ int initInput()
     }
 
     return 0;
+}
+
+void phTouchScreenCursor(int mX, int mY, int *motX, int *motY)
+{
+    if (getConfig()->emulateTouchscreen)
+    {
+        switch (getConfig()->phMode)
+        {
+        case 0:
+        case 2:
+        case 3:
+            if ((mX >= phX2 && mX <= (phX2 + phW2) && mY >= phY2 && mY <= (phY2 + phH2)) && getConfig()->hideCursor == 0)
+            {
+                setCursor(phTouchCursor);
+                showPhCursor();
+            }
+            else if (getConfig()->hideCursor == 1 || phShowCursorInGame == false)
+            {
+                hideCursor();
+            }
+            else if (phShowCursorInGame && getConfig()->hideCursor == 0)
+            {
+                setCursor(customCursor);
+                showCursor();
+            }
+            break;
+        case 4:
+            if ((mX >= phX2 && mX <= (phX2 + phW2) && mY >= (phY2 + phH) && mY <= (phY2 + (phH2 + phH))) && getConfig()->hideCursor == 0)
+            {
+                setCursor(phTouchCursor);
+                showPhCursor();
+            }
+            else if (getConfig()->hideCursor == 1 || phShowCursorInGame == false)
+            {
+                hideCursor();
+            }
+            else if (phShowCursorInGame && getConfig()->hideCursor == 0)
+            {
+                setCursor(customCursor);
+                showCursor();
+            }
+        }
+    }
+    if (mX < phX)
+        *motX = phX;
+    if (mX > (phW + phX))
+        *motX = (phW + phX) - 1;
+    if (mY > phH + phY)
+        *motY = (phH + phY) - 1;
+    if (mY < phY)
+        *motY = phY;
+}
+
+void phTouchClick(int mX, int mY, int type)
+{
+    int x, y;
+    bool insideTouchScreen = false;
+    switch (getConfig()->phMode)
+    {
+    case 0:
+    case 2:
+    case 3:
+        if (mX >= phX2 && mX <= (phX2 + phW2) && mY >= phY2 && mY <= (phY2 + phH2))
+        {
+            x = mX - phW;
+            y = mY - phY2;
+            insideTouchScreen = true;
+        }
+        break;
+    case 4:
+        if (mX >= phX2 && mX <= (phX2 + phW2) && mY >= (phY2 + phH) && mY <= (phY2 + (phH2 + phH)))
+        {
+            x = mX - phX2;
+            y = mY - phH;
+            insideTouchScreen = true;
+        }
+    }
+    if (insideTouchScreen)
+    {
+        if (type == ButtonPress)
+            phCoordinates(x, y, phW2, phH2, ButtonPress);
+        else if (type == SDL_MOUSEBUTTONDOWN)
+            phCoordinates(x, y, phW2, phH2, SDL_MOUSEBUTTONDOWN);
+        else if (type == ButtonRelease)
+            phCoordinates(x, y, phW2, phH2, ButtonRelease);
+        else if (type == SDL_MOUSEBUTTONUP)
+            phCoordinates(x, y, phW2, phH2, SDL_MOUSEBUTTONUP);
+        else if (type == MotionNotify)
+            phCoordinates(x, y, phW2, phH2, MotionNotify);
+        else if (type == SDL_MOUSEMOTION)
+            phCoordinates(x, y, phW2, phH2, SDL_MOUSEMOTION);
+    }
+    else
+    {
+        if (getConfig()->noSDL)
+            setSwitch(PLAYER_1, BUTTON_1, type == ButtonPress);
+        else
+            setSwitch(PLAYER_1, BUTTON_1, type == SDL_MOUSEBUTTONDOWN);
+    }
 }
 
 /**
@@ -281,16 +390,15 @@ int XNextEventShooting(Display *display, XEvent *event_return, int returnValue)
         {
             int mX = event_return->xmotion.x;
             int mY = event_return->xmotion.y;
-            if (mX < phX)
-                mX = phX;
-            if (mX > (phW + phX))
-                mX = (phW + phX) - 1;
-            if (mY > phH + phY)
-                mY = (phH + phY) - 1;
-            if (mY < phY)
-                mY = phY;
-            setAnalogue(ANALOGUE_1, ((double)(mX - phX) / (double)phW) * pow(2, jvsAnalogueInBits));
-            setAnalogue(ANALOGUE_2, ((double)(mY - phY) / (double)phH) * pow(2, jvsAnalogueInBits));
+
+            if (phIsDragging)
+                phTouchClick(mX, mY, event_return->type);
+
+            int motX = mX, motY = mY;
+            phTouchScreenCursor(mX, mY, &motX, &motY);
+
+            setAnalogue(ANALOGUE_1, ((double)(motX - phX) / (double)phW) * pow(2, jvsAnalogueInBits));
+            setAnalogue(ANALOGUE_2, ((double)(motY - phY) / (double)phH) * pow(2, jvsAnalogueInBits));
         }
         else
         {
@@ -335,7 +443,17 @@ int XNextEventShooting(Display *display, XEvent *event_return, int returnValue)
     {
         if (event_return->xbutton.button == 1) // Trigger
         {
-            setSwitch(PLAYER_1, BUTTON_1, event_return->type == ButtonPress);
+            if (getConfig()->crc32 == PRIMEVAL_HUNT && getConfig()->emulateTouchscreen)
+            {
+                int mX = event_return->xmotion.x;
+                int mY = event_return->xmotion.y;
+                phTouchClick(mX, mY, event_return->type);
+                phIsDragging = (event_return->type == ButtonPress ? 1 : 0);
+            }
+            else
+            {
+                setSwitch(PLAYER_1, BUTTON_1, event_return->type == ButtonPress);
+            }
         }
         else if (event_return->xbutton.button == 3) // Reload
         {
@@ -534,16 +652,15 @@ void sdlEventShooting(SDL_Event *event)
         {
             int mX = event->motion.x;
             int mY = event->motion.y;
-            if (mX < phX)
-                mX = phX;
-            if (mX > (phW + phX))
-                mX = (phW + phX) - 1;
-            if (mY > phH + phY)
-                mY = (phH + phY) - 1;
-            if (mY < phY)
-                mY = phY;
-            setAnalogue(ANALOGUE_1, ((double)(mX - phX) / (double)phW) * pow(2, jvsAnalogueInBits));
-            setAnalogue(ANALOGUE_2, ((double)(mY - phY) / (double)phH) * pow(2, jvsAnalogueInBits));
+
+            if (phIsDragging)
+                phTouchClick(mX, mY, event->type);
+
+            int motX = mX, motY = mY;
+            phTouchScreenCursor(mX, mY, &motX, &motY);
+
+            setAnalogue(ANALOGUE_1, ((double)(motX - phX) / (double)phW) * pow(2, jvsAnalogueInBits));
+            setAnalogue(ANALOGUE_2, ((double)(motY - phY) / (double)phH) * pow(2, jvsAnalogueInBits));
         }
         else
         {
@@ -587,7 +704,17 @@ void sdlEventShooting(SDL_Event *event)
     {
         if (event->button.button == SDL_BUTTON_LEFT) // Trigger
         {
-            setSwitch(PLAYER_1, BUTTON_1, event->type == SDL_MOUSEBUTTONDOWN);
+            if (getConfig()->crc32 == PRIMEVAL_HUNT && getConfig()->emulateTouchscreen)
+            {
+                int mX = event->motion.x;
+                int mY = event->motion.y;
+                phTouchClick(mX, mY, event->type);
+                phIsDragging = (event->type == SDL_MOUSEBUTTONDOWN ? 1 : 0);
+            }
+            else
+            {
+                setSwitch(PLAYER_1, BUTTON_1, event->type == SDL_MOUSEBUTTONDOWN);
+            }
         }
         else if (event->button.button == SDL_BUTTON_RIGHT) // Reload
         {

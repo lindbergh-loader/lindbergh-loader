@@ -1,4 +1,3 @@
-#include <complex.h>
 #define GL_GLEXT_PROTOTYPES
 #ifndef __i386__
 #define __i386__
@@ -20,6 +19,7 @@
 #include <dlfcn.h>
 #include <SDL2/SDL.h>
 #include <sys/time.h>
+#include <stdio.h>
 
 #include "fps_limiter.h"
 #include "sdlcalls.h"
@@ -28,11 +28,12 @@
 #include "border.h"
 
 bool sdlGame = false;
+extern uint32_t gId;
 extern SDL_Window *SDLwindow;
 extern SDL_GLContext SDLcontext;
 extern char SDLgameTitle[];
 extern fps_limit fpsLimit;
-extern Window win;
+extern Window window;
 
 void glXSwapBuffers(Display *dpy, GLXDrawable drawable)
 {
@@ -43,14 +44,22 @@ void glXSwapBuffers(Display *dpy, GLXDrawable drawable)
     if (config->borderEnabled)
         drawGameBorder(config->width, config->height, config->whiteBorderPercentage, config->blackBorderPercentage);
 
-    int gId = getConfig()->crc32;
-    if (getConfig()->noSDL && (gId == OUTRUN_2_SP_SDX || gId == OUTRUN_2_SP_SDX_REVA || gId == OUTRUN_2_SP_SDX_REVA_TEST ||
-                               gId == OUTRUN_2_SP_SDX_REVA_TEST2 || gId == OUTRUN_2_SP_SDX_TEST))
+    if (getConfig()->noSDL)
     {
-        XEvent event;
-        while (XPending(dpy))
+        switch (gId)
         {
-            XNextEvent(dpy, &event);
+        case OUTRUN_2_SP_SDX:
+        case OUTRUN_2_SP_SDX_REVA:
+        case OUTRUN_2_SP_SDX_REVA_TEST:
+        case OUTRUN_2_SP_SDX_REVA_TEST2:
+        case OUTRUN_2_SP_SDX_TEST:
+        {
+            XEvent event;
+            while (XPending(dpy))
+            {
+                XNextEvent(dpy, &event);
+            }
+        }
         }
     }
     else
@@ -76,7 +85,7 @@ void glXSwapBuffers(Display *dpy, GLXDrawable drawable)
 
     if (getConfig()->noSDL)
     {
-        XStoreName(dpy, win, "");
+        XStoreName(dpy, window, "");
         return;
     }
     char windowTitle[512];
@@ -229,27 +238,36 @@ GLXFBConfig *glXChooseFBConfig(Display *dpy, int screen, const int *attrib_list,
     GLXFBConfig *(*_glXChooseFBConfig)(Display *dpy, int screen, const int *attrib_list, int *nelements) =
         dlsym(RTLD_NEXT, "glXChooseFBConfig");
 
-    int gId = getConfig()->crc32;
     char *__GLX_VENDOR_LIBRARY_NAME = getenv("__GLX_VENDOR_LIBRARY_NAME");
     char *__NV_PRIME_RENDER_OFFLOAD = getenv("__NV_PRIME_RENDER_OFFLOAD");
     if (__GLX_VENDOR_LIBRARY_NAME == NULL)
         __GLX_VENDOR_LIBRARY_NAME = " ";
     if (__NV_PRIME_RENDER_OFFLOAD == NULL)
         __NV_PRIME_RENDER_OFFLOAD = " ";
-    if ((strcmp(__GLX_VENDOR_LIBRARY_NAME, "nvidia") == 0) && (strcmp(__NV_PRIME_RENDER_OFFLOAD, "1") == 0) &&
-        ((gId == THE_HOUSE_OF_THE_DEAD_4_REVA) || (gId == THE_HOUSE_OF_THE_DEAD_4_REVB) ||
-         (gId == THE_HOUSE_OF_THE_DEAD_4_REVC) || (gId == THE_HOUSE_OF_THE_DEAD_4_SPECIAL) ||
-         (gId == THE_HOUSE_OF_THE_DEAD_4_SPECIAL_REVB) || (gId == THE_HOUSE_OF_THE_DEAD_EX) || (gId == TOO_SPICY)))
+
+    switch (gId)
     {
-        for (int i = 0; attrib_list[i] != None; i += 2)
+    case THE_HOUSE_OF_THE_DEAD_4_REVA:
+    case THE_HOUSE_OF_THE_DEAD_4_REVB:
+    case THE_HOUSE_OF_THE_DEAD_4_REVC:
+    case THE_HOUSE_OF_THE_DEAD_4_SPECIAL:
+    case THE_HOUSE_OF_THE_DEAD_4_SPECIAL_REVB:
+    case THE_HOUSE_OF_THE_DEAD_EX:
+    case TOO_SPICY:
+    {
+        if (strcmp(__GLX_VENDOR_LIBRARY_NAME, "nvidia") == 0 && strcmp(__NV_PRIME_RENDER_OFFLOAD, "1") == 0)
         {
-            if (attrib_list[i] == GLX_DOUBLEBUFFER)
+            for (int i = 0; attrib_list[i] != None; i += 2)
             {
-                int *ptr = (int *)&attrib_list[i + 1];
-                patchMemory((intptr_t)ptr, "01");
-                setVariable((intptr_t)ptr, GLX_DONT_CARE);
+                if (attrib_list[i] == GLX_DOUBLEBUFFER)
+                {
+                    int *ptr = (int *)&attrib_list[i + 1];
+                    patchMemory((intptr_t)ptr, "01");
+                    setVariable((intptr_t)ptr, GLX_DONT_CARE);
+                }
             }
         }
+    }
     }
     return _glXChooseFBConfig(dpy, screen, attrib_list, nelements);
 }
@@ -306,19 +324,30 @@ GLXFBConfigSGIX *glXChooseFBConfigSGIX(Display *dpy, int screen, int *attrib_lis
         __GLX_VENDOR_LIBRARY_NAME = " ";
     if (__NV_PRIME_RENDER_OFFLOAD == NULL)
         __NV_PRIME_RENDER_OFFLOAD = " ";
-    if ((strcmp(__GLX_VENDOR_LIBRARY_NAME, "nvidia") == 0) && (strcmp(__NV_PRIME_RENDER_OFFLOAD, "1") == 0) &&
-        ((gId == INITIALD_4_REVA) || (gId == INITIALD_4_REVB) || (gId == INITIALD_4_REVC) || (gId == INITIALD_4_REVD) ||
-         (gId == INITIALD_4_REVG) || (gId == INITIALD_4_EXP_REVB) || (gId == INITIALD_4_EXP_REVC) ||
-         gId == INITIALD_4_EXP_REVD))
+
+    switch (gId)
     {
-        for (int i = 0; attrib_list[i] != None; i += 2)
+    case INITIALD_4_REVA:
+    case INITIALD_4_REVB:
+    case INITIALD_4_REVC:
+    case INITIALD_4_REVD:
+    case INITIALD_4_REVG:
+    case INITIALD_4_EXP_REVB:
+    case INITIALD_4_EXP_REVC:
+    case INITIALD_4_EXP_REVD:
+    {
+        if (strcmp(__GLX_VENDOR_LIBRARY_NAME, "nvidia") == 0 && strcmp(__NV_PRIME_RENDER_OFFLOAD, "1") == 0)
         {
-            if (attrib_list[i] == GLX_DOUBLEBUFFER)
+            for (int i = 0; attrib_list[i] != None; i += 2)
             {
-                int *ptr = (int *)&attrib_list[i + 1];
-                patchMemory((intptr_t)ptr, "01");
+                if (attrib_list[i] == GLX_DOUBLEBUFFER)
+                {
+                    int *ptr = (int *)&attrib_list[i + 1];
+                    patchMemory((intptr_t)ptr, "01");
+                }
             }
         }
+    }
     }
     return glXChooseFBConfig(dpy, screen, attrib_list, nelements);
 }

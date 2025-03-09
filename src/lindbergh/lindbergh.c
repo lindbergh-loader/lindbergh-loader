@@ -85,6 +85,7 @@ uint32_t cleanElfCRC32[] = {
     0x9BFD0D98, // DVP-0019D | id4.elf
     0x9CF9BBCC, // DVP-0019G | id4.elf
     0xFA0F6AB0, // DVP-0027A | apacheM.elf
+    0x5A7F315E, // DVP-0027A | apachetestM.elf
     0x9D414D18, // DVP-0029A | vsg
     0xC345E213, // DVP-0030B | id4.elf
     0x98E6A516, // DVP-0030C | id4.elf
@@ -182,6 +183,7 @@ void isCleanElf(char *command)
         printf("\033[1;31m");
         printf("Warning: The ELF you are running is not Clean and might cause unwanted behavior.\n");
         printf("         Make sure you ELF and game dump are clean before reporting issues.\n");
+        printf("         If you are sure the ELF is clean, please report it to us.\n");
         printf("\033[0m");
     }
 }
@@ -215,7 +217,7 @@ void testModePath(char *name)
 
     if (strcmp(name, "./apacheM.elf") == 0)
     {
-        strcpy(name, "./apacheTestM.elf");
+        strcpy(name, "./apachetestM.elf");
         return;
     }
 
@@ -233,7 +235,7 @@ void testModePath(char *name)
  * Makes sure the environment variables are set correctly
  * to run the game.
  */
-void setEnvironmentVariables(int isFlatpak, int zink)
+void setEnvironmentVariables(int isFlatpak, int zink, int nvidia)
 {
     // Ensure the library path is set correctly
     char libraryPath[128] = {0};
@@ -254,9 +256,15 @@ void setEnvironmentVariables(int isFlatpak, int zink)
         setenv(LD_PRELOAD, PRELOAD_FILE_NAME, 1);
     else
         setenv(LD_PRELOAD, PRELOAD_FILE_FLATPAK, 1);
-  
-    if(zink)
+
+    if (zink)
         setenv("MESA_LOADER_DRIVER_OVERRIDE", "zink", 1);
+
+    if (nvidia)
+    {
+        setenv("__GLX_VENDOR_LIBRARY_NAME", "nvidia", 1);
+        setenv("__NV_PRIME_RENDER_OFFLOAD", "1", 1);
+    }
 }
 
 /**
@@ -268,6 +276,8 @@ void printUsage(char *argv[])
     printf("Options:\n");
     printf("  --test | -t         Runs the test mode\n");
     printf("  --segaboot | -s     Runs segaboot\n");
+    printf("  --zink | -z         Runs with Zink\n");
+    printf("  --nvidia | -n       Runs with nVidia GPU when is as a secondary GPU in a laptop\n");
     printf("  --gdb               Runs with GDB\n");
     printf("  --list-controllers  Lists available controllers and inputs\n");
     printf("  --version           Displays the version of the loader and team's names\n");
@@ -408,6 +418,7 @@ int main(int argc, char *argv[])
     int testMode = 0;
     int gdb = 0;
     int zink = 0;
+    int nvidia = 0;
     int forceGame = 0;
     int segaboot = 0;
     char extConfigPath[PATH_MAX] = {0};
@@ -433,19 +444,25 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        if (strcmp(argv[i], "--zink") == 0)
+        if (strcmp(argv[i], "-z") == 0 || strcmp(argv[i], "--ziink") == 0)
         {
             zink = 1;
             continue;
         }
-      
+
+        if (strcmp(argv[i], "-n") == 0 || strcmp(argv[i], "--nvidia") == 0)
+        {
+            nvidia = 1;
+            continue;
+        }
+
         if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--config") == 0)
         {
-            if (i+1 >= argc)
+            if (i + 1 >= argc)
             {
                 break;
             }
-            strncpy(extConfigPath, argv[i+1], PATH_MAX);
+            strncpy(extConfigPath, argv[i + 1], PATH_MAX);
             i += 1;
             continue;
         }
@@ -455,8 +472,8 @@ int main(int argc, char *argv[])
     }
 
     // Ensure environment variables are set correctly
-    setEnvironmentVariables(isFlatpak, zink);
-  
+    setEnvironmentVariables(isFlatpak, zink, nvidia);
+
     char command[128] = {0};
     strcpy(command, "./");
     if (forceGame)
@@ -492,7 +509,7 @@ int main(int argc, char *argv[])
 
     if (extConfigPath[0] != '\0')
     {
-        setenv(LINDBERGH_CONFIG_PATH,extConfigPath,1);
+        setenv(LINDBERGH_CONFIG_PATH, extConfigPath, 1);
     }
 
     log_info("Starting $ %s", command);

@@ -1,0 +1,48 @@
+name: Automated Builds
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - '.github/ISSUE_TEMPLATE/*'
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - '.github/ISSUE_TEMPLATE/*'
+
+jobs:
+  linux-build:
+    name: 💻 Linux
+    uses: "./.github/workflows/linux-build.yml"
+  linux-flatpak:
+    name: 📦 Linux Flatpak
+    uses: "./.github/workflows/flatpak-build.yml"
+
+  create-release:
+    name: 📤 Create Release
+    needs: [linux-build, linux-flatpak]
+    runs-on: ubuntu-22.04
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts/
+
+      - name: Display Downloaded Artifacts
+        run: find ./artifacts/
+
+      - name: Create Preview Release
+        if: github.ref == 'refs/heads/main'
+        uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: v${{ github.run_number }}
+          prerelease: false
+          title: "Build v${{ github.run_number }}"
+          files: |
+            ./artifacts/linux-flatpak/lindbergh-loader.flatpak
+            ./artifacts/linux-build/build.tar.gz

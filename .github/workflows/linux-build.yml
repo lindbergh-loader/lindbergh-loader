@@ -1,0 +1,45 @@
+name: Build and Release Lindbergh
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # Build the Docker image
+      - name: Build Docker image
+        run: |
+          docker build --target lindbergh-build -t lindbergh-loader .
+
+      # Extract build artifacts
+      - name: Extract build artifacts
+        run: |
+          docker create --name lindbergh-builder lindbergh-loader
+          docker cp lindbergh-builder:/output ./build
+          docker rm lindbergh-builder
+
+      # Compress the build directory
+      - name: Compress build directory
+        run: tar -czvf build.tar.gz -C ./build .
+
+      # Archive the build directory as an artifact for debugging
+      - name: Archive build directory
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: build.tar.gz
+

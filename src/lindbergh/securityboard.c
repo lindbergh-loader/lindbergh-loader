@@ -1,8 +1,8 @@
 #include <stdio.h>
 
+#include "config.h"
 #include "securityboard.h"
 #include "log.h"
-#include "config.h"
 
 #define SECURITY_BOARD_FRONT_PANEL 0x38
 #define SECURITY_BOARD_FRONT_PANEL_NON_ROOT 0x1038

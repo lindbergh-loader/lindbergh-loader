@@ -16,6 +16,8 @@
 #define I2C_SEEK 2
 #define I2C_WRITE 3
 
+extern uint32_t gId;
+
 union i2c_smbus_data {
     uint8_t byte;
     uint16_t word;
@@ -68,36 +70,40 @@ int initEeprom()
             setFreeplay(eeprom, getConfig()->freeplay);
     }
 
-    if ((getConfig()->crc32 == LETS_GO_JUNGLE_SPECIAL) || (getConfig()->crc32 == THE_HOUSE_OF_THE_DEAD_EX) ||
-        (getConfig()->crc32 == THE_HOUSE_OF_THE_DEAD_4_SPECIAL) ||
-        (getConfig()->crc32 == THE_HOUSE_OF_THE_DEAD_4_SPECIAL_REVB))
+    switch (gId)
     {
+    case LETS_GO_JUNGLE_SPECIAL:
+    case THE_HOUSE_OF_THE_DEAD_EX:
+    case THE_HOUSE_OF_THE_DEAD_4_SPECIAL:
+    case THE_HOUSE_OF_THE_DEAD_4_SPECIAL_REVB:
         if (fixCreditSection(eeprom) != 0)
         {
             printf("Error initializing eeprom settings.");
             fclose(eeprom);
             return 1;
         }
-    }
-
-    if (getConfig()->crc32 == HUMMER || getConfig()->crc32 == HUMMER_SDLX || getConfig()->crc32 == HUMMER_EXTREME ||
-        getConfig()->crc32 == HUMMER_EXTREME_MDX)
-    {
+        break;
+    case HUMMER:
+    case HUMMER_SDLX:
+    case HUMMER_EXTREME:
+    case HUMMER_EXTREME_MDX:
         if (fixCoinAssignmentsHummer(eeprom) != 0)
         {
             printf("Error initializing eeprom settings.");
             fclose(eeprom);
             return 1;
         }
-    }
-
-    if ((getConfig()->crc32 == OUTRUN_2_SP_SDX || getConfig()->crc32 == OUTRUN_2_SP_SDX_REVA) && strcmp(getConfig()->or2IP, "") != 0)
-    {
-        if (setIP(eeprom, getConfig()->or2IP, getConfig()->or2Netmask) != 0)
+        break;
+    case OUTRUN_2_SP_SDX:
+    case OUTRUN_2_SP_SDX_REVA:
+        if (strcmp(getConfig()->or2IP, "") != 0)
         {
-            printf("Error setting the new IP address.");
-            fclose(eeprom);
-            return 1;
+            if (setIP(eeprom, getConfig()->or2IP, getConfig()->or2Netmask) != 0)
+            {
+                printf("Error setting the new IP address.");
+                fclose(eeprom);
+                return 1;
+            }
         }
     }
 

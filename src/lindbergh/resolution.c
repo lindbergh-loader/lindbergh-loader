@@ -1,5 +1,6 @@
 #include "config.h"
 #include <GL/gl.h>
+#include <SDL2/SDL.h>
 #include <X11/X.h>
 #include <X11/Xlib.h>
 #include <dlfcn.h>
@@ -15,17 +16,22 @@
 #include "patch.h"
 #include "resolution.h"
 
+extern uint32_t gId;
+extern SDL_Window *SDLwindow;
+int gWidth, gHeight;
+
 int srtvX = 0;
 int srtvW, srtvH;
 int phX, phY, phW, phH;
+int phX2, phY2, phW2, phH2;
 
 int vf5FSwidth;
 
 void *glVertex3fPatchRetAddrABC[4];
 void *glVertex3fNoPatchRetAddrABC[4];
 
-GLenum curTargetABC = 0;
-GLuint curTextureIDABC = 0;
+GLenum curTarget = 0;
+GLuint curTextureID = 0;
 const GLfloat *texCoordABC[4];
 
 vertexABC vABC[4];
@@ -62,16 +68,7 @@ int idTextShift = 0;
 float id4NewCaptionY;
 float idShiftX = 0.0;
 float isShiftY = 0.0;
-
-uint32_t harleyCreditsOffsets[] = {
-    0x000000e8, 0x0000012c, 0x00000170, 0x00000468, 0x000004ac, 0x000004f0, 0x00000578, 0x000005bc, 0x00000a88, 0x00000c48, 0x00000c8c,
-    0x00000e98, 0x00000edc, 0x00000f20, 0x00000f64, 0x00000fa8, 0x00000fec, 0x00001030, 0x00001074, 0x000010b8, 0x00001638, 0x0000167c,
-    0x000016c0, 0x00001704, 0x00001748, 0x0000178c, 0x000017d0, 0x00001814, 0x00001da8, 0x00001dec, 0x00002008, 0x0000204c, 0x00002090,
-    0x000020d4, 0x00002118, 0x0000215c, 0x000021a0, 0x000021e4, 0x00002228, 0x000027a8, 0x000027e0, 0x00002830, 0x00002874, 0x000028b8,
-    0x000028fc, 0x00002940, 0x00002e48, 0x00002e8c, 0x000030a8, 0x000030ec, 0x00003130, 0x00003174, 0x000034b8, 0x000034fc, 0x00003540,
-    0x00003584, 0x000038b8, 0x000038fc, 0x00003b58, 0x00003b9c, 0x00003f48, 0x000041c8, 0x0000420c, 0x00004250, 0x00004294};
-
-int harleyCreditsOffsetsSize = 65;
+bool myEnableScaling = false;
 
 int hummerRespatch()
 {
@@ -80,56 +77,15 @@ int hummerRespatch()
         (addr == (void *)0x080d8b4f) || (addr == (void *)0x080d8bbb) || (addr == (void *)0x08159eb0) || (addr == (void *)0x08159eec) ||
         (addr == (void *)0x08159f64) || (addr == (void *)0x08163490) || (addr == (void *)0x081634cc) || (addr == (void *)0x08163544))
     {
-        return getConfig()->width - 1;
+        return gWidth - 1;
     }
     else if ((addr == (void *)0x080d8b78) || (addr == (void *)0x080d8bae) || (addr == (void *)0x080d8c1a) || (addr == (void *)0x080d8b34) ||
              (addr == (void *)0x080d8b6a) || (addr == (void *)0x080d8bd6) || (addr == (void *)0x08159ece) || (addr == (void *)0x08159f0a) ||
              (addr == (void *)0x08159f82) || (addr == (void *)0x081634ae) || (addr == (void *)0x081634ea) || (addr == (void *)0x08163562))
     {
-        return getConfig()->height;
+        return gHeight;
     }
     return 1280;
-}
-
-size_t harleyFreadReplace(void *buf, size_t size, size_t count, FILE *stream)
-{
-    size_t (*_fread)(void *buf, size_t size, size_t count, FILE *stream) = dlsym(RTLD_NEXT, "fread");
-
-    int s = _fread(buf, size, count, stream);
-    if (getConfig()->width == 1360 || getConfig()->width == 640)
-        return s;
-
-    for (int x = 0; x < harleyCreditsOffsetsSize; x++)
-    {
-        float oldX, idx;
-        idx = 1.2; //((float)getConfig()->width / 1360.0) * 0.81459;
-        memcpy(&oldX, buf + harleyCreditsOffsets[x], sizeof(float));
-        float newX = oldX - (((float)getConfig()->width - 1360.0) / 2);
-        float newY = (((600.0 * (float)getConfig()->height) / 768.0) - 600.0) * -1;
-
-        if (getConfig()->width > 1920)
-        {
-            newX = oldX - ((((float)getConfig()->width - 1360.0) / 2) / idx);
-            newY = (((600.0 * (float)getConfig()->height) / 768.0) - (600.0 * idx)) * -1;
-            // Move the words "CREDIT(S)" and  "TO START" and "TO CONTINUE" a little to the right
-            if (harleyCreditsOffsets[x] == 0x00000f20 || harleyCreditsOffsets[x] == 0x00001030 || harleyCreditsOffsets[x] == 0x00000f64 ||
-                harleyCreditsOffsets[x] == 0x00001074 || harleyCreditsOffsets[x] == 0x0000167c || harleyCreditsOffsets[x] == 0x00001814 ||
-                harleyCreditsOffsets[x] == 0x00001638 || harleyCreditsOffsets[x] == 0x000017d0)
-            {
-                newX -= idx * 10;
-            }
-            // Do not scale "TO START" and "TO CONTINUE"
-            if (harleyCreditsOffsets[x] != 0x0000167c && harleyCreditsOffsets[x] != 0x00001814 && harleyCreditsOffsets[x] != 0x00000f64 &&
-                harleyCreditsOffsets[x] != 0x00001074)
-            {
-                memcpy(buf + harleyCreditsOffsets[x] - 8, &idx, sizeof(float));
-                memcpy(buf + harleyCreditsOffsets[x] - 12, &idx, sizeof(float));
-            }
-        }
-        memcpy(buf + harleyCreditsOffsets[x], &newX, sizeof(float));
-        memcpy(buf + harleyCreditsOffsets[x] + 4, &newY, sizeof(float));
-    }
-    return s;
 }
 
 /**
@@ -144,13 +100,13 @@ void glOrtho(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdou
 
     void *returnAddress = __builtin_return_address(0);
 
-    switch (getConfig()->crc32)
+    switch (gId)
     {
     case THE_HOUSE_OF_THE_DEAD_4_REVA:
     case THE_HOUSE_OF_THE_DEAD_4_REVB:
     case THE_HOUSE_OF_THE_DEAD_4_REVC:
     {
-        if ((getConfig()->width != 1280 && getConfig()->height != 768) || (getConfig()->width != 640 && getConfig()->height != 480))
+        if ((gWidth != 1280 && gHeight != 768) || (gWidth != 640 && gHeight != 480))
         {
             right = 1280.0;
             bottom = 720.0;
@@ -160,7 +116,7 @@ void glOrtho(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdou
     case THE_HOUSE_OF_THE_DEAD_4_SPECIAL:
     case THE_HOUSE_OF_THE_DEAD_4_SPECIAL_REVB:
     {
-        if (getConfig()->width != 1024 && getConfig()->height != 768)
+        if (gWidth != 1024 && gHeight != 768)
         {
             if (right == 1024.0 && bottom == 768.0)
             {
@@ -172,9 +128,9 @@ void glOrtho(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdou
     break;
     case SEGA_RACE_TV:
     {
-        if (getConfig()->width != 640 && getConfig()->height != 480)
+        if (gWidth != 640 && gHeight != 480)
         {
-            if ((right == 640.0 && bottom == 480.0) && (getConfig()->width != 640 && getConfig()->height != 480))
+            if ((right == 640.0 && bottom == 480.0) && (gWidth != 640 && gHeight != 480))
             {
                 right = 600000.0;
                 bottom = 600000.0;
@@ -184,7 +140,7 @@ void glOrtho(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdou
     break;
     case THE_HOUSE_OF_THE_DEAD_EX:
     {
-        if (getConfig()->width != 1280 && getConfig()->height != 768)
+        if (gWidth != 1360 && gHeight != 768)
         {
             right = 600.0;
             bottom = 480.0;
@@ -208,17 +164,17 @@ void glViewport(GLint x, GLint y, GLsizei width, GLsizei height)
 
     void *returnAddress = __builtin_return_address(0);
 
-    switch (getConfig()->crc32)
+    switch (gId)
     {
     case HUMMER:
     case HUMMER_SDLX:
     {
-        if (getConfig()->width != 1280 && getConfig()->height != 768)
+        if (gWidth != 1280 && gHeight != 768)
         {
             if (width == 1280 && height == 768)
             {
-                width = getConfig()->width;
-                height = getConfig()->height;
+                width = gWidth;
+                height = gHeight;
             }
         }
     }
@@ -229,12 +185,12 @@ void glViewport(GLint x, GLint y, GLsizei width, GLsizei height)
     case OUTRUN_2_SP_SDX_REVA_TEST:
     case OUTRUN_2_SP_SDX_REVA_TEST2:
     {
-        if (getConfig()->width != 800 && getConfig()->height != 480)
+        if (gWidth != 800 && gHeight != 480)
         {
             if ((width >= 800) && (width != 1024))
             {
-                width = getConfig()->width;
-                height = getConfig()->height;
+                width = gWidth;
+                height = gHeight;
             }
         }
     }
@@ -242,7 +198,7 @@ void glViewport(GLint x, GLint y, GLsizei width, GLsizei height)
 
     case SEGA_RACE_TV:
     {
-        if (getConfig()->width != 640 && getConfig()->height != 480)
+        if (gWidth != 640 && gHeight != 480)
         {
             if (width == 640 && height == 480 && returnAddress == (void *)0x08123932)
             {
@@ -258,30 +214,30 @@ void glViewport(GLint x, GLint y, GLsizei width, GLsizei height)
         }
     }
     break;
-    case THE_HOUSE_OF_THE_DEAD_4_REVA:
+    // case THE_HOUSE_OF_THE_DEAD_4_REVA:
+    // case THE_HOUSE_OF_THE_DEAD_4_REVB:
+    // case THE_HOUSE_OF_THE_DEAD_4_REVC:
     case THE_HOUSE_OF_THE_DEAD_4_REVA_TEST:
-    case THE_HOUSE_OF_THE_DEAD_4_REVB:
     case THE_HOUSE_OF_THE_DEAD_4_REVB_TEST:
-    case THE_HOUSE_OF_THE_DEAD_4_REVC:
     case THE_HOUSE_OF_THE_DEAD_4_REVC_TEST:
     case THE_HOUSE_OF_THE_DEAD_EX_TEST:
     {
         if (width == 640 && height == 480)
         {
-            width = getConfig()->width;
-            height = getConfig()->height;
+            width = gWidth;
+            height = gHeight;
         }
     }
     break;
     case THE_HOUSE_OF_THE_DEAD_4_SPECIAL:
     case THE_HOUSE_OF_THE_DEAD_4_SPECIAL_REVB:
     {
-        if (getConfig()->width != 1024 && getConfig()->height != 768)
+        if (gWidth != 1024 && gHeight != 768)
         {
             if (width == 1024 && height == 768)
             {
-                width = getConfig()->width;
-                height = getConfig()->height;
+                width = gWidth;
+                height = gHeight;
                 x = 250;
                 y = 100;
             }
@@ -295,11 +251,33 @@ void glViewport(GLint x, GLint y, GLsizei width, GLsizei height)
     case VIRTUA_FIGHTER_5_R_REVD:
     case VIRTUA_FIGHTER_5_R_REVG:
     {
-        if ((getConfig()->width != 640 && getConfig()->height != 480) || (getConfig()->width != 1280 && getConfig()->height != 768))
+        if ((gWidth != 640 && gHeight != 480) || (gWidth != 1280 && gHeight != 768))
         {
             if (width == vf5FSwidth)
             {
-                width = getConfig()->width;
+                width = gWidth;
+            }
+        }
+    }
+    break;
+    case PRIMEVAL_HUNT:
+    {
+        if (isTestMode() && gWidth != 1280 && gHeight != 480)
+        {
+            if (getConfig()->keepAspectRatio)
+            {
+                width = gWidth / 2;
+                height = ((gWidth / 2) / 4) * 3;
+                y = (gHeight - height) / 2;
+            }
+            else
+            {
+                width = gWidth / 2;
+                height = gHeight;
+            }
+            if (x == 640)
+            {
+                x = width = gWidth / 2;
             }
         }
     }
@@ -317,9 +295,9 @@ void glTexImage2D(unsigned int target, int level, int internalformat, int width,
     void (*_glTexImage2D)(unsigned int target, int level, int internalformat, int width, int height, int border, unsigned int format,
                           unsigned int type, const void *pixels) = dlsym(RTLD_NEXT, "glTexImage2D");
 
-    if (getConfig()->width != 800 && getConfig()->height != 480)
+    if (gWidth != 800 && gHeight != 480)
     {
-        switch (getConfig()->crc32)
+        switch (gId)
         {
         case OUTRUN_2_SP_SDX:
         case OUTRUN_2_SP_SDX_REVA:
@@ -327,8 +305,8 @@ void glTexImage2D(unsigned int target, int level, int internalformat, int width,
             void *addr = __builtin_return_address(0);
             if ((width >= 800) && (width != 1024) && (addr != (void *)0x80d78d5) && (addr != (void *)0x080d7941))
             {
-                width = getConfig()->width;
-                height = getConfig()->height;
+                width = gWidth;
+                height = gHeight;
             }
         }
         break;
@@ -344,7 +322,7 @@ void glTexParameteri(unsigned int target, unsigned int pname, int param)
 
     void (*_glTexParameteri)(unsigned int, unsigned int, int) = dlsym(RTLD_NEXT, "glTexParameteri");
 
-    switch (getConfig()->crc32)
+    switch (gId)
     {
     case OUTRUN_2_SP_SDX:
     case OUTRUN_2_SP_SDX_REVA:
@@ -390,10 +368,10 @@ int isTestMode()
     return false;
 }
 
-void glBindTextureABC(GLenum target, GLuint texture)
+void myGlBindTexture(GLenum target, GLuint texture)
 {
-    curTargetABC = target;
-    curTextureIDABC = texture;
+    // const char *targetName = "";
+    // switch (target)
 
     void (*_glBindTexture)(GLenum, GLuint) = dlsym(RTLD_NEXT, "glBindTexture");
     _glBindTexture(target, texture);
@@ -403,17 +381,17 @@ void scaleABCVertex()
 {
     for (int idx = 0; idx < 4; idx++)
     {
-        vABC[idx].x *= (getConfig()->width / 640.0);
-        vABC[idx].y *= (getConfig()->height / 480.0);
+        vABC[idx].x *= (gWidth / 640.0);
+        vABC[idx].y *= (gHeight / 480.0);
     }
 }
 
 void scaleNumbers()
 {
     lockedCountABC++;
-    float newFontWidth = 8 * ((getConfig()->height / 480.0) * 0.8);
-    float newFontHeight = 16 * ((getConfig()->height / 480.0) * 0.8);
-    float newY = 8.0 * (getConfig()->height / 480.0);
+    float newFontWidth = 8 * ((gHeight / 480.0) * 0.8);
+    float newFontHeight = 16 * ((gHeight / 480.0) * 0.8);
+    float newY = 8.0 * (gHeight / 480.0);
     switch (lockedCountABC)
     {
     case 1:
@@ -459,7 +437,7 @@ void scaleByAngle(float percentage, float shift)
 {
     percentage = (percentage == 0.0 ? 1 : percentage / 100.0);
     float sizeX, sizeY, newHalfSizeX, newHalfSizeY;
-    float idx = (getConfig()->height / 480.0) * percentage;
+    float idx = (gHeight / 480.0) * percentage;
     switch ((int)angleABC)
     {
     case 0:
@@ -533,7 +511,7 @@ void shiftTarget(float percentage)
 {
     percentage = percentage / 100;
     float size, newHalfSize;
-    float idx = (getConfig()->height / 480.0) * percentage;
+    float idx = (gHeight / 480.0) * percentage;
     switch ((int)angleABC)
     {
     case 0:
@@ -599,7 +577,7 @@ void glVertex3fABC1(GLfloat x, GLfloat y, GLfloat z)
         return;
     }
 
-    if (curTargetABC == GL_TEXTURE_2D && (getConfig()->width != 640 || getConfig()->height != 480))
+    if (curTarget == GL_TEXTURE_2D && (gWidth != 640 || gHeight != 480))
     {
         float sizeX, sizeY;
         sizeX = vABC[1].x - vABC[0].x;
@@ -610,16 +588,16 @@ void glVertex3fABC1(GLfloat x, GLfloat y, GLfloat z)
         // Cut scene video
         if (textureIDABC == 0x20350)
         {
-            float idx = (getConfig()->height / 480.0);
+            float idx = (gHeight / 480.0);
             if (vABC[2].y < 65.0 && vABC[3].y < 65.0)
             {
                 vABC[2].y *= idx * 1.5;
                 vABC[3].y *= idx * 1.5;
             }
-            else if ((vABC[0].y > (getConfig()->height - 65.0)) && (vABC[1].y > (getConfig()->height - 65.0)))
+            else if ((vABC[0].y > (gHeight - 65.0)) && (vABC[1].y > (gHeight - 65.0)))
             {
-                vABC[0].y += (getConfig()->height - vABC[0].y) - ((getConfig()->height - vABC[0].y) * (idx * 1.5));
-                vABC[1].y += (getConfig()->height - vABC[1].y) - ((getConfig()->height - vABC[1].y) * (idx * 1.5));
+                vABC[0].y += (gHeight - vABC[0].y) - ((gHeight - vABC[0].y) * (idx * 1.5));
+                vABC[1].y += (gHeight - vABC[1].y) - ((gHeight - vABC[1].y) * (idx * 1.5));
             }
             scale = false;
         }
@@ -670,14 +648,14 @@ void glVertex3fABC1(GLfloat x, GLfloat y, GLfloat z)
         // Press Start Button / Insert Coins
         else if (textureIDABC == 0x20138 || textureIDABC == 0x2013a)
         {
-            float newSizeX = sizeX * (getConfig()->width / 640.0);
-            float newSizeY = sizeY * (getConfig()->height / 480.0);
-            vABC[0].x = (getConfig()->width - newSizeX) / 2;
+            float newSizeX = sizeX * (gWidth / 640.0);
+            float newSizeY = sizeY * (gHeight / 480.0);
+            vABC[0].x = (gWidth - newSizeX) / 2;
             vABC[1].x = vABC[0].x + newSizeX;
             vABC[2].x = vABC[1].x;
             vABC[3].x = vABC[0].x;
 
-            vABC[0].y = getConfig()->height - ((newSizeY * 2) + 30);
+            vABC[0].y = gHeight - ((newSizeY * 2) + 30);
             vABC[1].y = vABC[0].y;
             vABC[2].y = vABC[0].y + newSizeY;
             vABC[3].y = vABC[0].y + newSizeY;
@@ -686,17 +664,17 @@ void glVertex3fABC1(GLfloat x, GLfloat y, GLfloat z)
         // FREE PLAY / Credits / Credit count
         else if (textureIDABC >= 0x20057 && textureIDABC <= 0x20062)
         {
-            float newSizeX = sizeX * (getConfig()->width / 640.0);
-            float newSizeY = sizeY * (getConfig()->height / 480.0);
+            float newSizeX = sizeX * (gWidth / 640.0);
+            float newSizeY = sizeY * (gHeight / 480.0);
 
-            vABC[0].x = (getConfig()->width - newSizeX) / 2;
+            vABC[0].x = (gWidth - newSizeX) / 2;
             if (sizeX == 88.0)
             {
-                vABC[0].x -= (16 * (getConfig()->width / 640.0)) * 1.5;
+                vABC[0].x -= (16 * (gWidth / 640.0)) * 1.5;
             }
             if (sizeX == 16.0)
             {
-                float creditsSize = (88 * (getConfig()->width / 640.0)) / 2;
+                float creditsSize = (88 * (gWidth / 640.0)) / 2;
                 if (prevCreditXABC == x)
                     creditCountABC = 1;
                 if (creditCountABC == 0)
@@ -716,7 +694,7 @@ void glVertex3fABC1(GLfloat x, GLfloat y, GLfloat z)
             vABC[2].x = vABC[1].x;
             vABC[3].x = vABC[0].x;
 
-            vABC[0].y = getConfig()->height - (newSizeY + 20);
+            vABC[0].y = gHeight - (newSizeY + 20);
             vABC[1].y = vABC[0].y;
             vABC[2].y = vABC[0].y + newSizeY;
             vABC[3].y = vABC[0].y + newSizeY;
@@ -726,8 +704,8 @@ void glVertex3fABC1(GLfloat x, GLfloat y, GLfloat z)
         else if (textureIDABC == 0x20064)
         {
 
-            float sizeIncX = 26.0 * (getConfig()->height / 480.0);
-            float sizeIncY = 8.0 * (getConfig()->height / 480.0);
+            float sizeIncX = 26.0 * (gHeight / 480.0);
+            float sizeIncY = 8.0 * (gHeight / 480.0);
             vABC[0].x -= sizeIncX / 2.0;
             vABC[1].x += sizeIncX / 2.0;
             vABC[2].x += sizeIncX / 2.0;
@@ -760,8 +738,8 @@ void glVertex3fABC1(GLfloat x, GLfloat y, GLfloat z)
         {
             for (int x = 0; x < 4; x++)
             {
-                vABC[x].x = vABC[x].x * (getConfig()->width / 640.0);
-                vABC[x].y = vABC[x].y * (getConfig()->height / 480.0);
+                vABC[x].x = vABC[x].x * (gWidth / 640.0);
+                vABC[x].y = vABC[x].y * (gHeight / 480.0);
             }
             scale = false;
         }
@@ -774,7 +752,7 @@ void glVertex3fABC1(GLfloat x, GLfloat y, GLfloat z)
         // Green arrows in the crosshair
         else if (textureIDABC == 0x2014c)
         {
-            float shift = (20.0 * (getConfig()->height / 480.0) - 20.0) / 2.0;
+            float shift = (20.0 * (gHeight / 480.0) - 20.0) / 2.0;
             scaleByAngle(80, shift - 5.0);
             switch ((int)angleABC)
             {
@@ -825,8 +803,8 @@ void glVertex3fABC1(GLfloat x, GLfloat y, GLfloat z)
         else if (textureIDABC == 0x20141 || textureIDABC == 0x20142 || textureIDABC == 0x20143 || textureIDABC == 0x20144 ||
                  textureIDABC == 0x20145)
         {
-            float sizeIncX = 6.0 * (getConfig()->height / 480.0) - 6.0;
-            float sizeIncY = 10.0 * (getConfig()->height / 480.0) - 10.0;
+            float sizeIncX = 6.0 * (gHeight / 480.0) - 6.0;
+            float sizeIncY = 10.0 * (gHeight / 480.0) - 10.0;
             vABC[0].x -= sizeIncX / 2.0;
             vABC[0].y -= sizeIncY / 2.0;
             vABC[1].x += sizeIncX / 2.0;
@@ -840,8 +818,8 @@ void glVertex3fABC1(GLfloat x, GLfloat y, GLfloat z)
         // 0x201E2 Friend, 0x201e3 Target, 0x201C5 Enemy and 0x201C6 Missile words
         else if (textureIDABC == 0x201E2 || textureIDABC == 0x201e3 || textureIDABC == 0x201C5 || textureIDABC == 0x201C6)
         {
-            float newHalfSizeX = ((sizeX * ((getConfig()->height / 480.0) * 0.8)) - sizeX) / 2.0;
-            float newSizeY = (sizeY * ((getConfig()->height / 480.0) * 0.8)) - sizeY;
+            float newHalfSizeX = ((sizeX * ((gHeight / 480.0) * 0.8)) - sizeX) / 2.0;
+            float newSizeY = (sizeY * ((gHeight / 480.0) * 0.8)) - sizeY;
             vABC[0].x -= newHalfSizeX;
             vABC[0].y -= newSizeY * 2;
             vABC[1].x += newHalfSizeX;
@@ -859,8 +837,8 @@ void glVertex3fABC1(GLfloat x, GLfloat y, GLfloat z)
                  textureIDABC == 0x20312 || textureIDABC == 0x201e4 || textureIDABC == 0x201e5 || textureIDABC == 0x201e6 ||
                  textureIDABC == 0x201C7)
         {
-            float newHalfSizeX = ((sizeX * ((getConfig()->height / 480.0) * 0.8)) - sizeX) / 2.0;
-            float newSizeY = (sizeY * ((getConfig()->height / 480.0) * 0.8)) - sizeY;
+            float newHalfSizeX = ((sizeX * ((gHeight / 480.0) * 0.8)) - sizeX) / 2.0;
+            float newSizeY = (sizeY * ((gHeight / 480.0) * 0.8)) - sizeY;
             vABC[0].x -= newHalfSizeX;
             vABC[0].y -= newSizeY;
             vABC[1].x += newHalfSizeX;
@@ -872,8 +850,8 @@ void glVertex3fABC1(GLfloat x, GLfloat y, GLfloat z)
         // Fonts and Subtitles in Cut scene Y position
         else if (textureIDABC == 0x30008)
         {
-            int width = getConfig()->width;
-            int height = getConfig()->height;
+            int width = gWidth;
+            int height = gHeight;
             float idx = ((height / 480.0) / 10) + 1;
             float heightShiftUp = height * ((((height / 2.0) - 216) / height) - 0.05);
             if (vABC[0].y == ((height / 2.0) - 216) || vABC[0].y == (((height / 2.0) - 216) + sizeY + 2))
@@ -893,8 +871,8 @@ void glVertex3fABC1(GLfloat x, GLfloat y, GLfloat z)
                 vABC[3].y -= sizeY - 16;
                 scaleABCVertex();
 
-                float widthScaleIdx = getConfig()->width / 640.0;
-                float fontSizeScaled = 8 * (getConfig()->height / 480.0);
+                float widthScaleIdx = gWidth / 640.0;
+                float fontSizeScaled = 8 * (gHeight / 480.0);
                 float fontWidthAfterScaled = 8 * widthScaleIdx;
                 if (originalPosition == (374 - fontSizeScaled))
                 {
@@ -932,7 +910,7 @@ void glVertex3fABC1(GLfloat x, GLfloat y, GLfloat z)
             {
                 for (int x = 0; x < 4; x++)
                 {
-                    vABC[x].y *= ((getConfig()->height / 480.0) / 10) + 1;
+                    vABC[x].y *= ((gHeight / 480.0) / 10) + 1;
                 }
             }
             scale = false;
@@ -954,8 +932,8 @@ void glVertex3fABC2(GLfloat x, GLfloat y, GLfloat z)
 {
     void (*_glVertex3f)(GLfloat x, GLfloat y, GLfloat z) = dlsym(RTLD_NEXT, "glVertex3f");
 
-    GLfloat scaledX = x * (getConfig()->width / 640.0);
-    GLfloat scaledY = y * (getConfig()->height / 480.0);
+    GLfloat scaledX = x * (gWidth / 640.0);
+    GLfloat scaledY = y * (gHeight / 480.0);
 
     _glVertex3f(scaledX, scaledY, z);
 }
@@ -977,7 +955,7 @@ void glClearColorPH(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha)
 
 void vf5WidthFix(void *param1)
 {
-    if (getConfig()->width > 1920)
+    if (gWidth > 1920)
         setVariable(0x86eb208, 1920);
     (((void (*)(void *))0x080d4c24)(param1));
 }
@@ -1015,11 +993,11 @@ void idDisplayTexture(void *p1, void *p2, int p3, int p4, int p5)
 {
     float newX = 0;
     if (p4 > 200)
-        newX = ((float)getConfig()->width / 2) - ((1360.0 / 2) - p4);
+        newX = ((float)gWidth / 2) - ((1360.0 / 2) - p4);
     else
         newX = p4;
 
-    float newY = (float)getConfig()->height * (p5 / 768.0);
+    float newY = (float)gHeight * (p5 / 768.0);
 
     idDisplayTextureFixCAVE(p1, p2, p3, (int)newX, (int)newY);
 }
@@ -1040,7 +1018,7 @@ void calculateShift(int W, int H, float *ShiftX, float *ShiftY, bool right)
 
 void idDrawBallon(void *p1, void *p2, float p3, float p4, float p5, float p6, float p7, bool p8)
 {
-    calculateShift(getConfig()->width, getConfig()->height, &idShiftX, &isShiftY, p8);
+    calculateShift(gWidth, gHeight, &idShiftX, &isShiftY, p8);
     idDrawBallonFixCAVE(p1, p2, p3 + idShiftX, p4 + isShiftY, p5, p6, p7, p8);
 }
 
@@ -1062,8 +1040,8 @@ void idTestText(long p1, long p2, unsigned int p3, char *p4)
 void patchABCMarkers(uint32_t addrCtrlEnemyInfo, uint32_t addrCtrlPlayerRivalFont, uint32_t addrCtrlEnemyPursuit2d)
 {
     // ctrl_enemy_information
-    newWidthRange_CEI_ABC = getConfig()->width + 100.0;
-    newHeightRange_CEI_ABC = getConfig()->height + 68.0;
+    newWidthRange_CEI_ABC = gWidth + 100.0;
+    newHeightRange_CEI_ABC = gHeight + 68.0;
     uint32_t *widthRangePtr_CEI = (uint32_t *)&newWidthRange_CEI_ABC;   // 750
     uint32_t *heightRangePtr_CEI = (uint32_t *)&newHeightRange_CEI_ABC; // 548
     setVariable(addrCtrlEnemyInfo + 0x127, (size_t)widthRangePtr_CEI);  // 750
@@ -1072,18 +1050,18 @@ void patchABCMarkers(uint32_t addrCtrlEnemyInfo, uint32_t addrCtrlPlayerRivalFon
     setVariable(addrCtrlEnemyInfo + 0x44c, (size_t)heightRangePtr_CEI); // 548
 
     // Ctrl_Enemy_Pursuit_2d and Ctrl_Player, Rival_Font
-    newWidthABC = (float)getConfig()->width;               // 640
-    newHeightABC = (float)getConfig()->height;             // 480
-    newReducedWidthABC = (float)getConfig()->width - 40;   // 600
-    newReducedHeightABC = (float)getConfig()->height - 40; // 440
-    newHalfWidthABC = (float)getConfig()->width / 2.0;     // 320
-    newHalfHeightABC = (float)getConfig()->height / 2.0;   // 240
-    newWidthRangeABC = getConfig()->width + 90.0;          // 730
-    newHeightRangeABC = getConfig()->height + 90.0;        // 570
-    new410ABC = (getConfig()->width / 2.0) + 90.0;         // 410
-    new330ABC = (getConfig()->height / 2.0) + 90.0;        // 330
-    new280ABC = (getConfig()->width / 2.0) - 40.0;         // 280
-    new200ABC = (getConfig()->height / 2.0) - 40.0;        // 200
+    newWidthABC = (float)gWidth;               // 640
+    newHeightABC = (float)gHeight;             // 480
+    newReducedWidthABC = (float)gWidth - 40;   // 600
+    newReducedHeightABC = (float)gHeight - 40; // 440
+    newHalfWidthABC = (float)gWidth / 2.0;     // 320
+    newHalfHeightABC = (float)gHeight / 2.0;   // 240
+    newWidthRangeABC = gWidth + 90.0;          // 730
+    newHeightRangeABC = gHeight + 90.0;        // 570
+    new410ABC = (gWidth / 2.0) + 90.0;         // 410
+    new330ABC = (gHeight / 2.0) + 90.0;        // 330
+    new280ABC = (gWidth / 2.0) - 40.0;         // 280
+    new200ABC = (gHeight / 2.0) - 40.0;        // 200
 
     newWidthPtrABC = (uint32_t *)&newWidthABC;
     newHeightPtrABC = (uint32_t *)&newHeightABC;
@@ -1147,7 +1125,7 @@ void patchABCMarkers(uint32_t addrCtrlEnemyInfo, uint32_t addrCtrlPlayerRivalFon
 
 void hookABCGLFunctions(uint32_t glBindTextureAddr, uint32_t glVertex3fAddr1, uint32_t glVertex3fAddr2)
 {
-    replaceCallAtAddress(glBindTextureAddr, glBindTextureABC);
+    replaceCallAtAddress(glBindTextureAddr, myGlBindTexture);
 
     replaceCallAtAddress(glVertex3fAddr1, glTexCoord2fvABC);
     replaceCallAtAddress(glVertex3fAddr1 + 0x1f, glVertex3fABC1);
@@ -1197,11 +1175,11 @@ void glVertex3fHOD4(GLfloat x, GLfloat y, GLfloat z)
 
     void *returnAddress = __builtin_return_address(0);
 
-    float scaleX = getConfig()->width / 1280.0f;
-    float scaleY = getConfig()->height / 768.0f;
+    float scaleX = gWidth / 1280.0f;
+    float scaleY = gHeight / 768.0f;
 
-    float TestX = ((((getConfig()->width - 1280.0) / 2.0) * 1.1116317809) / 1280.0) * (1.5 / scaleX);
-    float TestY = ((((getConfig()->height - 768.0) / 2.0) * 0.666979044) / 768.0) * (1.5 / scaleX);
+    float TestX = ((((gWidth - 1280.0) / 2.0) * 1.1116317809) / 1280.0) * (1.5 / scaleX);
+    float TestY = ((((gHeight - 768.0) / 2.0) * 0.666979044) / 768.0) * (1.5 / scaleX);
     float OffsetX = TestX; // test
     float OffsetY = TestY;
 
@@ -1212,7 +1190,7 @@ void glVertex3fHOD4(GLfloat x, GLfloat y, GLfloat z)
 
     if (z == -1.510000f)
     {                              // logo  2d elemtents target
-        if (curTextureIDGE != 260) // target boss fight
+        if (curTextureID != 260)   // target boss fight
         {
             x += OffsetX;
             y -= OffsetY;
@@ -1290,18 +1268,54 @@ void glVertex3fHOD4(GLfloat x, GLfloat y, GLfloat z)
     _glVertex3f(x, y, z);
 }
 
+void glVertex3fHarley(GLfloat x, GLfloat y, GLfloat z)
+{
+    int (*_glVertex3f)(GLfloat x, GLfloat y, GLfloat z) = dlsym(RTLD_NEXT, "glVertex3f");
+
+    float scaleX = gWidth / 1360.0f;
+    float scaleY = gHeight / 768.0f;
+
+    float OffsetX = ((gWidth - 1360.0) / 2.0) * 0.85;
+    float OffsetY = ((gHeight - 768.0) / 2.0) * 0.85;
+
+    if (curTextureID == 71)
+    {
+
+        x += OffsetX;
+        y -= OffsetY;
+        x *= scaleX;
+        y *= scaleY;
+    }
+    void *addr = __builtin_return_address(0);
+    // printf("glVertex3f is hooked: x=%f, y=%f, z=%f\n", x, y, z);
+    // printf("z values: %.10f\n", z);
+
+    // if ( z == -3517.2272949219f){ //1360x768
+    // if ( z == -4271.795898f){ //900p
+    if (z == -5300.7529296875)
+    { // 1080p
+        printf("glVertex3f hooked: x=%f, y=%f, z=%f, addr: %p\n", x, y, z, addr);
+        x -= 350;
+        y += 150;
+    }
+
+    _glVertex3f(x, y, z);
+}
 
 int initResolutionPatches()
 {
-    switch (getConfig()->crc32)
+    gWidth = getConfig()->width;
+    gHeight = getConfig()->height;
+
+    switch (gId)
     {
     case AFTER_BURNER_CLIMAX:
     {
-        if (getConfig()->width == 640 && getConfig()->height == 480)
+        if (gWidth == 640 && gHeight == 480)
             break;
-        setVariable(0x082c0308, getConfig()->width);
-        setVariable(0x082c030c, getConfig()->height);
-        float newFontScale = getConfig()->height / 480.0;
+        setVariable(0x082c0308, gWidth);
+        setVariable(0x082c030c, gHeight);
+        float newFontScale = gHeight / 480.0;
         unsigned int *newFontScalePtr = (unsigned int *)&newFontScale;
         setVariable(0x0806cd72, *newFontScalePtr);
         abcDrawSpriteCAVEAddress = (void *)0x08076a28 + 6;
@@ -1313,11 +1327,11 @@ int initResolutionPatches()
     break;
     case AFTER_BURNER_CLIMAX_REVA:
     {
-        if (getConfig()->width == 640 && getConfig()->height == 480)
+        if (gWidth == 640 && gHeight == 480)
             break;
-        setVariable(0x082c0a68, getConfig()->width);
-        setVariable(0x082c0a6c, getConfig()->height);
-        float newFontScale = getConfig()->height / 480.0;
+        setVariable(0x082c0a68, gWidth);
+        setVariable(0x082c0a6c, gHeight);
+        float newFontScale = gHeight / 480.0;
         unsigned int *newFontScalePtr = (unsigned int *)&newFontScale;
         setVariable(0x0806cd6a, *newFontScalePtr);
         abcDrawSpriteCAVEAddress = (void *)0x08076a20 + 6;
@@ -1329,11 +1343,11 @@ int initResolutionPatches()
     break;
     case AFTER_BURNER_CLIMAX_REVB:
     {
-        if (getConfig()->width == 640 && getConfig()->height == 480)
+        if (gWidth == 640 && gHeight == 480)
             break;
-        setVariable(0x082C0AE8, getConfig()->width);
-        setVariable(0x082C0AEC, getConfig()->height);
-        float newFontScale = getConfig()->height / 480.0;
+        setVariable(0x082C0AE8, gWidth);
+        setVariable(0x082C0AEC, gHeight);
+        float newFontScale = gHeight / 480.0;
         unsigned int *newFontScalePtr = (unsigned int *)&newFontScale;
         setVariable(0x0806cd72, *newFontScalePtr);
         abcDrawSpriteCAVEAddress = (void *)0x08076a28 + 6;
@@ -1345,11 +1359,11 @@ int initResolutionPatches()
     break;
     case AFTER_BURNER_CLIMAX_SDX:
     {
-        if (getConfig()->width == 640 && getConfig()->height == 480)
+        if (gWidth == 640 && gHeight == 480)
             break;
-        setVariable(0x082c2228, getConfig()->width);
-        setVariable(0x082c222c, getConfig()->height);
-        float newFontScale = getConfig()->height / 480.0;
+        setVariable(0x082c2228, gWidth);
+        setVariable(0x082c222c, gHeight);
+        float newFontScale = gHeight / 480.0;
         unsigned int *newFontScalePtr = (unsigned int *)&newFontScale;
         setVariable(0x0806ce2e, *newFontScalePtr);
         abcDrawSpriteCAVEAddress = (void *)0x08076ae4 + 6;
@@ -1361,11 +1375,11 @@ int initResolutionPatches()
     break;
     case AFTER_BURNER_CLIMAX_SDX_REVA:
     {
-        if (getConfig()->width == 640 && getConfig()->height == 480)
+        if (gWidth == 640 && gHeight == 480)
             break;
-        setVariable(0x082c2228, getConfig()->width);
-        setVariable(0x082c222c, getConfig()->height);
-        float newFontScale = getConfig()->height / 480.0;
+        setVariable(0x082c2228, gWidth);
+        setVariable(0x082c222c, gHeight);
+        float newFontScale = gHeight / 480.0;
         unsigned int *newFontScalePtr = (unsigned int *)&newFontScale;
         setVariable(0x0806ce36, *newFontScalePtr);
         abcDrawSpriteCAVEAddress = (void *)0x08076aec + 6;
@@ -1377,11 +1391,11 @@ int initResolutionPatches()
     break;
     case AFTER_BURNER_CLIMAX_SE:
     {
-        if (getConfig()->width == 640 && getConfig()->height == 480)
+        if (gWidth == 640 && gHeight == 480)
             break;
-        setVariable(0x082c0b28, getConfig()->width);
-        setVariable(0x082c0b2c, getConfig()->height);
-        float newFontScale = getConfig()->height / 480.0;
+        setVariable(0x082c0b28, gWidth);
+        setVariable(0x082c0b2c, gHeight);
+        float newFontScale = gHeight / 480.0;
         unsigned int *newFontScalePtr = (unsigned int *)&newFontScale;
         setVariable(0x0806cd6a, *newFontScalePtr);
         abcDrawSpriteCAVEAddress = (void *)0x08076a20 + 6;
@@ -1393,11 +1407,11 @@ int initResolutionPatches()
     break;
     case AFTER_BURNER_CLIMAX_SE_REVA:
     {
-        if (getConfig()->width == 640 && getConfig()->height == 480)
+        if (gWidth == 640 && gHeight == 480)
             break;
-        setVariable(0x082c0b28, getConfig()->width);
-        setVariable(0x082c0b2c, getConfig()->height);
-        float newFontScale = getConfig()->height / 480.0;
+        setVariable(0x082c0b28, gWidth);
+        setVariable(0x082c0b2c, gHeight);
+        float newFontScale = gHeight / 480.0;
         unsigned int *newFontScalePtr = (unsigned int *)&newFontScale;
         setVariable(0x0806cd72, *newFontScalePtr);
         abcDrawSpriteCAVEAddress = (void *)0x08076a28 + 6;
@@ -1417,10 +1431,21 @@ int initResolutionPatches()
     break;
     case HARLEY_DAVIDSON:
     {
-        if (getConfig()->width <= 1360 && getConfig()->height <= 768)
+        int w = gWidth;
+        int h = gHeight;
+        if (gWidth == 1360 && gHeight == 768)
+        {
+            if (getConfig()->boostRenderRes)
+            {
+                setVariable(0x088a55e0, w); // render res
+                patchMemory(0x08056c31, "9090909090");
+            }
             break;
-        int w = getConfig()->width;
-        int h = getConfig()->height;
+        }
+        else if (gWidth == 640 && gHeight == 480)
+        {
+            break;
+        }
         setVariable(0x088a57e0, w); // main res
         setVariable(0x088a57e4, h);
         setVariable(0x088a57e8, w);
@@ -1433,16 +1458,15 @@ int initResolutionPatches()
         patchMemory(0x082a8500, "9090909090"); // restype
         patchMemory(0x088a55e4, "14");
         patchMemory(0x082a2412, "00008040"); // Fixes white logo background.
-        if (getConfig()->width > 1360)
-        {
-            unsigned int idx = ((21 * h) / 768) + 1;
-            setVariable(0x082a250e, idx);
-        }
+        unsigned int idx = ((21 * h) / 768) + 1;
+        setVariable(0x082a250e, idx);
+        detourFunction(0x0804c700, glVertex3fHarley);
+        detourFunction(0x0804d220, myGlBindTexture);
     }
     break;
     case HUMMER:
     {
-        if (getConfig()->width <= 1280 && getConfig()->height <= 768)
+        if (gWidth <= 1280 && gHeight <= 768)
             break;
         replaceCallAtAddress(0x080d8b58, hummerRespatch);
         replaceCallAtAddress(0x080d8b73, hummerRespatch);
@@ -1454,7 +1478,7 @@ int initResolutionPatches()
     break;
     case HUMMER_EXTREME:
     {
-        if (getConfig()->width <= 1280 && getConfig()->height <= 768)
+        if (gWidth <= 1280 && gHeight <= 768)
             break;
         replaceCallAtAddress(0x08159eab, hummerRespatch);
         replaceCallAtAddress(0x08159ec9, hummerRespatch);
@@ -1466,7 +1490,7 @@ int initResolutionPatches()
     break;
     case HUMMER_EXTREME_MDX:
     {
-        if (getConfig()->width <= 1280 && getConfig()->height <= 768)
+        if (gWidth <= 1280 && gHeight <= 768)
             break;
         replaceCallAtAddress(0x0816348b, hummerRespatch);
         replaceCallAtAddress(0x081634a9, hummerRespatch);
@@ -1478,7 +1502,7 @@ int initResolutionPatches()
     break;
     case HUMMER_SDLX:
     {
-        if (getConfig()->width <= 1280 && getConfig()->height <= 768)
+        if (gWidth <= 1280 && gHeight <= 768)
             break;
         replaceCallAtAddress(0x080d8b14, hummerRespatch);
         replaceCallAtAddress(0x080d8b2f, hummerRespatch);
@@ -1490,24 +1514,34 @@ int initResolutionPatches()
     break;
     case INITIALD_4_EXP_REVB:
     {
-        if (getConfig()->width == 1360 && getConfig()->height == 768)
+        if (gWidth == 1360 && gHeight == 768)
+        {
+            if (getConfig()->boostRenderRes)
+            {
+                setVariable(0x082560a2, gWidth); // Set ResX
+                setVariable(0x08256162, gWidth); // Set ResX
+                setVariable(0x08256222, gWidth); // Set ResX
+                setVariable(0x08256281, gWidth); // Set ResX
+            }
             break;
-        setVariable(0x0837979d, 0x0000f0e9);          // Force set resolution
-        setVariable(0x08379893, getConfig()->width);  // Set ResX
-        setVariable(0x08379898, getConfig()->height); // Set ResY
+        }
+        setVariable(0x0837979d, 0x0000f0e9); // Force set resolution
+        setVariable(0x08379893, gWidth);     // Set ResX
+        setVariable(0x08379898, gHeight);    // Set ResY
         // Renderbuffer Resolution
-        setVariable(0x082560a2, getConfig()->width);  // Set ResX
-        setVariable(0x0825609a, getConfig()->height); // Set ResY
-        setVariable(0x08256162, getConfig()->width);  // Set ResX
-        setVariable(0x0825615a, getConfig()->height); // Set ResY
-        setVariable(0x08256222, getConfig()->width);  // Set ResX
-        setVariable(0x0825621a, getConfig()->height); // Set ResY
-        setVariable(0x08256281, getConfig()->width);  // Set ResX
-        setVariable(0x08256279, getConfig()->height); // Set ResY
-        setVariable(0x08256b27, getConfig()->width);  // Set ResX
-        setVariable(0x08256b1f, getConfig()->height); // Set ResY
-        setVariable(0x08256bb2, getConfig()->width);  // Set ResX
-        setVariable(0x08256baa, getConfig()->height); // Set ResY
+        setVariable(0x082560a2, gWidth);  // Set ResX
+        setVariable(0x0825609a, gHeight); // Set ResY
+        setVariable(0x08256162, gWidth);  // Set ResX
+        setVariable(0x0825615a, gHeight); // Set ResY
+        setVariable(0x08256222, gWidth);  // Set ResX
+        setVariable(0x0825621a, gHeight); // Set ResY
+        setVariable(0x08256281, gWidth);  // Set ResX
+        setVariable(0x08256279, gHeight); // Set ResY
+
+        setVariable(0x08256b27, gWidth);  // Set ResX
+        setVariable(0x08256b1f, gHeight); // Set ResY
+        setVariable(0x08256bb2, gWidth);  // Set ResX
+        setVariable(0x08256baa, gHeight); // Set ResY
 
         idDisplayTextureCAVEAddress = (void *)0x08337360 + 5;
         detourFunction(0x08337360, idDisplayTexture);
@@ -1516,7 +1550,7 @@ int initResolutionPatches()
         patchMemory(0x0857dfe9, "01"); // FSAA Enabled
         setVariable(0x089ea1d0, 1);    // FSAA Quality
         // Fix Subtitles Position
-        id4NewCaptionY = ((getConfig()->height - 768.0) / 2) + 64.0;
+        id4NewCaptionY = ((gHeight - 768.0) / 2) + 64.0;
         detourFunction(0x081f0f91, yTxtPatch);
         id4NewCaptionYCAVEAddress = (void *)(0x081f0f91 + 8);
         // Ballon fix
@@ -1525,10 +1559,10 @@ int initResolutionPatches()
         detourFunction(0x081ef2ee, idDrawBallon);
         replaceCallAtAddress(0x081f084a, id4DrawText);
         // Scale Testmode text
-        if (isTestMode() && getConfig()->width >= 1920)
+        if (isTestMode() && gWidth >= 1920)
         {
             patchMemory(0x0899bb78, "02");
-            idTextShift = (getConfig()->width == 1920 ? 27 : ((1920 / getConfig()->width) * 27) + 2);
+            idTextShift = (gWidth == 1920 ? 27 : ((1920 / gWidth) * 27) + 2);
             idTestTextAddress = (void *)0x08579e92;
             replaceCallAtAddress(0x0835a1fe, idTestText);
         }
@@ -1536,24 +1570,33 @@ int initResolutionPatches()
     break;
     case INITIALD_4_EXP_REVC:
     {
-        if (getConfig()->width == 1360 && getConfig()->height == 768)
+        if (gWidth == 1360 && gHeight == 768)
+        {
+            if (getConfig()->boostRenderRes)
+            {
+                setVariable(0x08256192, gWidth); // Set ResX
+                setVariable(0x08256252, gWidth); // Set ResX
+                setVariable(0x08256312, gWidth); // Set ResX
+                setVariable(0x08256371, gWidth); // Set ResX
+            }
             break;
-        setVariable(0x0837961d, 0x0000f0e9);          // Force set resolution
-        setVariable(0x08379713, getConfig()->width);  // Set ResX
-        setVariable(0x08379718, getConfig()->height); // Set ResY
+        }
+        setVariable(0x0837961d, 0x0000f0e9); // Force set resolution
+        setVariable(0x08379713, gWidth);     // Set ResX
+        setVariable(0x08379718, gHeight);    // Set ResY
         // Renderbuffer Resolution
-        setVariable(0x08256192, getConfig()->width);  // Set ResX
-        setVariable(0x0825618a, getConfig()->height); // Set ResY
-        setVariable(0x08256252, getConfig()->width);  // Set ResX
-        setVariable(0x0825624a, getConfig()->height); // Set ResY
-        setVariable(0x08256312, getConfig()->width);  // Set ResX
-        setVariable(0x0825630a, getConfig()->height); // Set ResY
-        setVariable(0x08256371, getConfig()->width);  // Set ResX
-        setVariable(0x08256369, getConfig()->height); // Set ResY
-        setVariable(0x08256c17, getConfig()->width);  // Set ResX
-        setVariable(0x08256c0f, getConfig()->height); // Set ResY
-        setVariable(0x08256ca2, getConfig()->width);  // Set ResX
-        setVariable(0x08256c9a, getConfig()->height); // Set ResY
+        setVariable(0x08256192, gWidth);  // Set ResX
+        setVariable(0x0825618a, gHeight); // Set ResY
+        setVariable(0x08256252, gWidth);  // Set ResX
+        setVariable(0x0825624a, gHeight); // Set ResY
+        setVariable(0x08256312, gWidth);  // Set ResX
+        setVariable(0x0825630a, gHeight); // Set ResY
+        setVariable(0x08256371, gWidth);  // Set ResX
+        setVariable(0x08256369, gHeight); // Set ResY
+        setVariable(0x08256c17, gWidth);  // Set ResX
+        setVariable(0x08256c0f, gHeight); // Set ResY
+        setVariable(0x08256ca2, gWidth);  // Set ResX
+        setVariable(0x08256c9a, gHeight); // Set ResY
 
         idDisplayTextureCAVEAddress = (void *)0x08337200 + 5;
         detourFunction(0x08337200, idDisplayTexture);
@@ -1562,10 +1605,10 @@ int initResolutionPatches()
         patchMemory(0x0857dd69, "01"); // FSAA Enabled
         setVariable(0x089ea1d0, 1);    // FSAA Quality
         // Fix Subtitles
-        float newCaptionY = ((getConfig()->height - 768.0) / 2) + 64.0;
+        float newCaptionY = ((gHeight - 768.0) / 2) + 64.0;
         setVariable(0x089a7d58, *(unsigned int *)&newCaptionY);
         // Fix Subtitles Position
-        id4NewCaptionY = ((getConfig()->height - 768.0) / 2) + 64.0;
+        id4NewCaptionY = ((gHeight - 768.0) / 2) + 64.0;
         detourFunction(0x081f1051, yTxtPatch);
         id4NewCaptionYCAVEAddress = (void *)(0x081f1051 + 8);
         // Ballon fix
@@ -1574,10 +1617,10 @@ int initResolutionPatches()
         detourFunction(0x081ef39e, idDrawBallon);
         replaceCallAtAddress(0x081f08fc, id4DrawText);
         // Scale Testmode text
-        if (isTestMode() && getConfig()->width >= 1920)
+        if (isTestMode() && gWidth >= 1920)
         {
             patchMemory(0x0899bb78, "02");
-            idTextShift = (getConfig()->width == 1920 ? 27 : ((1920 / getConfig()->width) * 27) + 2);
+            idTextShift = (gWidth == 1920 ? 27 : ((1920 / gWidth) * 27) + 2);
             idTestTextAddress = (void *)0x08579c12;
             replaceCallAtAddress(0x0835a09e, idTestText);
         }
@@ -1585,24 +1628,33 @@ int initResolutionPatches()
     break;
     case INITIALD_4_EXP_REVD:
     {
-        if (getConfig()->width == 1360 && getConfig()->height == 768)
+        if (gWidth == 1360 && gHeight == 768)
+        {
+            if (getConfig()->boostRenderRes)
+            {
+                setVariable(0x0825728a, gWidth); // Set ResX
+                setVariable(0x0825734a, gWidth); // Set ResX
+                setVariable(0x0825740a, gWidth); // Set ResX
+                setVariable(0x08257469, gWidth); // Set ResX
+            }
             break;
-        setVariable(0x0837b12d, 0x0000f0e9);          // Force set resolution
-        setVariable(0x0837b223, getConfig()->width);  // Set ResX
-        setVariable(0x0837b228, getConfig()->height); // Set ResY
+        }
+        setVariable(0x0837b12d, 0x0000f0e9); // Force set resolution
+        setVariable(0x0837b223, gWidth);     // Set ResX
+        setVariable(0x0837b228, gHeight);    // Set ResY
         // Renderbuffer Resolution
-        setVariable(0x0825728a, getConfig()->width);  // Set ResX
-        setVariable(0x08257282, getConfig()->height); // Set ResY
-        setVariable(0x0825734a, getConfig()->width);  // Set ResX
-        setVariable(0x08257342, getConfig()->height); // Set ResY
-        setVariable(0x0825740a, getConfig()->width);  // Set ResX
-        setVariable(0x08257402, getConfig()->height); // Set ResY
-        setVariable(0x08257469, getConfig()->width);  // Set ResX
-        setVariable(0x08257461, getConfig()->height); // Set ResY
-        setVariable(0x08257d0f, getConfig()->width);  // Set ResX
-        setVariable(0x08257d07, getConfig()->height); // Set ResY
-        setVariable(0x08257d9a, getConfig()->width);  // Set ResX
-        setVariable(0x08257d92, getConfig()->height); // Set ResY
+        setVariable(0x0825728a, gWidth);  // Set ResX
+        setVariable(0x08257282, gHeight); // Set ResY
+        setVariable(0x0825734a, gWidth);  // Set ResX
+        setVariable(0x08257342, gHeight); // Set ResY
+        setVariable(0x0825740a, gWidth);  // Set ResX
+        setVariable(0x08257402, gHeight); // Set ResY
+        setVariable(0x08257469, gWidth);  // Set ResX
+        setVariable(0x08257461, gHeight); // Set ResY
+        setVariable(0x08257d0f, gWidth);  // Set ResX
+        setVariable(0x08257d07, gHeight); // Set ResY
+        setVariable(0x08257d9a, gWidth);  // Set ResX
+        setVariable(0x08257d92, gHeight); // Set ResY
 
         idDisplayTextureCAVEAddress = (void *)0x08338d50 + 5;
         detourFunction(0x08338d50, idDisplayTexture);
@@ -1611,7 +1663,7 @@ int initResolutionPatches()
         patchMemory(0x0857f879, "01"); // FSAA Enabled
         setVariable(0x089ed930, 1);    // FSAA Quality
         // Fix Subtitles Position
-        id4NewCaptionY = ((getConfig()->height - 768.0) / 2) + 64.0;
+        id4NewCaptionY = ((gHeight - 768.0) / 2) + 64.0;
         detourFunction(0x081f2061, yTxtPatch);
         id4NewCaptionYCAVEAddress = (void *)(0x081f2061 + 8);
         // Ballon fix
@@ -1620,10 +1672,10 @@ int initResolutionPatches()
         detourFunction(0x081f03be, idDrawBallon);
         replaceCallAtAddress(0x081f191a, id4DrawText);
         // Scale Testmode text
-        if (isTestMode() && getConfig()->width >= 1920)
+        if (isTestMode() && gWidth >= 1920)
         {
             patchMemory(0x0899f2d8, "02");
-            idTextShift = (getConfig()->width == 1920 ? 27 : ((1920 / getConfig()->width) * 27) + 2);
+            idTextShift = (gWidth == 1920 ? 27 : ((1920 / gWidth) * 27) + 2);
             idTestTextAddress = (void *)0x0857b722;
             replaceCallAtAddress(0x0835bbee, idTestText);
         }
@@ -1631,24 +1683,33 @@ int initResolutionPatches()
     break;
     case INITIALD_4_REVA:
     {
-        if (getConfig()->width == 1360 && getConfig()->height == 768)
+        if (gWidth == 1360 && gHeight == 768)
+        {
+            if (getConfig()->boostRenderRes)
+            {
+                setVariable(0x08247e77, gWidth); // Set ResX
+                setVariable(0x08247f37, gWidth); // Set ResX
+                setVariable(0x08247ff7, gWidth); // Set ResX
+                setVariable(0x08248056, gWidth); // Set ResX
+            }
             break;
+        }
         setVariable(0x0835640d, 0x0000f0e9);          // Force set resolution
-        setVariable(0x08356503, getConfig()->width);  // Set ResX
-        setVariable(0x08356508, getConfig()->height); // Set ResY
+        setVariable(0x08356503, gWidth);              // Set ResX
+        setVariable(0x08356508, gHeight);             // Set ResY
         // Renderbuffer Resolution
-        setVariable(0x08247e77, getConfig()->width);  // Set ResX
-        setVariable(0x08247e6f, getConfig()->height); // Set ResY
-        setVariable(0x08247f37, getConfig()->width);  // Set ResX
-        setVariable(0x08247f2f, getConfig()->height); // Set ResY
-        setVariable(0x08247ff7, getConfig()->width);  // Set ResX
-        setVariable(0x08247fef, getConfig()->height); // Set ResY
-        setVariable(0x08248056, getConfig()->width);  // Set ResX
-        setVariable(0x0824804e, getConfig()->height); // Set ResY
-        setVariable(0x082487e7, getConfig()->width);  // Set ResX
-        setVariable(0x082487df, getConfig()->height); // Set ResY
-        setVariable(0x08248872, getConfig()->width);  // Set ResX
-        setVariable(0x0824886a, getConfig()->height); // Set ResY
+        setVariable(0x08247e77, gWidth);  // Set ResX
+        setVariable(0x08247e6f, gHeight); // Set ResY
+        setVariable(0x08247f37, gWidth);  // Set ResX
+        setVariable(0x08247f2f, gHeight); // Set ResY
+        setVariable(0x08247ff7, gWidth);  // Set ResX
+        setVariable(0x08247fef, gHeight); // Set ResY
+        setVariable(0x08248056, gWidth);  // Set ResX
+        setVariable(0x0824804e, gHeight); // Set ResY
+        setVariable(0x082487e7, gWidth);  // Set ResX
+        setVariable(0x082487df, gHeight); // Set ResY
+        setVariable(0x08248872, gWidth);  // Set ResX
+        setVariable(0x0824886a, gHeight); // Set ResY
 
         idDisplayTextureCAVEAddress = (void *)0x083188a0 + 5;
         detourFunction(0x083188a0, idDisplayTexture);
@@ -1665,24 +1726,33 @@ int initResolutionPatches()
     break;
     case INITIALD_4_REVB:
     {
-        if (getConfig()->width == 1360 && getConfig()->height == 768)
+        if (gWidth == 1360 && gHeight == 768)
+        {
+            if (getConfig()->boostRenderRes)
+            {
+                setVariable(0x08248037, gWidth); // Set ResX
+                setVariable(0x082480f7, gWidth); // Set ResX
+                setVariable(0x082481b7, gWidth); // Set ResX
+                setVariable(0x08248216, gWidth); // Set ResX
+            }
             break;
+        }
         setVariable(0x0835664d, 0x0000f0e9);          // Force set resolution
-        setVariable(0x08356743, getConfig()->width);  // Set ResX
-        setVariable(0x08356748, getConfig()->height); // Set ResY
+        setVariable(0x08356743, gWidth);              // Set ResX
+        setVariable(0x08356748, gHeight);             // Set ResY
         // Renderbuffer Resolution
-        setVariable(0x08248037, getConfig()->width);  // Set ResX
-        setVariable(0x0824802f, getConfig()->height); // Set ResY
-        setVariable(0x082480f7, getConfig()->width);  // Set ResX
-        setVariable(0x082480ef, getConfig()->height); // Set ResY
-        setVariable(0x082481b7, getConfig()->width);  // Set ResX
-        setVariable(0x082481af, getConfig()->height); // Set ResY
-        setVariable(0x08248216, getConfig()->width);  // Set ResX
-        setVariable(0x0824820e, getConfig()->height); // Set ResY
-        setVariable(0x082489a7, getConfig()->width);  // Set ResX
-        setVariable(0x0824899f, getConfig()->height); // Set ResY
-        setVariable(0x08248a32, getConfig()->width);  // Set ResX
-        setVariable(0x08248a2a, getConfig()->height); // Set ResY
+        setVariable(0x08248037, gWidth);  // Set ResX
+        setVariable(0x0824802f, gHeight); // Set ResY
+        setVariable(0x082480f7, gWidth);  // Set ResX
+        setVariable(0x082480ef, gHeight); // Set ResY
+        setVariable(0x082481b7, gWidth);  // Set ResX
+        setVariable(0x082481af, gHeight); // Set ResY
+        setVariable(0x08248216, gWidth);  // Set ResX
+        setVariable(0x0824820e, gHeight); // Set ResY
+        setVariable(0x082489a7, gWidth);  // Set ResX
+        setVariable(0x0824899f, gHeight); // Set ResY
+        setVariable(0x08248a32, gWidth);  // Set ResX
+        setVariable(0x08248a2a, gHeight); // Set ResY
 
         idDisplayTextureCAVEAddress = (void *)0x08318ab0 + 5;
         detourFunction(0x08318ab0, idDisplayTexture);
@@ -1699,24 +1769,33 @@ int initResolutionPatches()
     break;
     case INITIALD_4_REVC:
     {
-        if (getConfig()->width == 1360 && getConfig()->height == 768)
+        if (gWidth == 1360 && gHeight == 768)
+        {
+            if (getConfig()->boostRenderRes)
+            {
+                setVariable(0x08248ad7, gWidth); // Set ResX
+                setVariable(0x08248b97, gWidth); // Set ResX
+                setVariable(0x08248c57, gWidth); // Set ResX
+                setVariable(0x08248cb6, gWidth); // Set ResX
+            }
             break;
+        }
         setVariable(0x0835eebd, 0x0000f0e9);          // Force set resolution
-        setVariable(0x0835efb3, getConfig()->width);  // Set ResX
-        setVariable(0x0835efb8, getConfig()->height); // Set ResY
+        setVariable(0x0835efb3, gWidth);              // Set ResX
+        setVariable(0x0835efb8, gHeight);             // Set ResY
         // Renderbuffer Resolution
-        setVariable(0x08248ad7, getConfig()->width);  // Set ResX
-        setVariable(0x08248acf, getConfig()->height); // Set ResY
-        setVariable(0x08248b97, getConfig()->width);  // Set ResX
-        setVariable(0x08248b8f, getConfig()->height); // Set ResY
-        setVariable(0x08248c57, getConfig()->width);  // Set ResX
-        setVariable(0x08248c4f, getConfig()->height); // Set ResY
-        setVariable(0x08248cb6, getConfig()->width);  // Set ResX
-        setVariable(0x08248cae, getConfig()->height); // Set ResY
-        setVariable(0x08249447, getConfig()->width);  // Set ResX
-        setVariable(0x0824943f, getConfig()->height); // Set ResY
-        setVariable(0x082494d2, getConfig()->width);  // Set ResX
-        setVariable(0x082494ca, getConfig()->height); // Set ResY
+        setVariable(0x08248ad7, gWidth);  // Set ResX
+        setVariable(0x08248acf, gHeight); // Set ResY
+        setVariable(0x08248b97, gWidth);  // Set ResX
+        setVariable(0x08248b8f, gHeight); // Set ResY
+        setVariable(0x08248c57, gWidth);  // Set ResX
+        setVariable(0x08248c4f, gHeight); // Set ResY
+        setVariable(0x08248cb6, gWidth);  // Set ResX
+        setVariable(0x08248cae, gHeight); // Set ResY
+        setVariable(0x08249447, gWidth);  // Set ResX
+        setVariable(0x0824943f, gHeight); // Set ResY
+        setVariable(0x082494d2, gWidth);  // Set ResX
+        setVariable(0x082494ca, gHeight); // Set ResY
 
         idDisplayTextureCAVEAddress = (void *)0x0831ea60 + 5;
         detourFunction(0x0831ea60, idDisplayTexture);
@@ -1733,24 +1812,33 @@ int initResolutionPatches()
     break;
     case INITIALD_4_REVD:
     {
-        if (getConfig()->width == 1360 && getConfig()->height == 768)
+        if (gWidth == 1360 && gHeight == 768)
+        {
+            if (getConfig()->boostRenderRes)
+            {
+                setVariable(0x08248f47, gWidth); // Set ResX
+                setVariable(0x08249007, gWidth); // Set ResX
+                setVariable(0x082490c7, gWidth); // Set ResX
+                setVariable(0x08249126, gWidth); // Set ResX
+            }
             break;
+        }
         setVariable(0x0835c55d, 0x0000f0e9);          // Force set resolution
-        setVariable(0x0835c653, getConfig()->width);  // Set ResX
-        setVariable(0x0835c658, getConfig()->height); // Set ResY
+        setVariable(0x0835c653, gWidth);              // Set ResX
+        setVariable(0x0835c658, gHeight);             // Set ResY
         // Renderbuffer Resolution
-        setVariable(0x08248f47, getConfig()->width);  // Set ResX
-        setVariable(0x08248f3f, getConfig()->height); // Set ResY
-        setVariable(0x08249007, getConfig()->width);  // Set ResX
-        setVariable(0x08248fff, getConfig()->height); // Set ResY
-        setVariable(0x082490c7, getConfig()->width);  // Set ResX
-        setVariable(0x082490bf, getConfig()->height); // Set ResY
-        setVariable(0x08249126, getConfig()->width);  // Set ResX
-        setVariable(0x0824911e, getConfig()->height); // Set ResY
-        setVariable(0x082498b7, getConfig()->width);  // Set ResX
-        setVariable(0x082498af, getConfig()->height); // Set ResY
-        setVariable(0x08249942, getConfig()->width);  // Set ResX
-        setVariable(0x0824993a, getConfig()->height); // Set ResY
+        setVariable(0x08248f47, gWidth);  // Set ResX
+        setVariable(0x08248f3f, gHeight); // Set ResY
+        setVariable(0x08249007, gWidth);  // Set ResX
+        setVariable(0x08248fff, gHeight); // Set ResY
+        setVariable(0x082490c7, gWidth);  // Set ResX
+        setVariable(0x082490bf, gHeight); // Set ResY
+        setVariable(0x08249126, gWidth);  // Set ResX
+        setVariable(0x0824911e, gHeight); // Set ResY
+        setVariable(0x082498b7, gWidth);  // Set ResX
+        setVariable(0x082498af, gHeight); // Set ResY
+        setVariable(0x08249942, gWidth);  // Set ResX
+        setVariable(0x0824993a, gHeight); // Set ResY
 
         idDisplayTextureCAVEAddress = (void *)0x0831bf90 + 5;
         detourFunction(0x0831bf90, idDisplayTexture);
@@ -1767,24 +1855,33 @@ int initResolutionPatches()
     break;
     case INITIALD_4_REVG:
     {
-        if (getConfig()->width == 1360 && getConfig()->height == 768)
+        if (gWidth == 1360 && gHeight == 768)
+        {
+            if (getConfig()->boostRenderRes)
+            {
+                setVariable(0x08262eda, gWidth); // Set ResX
+                setVariable(0x08262f9a, gWidth); // Set ResX
+                setVariable(0x0826305a, gWidth); // Set ResX
+                setVariable(0x082630b9, gWidth); // Set ResX
+            }
             break;
+        }
         setVariable(0x08393fbd, 0x0000f0e9);          // Force set resolution
-        setVariable(0x083940b3, getConfig()->width);  // Set ResX
-        setVariable(0x083940b8, getConfig()->height); // Set ResY
+        setVariable(0x083940b3, gWidth);              // Set ResX
+        setVariable(0x083940b8, gHeight);             // Set ResY
         // Renderbuffer Resolution
-        setVariable(0x08262eda, getConfig()->width);  // Set ResX
-        setVariable(0x08262ed2, getConfig()->height); // Set ResY
-        setVariable(0x08262f9a, getConfig()->width);  // Set ResX
-        setVariable(0x08262f92, getConfig()->height); // Set ResY
-        setVariable(0x0826305a, getConfig()->width);  // Set ResX
-        setVariable(0x08263052, getConfig()->height); // Set ResY
-        setVariable(0x082630b9, getConfig()->width);  // Set ResX
-        setVariable(0x082630b1, getConfig()->height); // Set ResY
-        setVariable(0x0826395f, getConfig()->width);  // Set ResX
-        setVariable(0x08263957, getConfig()->height); // Set ResY
-        setVariable(0x082639ea, getConfig()->width);  // Set ResX
-        setVariable(0x082639e2, getConfig()->height); // Set ResY
+        setVariable(0x08262eda, gWidth);  // Set ResX
+        setVariable(0x08262ed2, gHeight); // Set ResY
+        setVariable(0x08262f9a, gWidth);  // Set ResX
+        setVariable(0x08262f92, gHeight); // Set ResY
+        setVariable(0x0826305a, gWidth);  // Set ResX
+        setVariable(0x08263052, gHeight); // Set ResY
+        setVariable(0x082630b9, gWidth);  // Set ResX
+        setVariable(0x082630b1, gHeight); // Set ResY
+        setVariable(0x0826395f, gWidth);  // Set ResX
+        setVariable(0x08263957, gHeight); // Set ResY
+        setVariable(0x082639ea, gWidth);  // Set ResX
+        setVariable(0x082639e2, gHeight); // Set ResY
 
         idDisplayTextureCAVEAddress = (void *)0x083502b0 + 5;
         detourFunction(0x083502b0, idDisplayTexture);
@@ -1798,10 +1895,10 @@ int initResolutionPatches()
         detourFunction(0x081f2b7e, idDrawBallon);
         replaceCallAtAddress(0x081f40da, id4DrawText);
         // Scale Testmode text
-        if (isTestMode() && getConfig()->width >= 1920)
+        if (isTestMode() && gWidth >= 1920)
         {
             patchMemory(0x089e15d8, "02");
-            idTextShift = (getConfig()->width == 1920 ? 27 : ((1920 / getConfig()->width) * 27) + 2);
+            idTextShift = (gWidth == 1920 ? 27 : ((1920 / gWidth) * 27) + 2);
             idTestTextAddress = (void *)0x085945c2;
             replaceCallAtAddress(0x083748ce, idTestText);
         }
@@ -1809,30 +1906,38 @@ int initResolutionPatches()
     break;
     case INITIALD_5_EXP:
     {
-        if (getConfig()->width == 1360 && getConfig()->height == 768)
+        bool origRes = (gWidth == 1360 && gHeight == 768);
+        if (!getConfig()->boostRenderRes && origRes)
+        {
             break;
-        patchMemory(0x0853d8cd, "E9f000");            // Accept different Resolutions
-        setVariable(0x0853d9c3, getConfig()->width);  // Set ResX
-        setVariable(0x0853d9c8, getConfig()->height); // Set ResY
+        }
+        if (gWidth >= 1360 && gHeight >= 768)
+        {
+            patchMemory(0x08356054, "bb01000000eb6b"); // Prevents renrer.ini from loading
+            setVariable(0x08355f30, gWidth);           // Framebuffer Main Width
+            setVariable(0x08355f37, gHeight);          // Framebuffer Main Height
+            setVariable(0x08355fd1, 256);              // Framebuffer Road Specular width
+            setVariable(0x08355fd8, 256);              // Framebuffer Road Specular height
+            setVariable(0x08355ff7, gWidth);           // Framebuffer Glare Width
+            setVariable(0x08355ffe, gHeight);          // Framebuffer Glare Height
+            setVariable(0x08356024, gWidth >> 2);      // Framebuffer Reduced width
+            patchMemory(0x08356049, "00000001");       // Enable Cube Secular
+            if (origRes)
+                break;
+        }
+        patchMemory(0x0853d8cd, "E9f000"); // Accept different Resolutions
+        setVariable(0x0853d9c3, gWidth);   // Set ResX
+        setVariable(0x0853d9c8, gHeight);  // Set ResY
 
-        patchMemory(0x08356054, "bb01000000eb6b");        // Prevents renrer.ini from loading
-        setVariable(0x08355f30, getConfig()->width);      // Framebuffer Main Width
-        setVariable(0x08355f37, getConfig()->height);     // Framebuffer Main Height
-        setVariable(0x08355fd1, 256);                     // Framebuffer Road Specular width
-        setVariable(0x08355fd8, 256);                     // Framebuffer Road Specular height
-        setVariable(0x08355ff7, getConfig()->width);      // Framebuffer Glare Width
-        setVariable(0x08355ffe, getConfig()->height);     // Framebuffer Glare Height
-        setVariable(0x08356024, getConfig()->width >> 2); // Framebuffer Reduced width
-        patchMemory(0x08356049, "00000001");              // Enable Cube Secular
         // Fix Press start and Insert coins text
         idDisplayTextureCAVEAddress = (void *)0x084e2470 + 5;
         detourFunction(0x084e2470, idDisplayTexture);
         // setViewport for track selection screen
-        setVariable(0x08215cae, (int)(getConfig()->height * (112.0 / 768)));
-        setVariable(0x08215cb6, (int)(getConfig()->width * (724.0 / 1315)));
-        setVariable(0x08215cbe, (int)(getConfig()->height * (592.0 / 768)));
-        setVariable(0x08215cc6, (int)(getConfig()->width * (962.0 / 1315)));
-        setVariable(0x08215cce, getConfig()->height);
+        setVariable(0x08215cae, (int)(gHeight * (112.0 / 768)));
+        setVariable(0x08215cb6, (int)(gWidth * (724.0 / 1315)));
+        setVariable(0x08215cbe, (int)(gHeight * (592.0 / 768)));
+        setVariable(0x08215cc6, (int)(gWidth * (962.0 / 1315)));
+        setVariable(0x08215cce, gHeight);
         // FSAA
         patchMemory(0x0875aaa6, "9090");
         patchMemory(0x08788949, "01"); // FSAA Enabled
@@ -1844,15 +1949,15 @@ int initResolutionPatches()
         replaceCallAtAddress(0x08254b68, idBalloonPut);
         replaceCallAtAddress(0x08254c29, idBalloonPut);
         // START and VIEW CHANGE Text fix
-        float explanationScaleX = getConfig()->width - (1360.0 - 815.0);
-        float explanationScaleY = (getConfig()->height / 768.0) * 680.0;
+        float explanationScaleX = gWidth - (1360.0 - 815.0);
+        float explanationScaleY = (gHeight / 768.0) * 680.0;
         setVariable(0x0826ac45, *(unsigned int *)&explanationScaleY);
         setVariable(0x0826acbd, *(unsigned int *)&explanationScaleX);
         // Scale Testmode text
-        if (isTestMode() && getConfig()->width >= 1920)
+        if (isTestMode() && gWidth >= 1920)
         {
             patchMemory(0x08c55ca0, "02");
-            idTextShift = (getConfig()->width == 1920 ? 27 : ((1920 / getConfig()->width) * 27) + 2);
+            idTextShift = (gWidth == 1920 ? 27 : ((1920 / gWidth) * 27) + 2);
             idTestTextAddress = (void *)0x08775c1c;
             replaceCallAtAddress(0x0850853e, idTestText);
         }
@@ -1860,30 +1965,37 @@ int initResolutionPatches()
     break;
     case INITIALD_5_EXP_20:
     {
-        if (getConfig()->width == 1360 && getConfig()->height == 768)
+        bool origRes = (gWidth == 1360 && gHeight == 768);
+        if (!getConfig()->boostRenderRes && origRes)
+        {
             break;
-        patchMemory(0x0855a48d, "E9f000");            // Accept different Resolutions
-        setVariable(0x0855a583, getConfig()->width);  // Set ResX
-        setVariable(0x0855a588, getConfig()->height); // Set ResY
-
-        patchMemory(0x08363c24, "bb01000000eb6b");        // Prevents renrer.ini from loading
-        setVariable(0x08363b00, getConfig()->width);      // Framebuffer Main Width
-        setVariable(0x08363b07, getConfig()->height);     // Framebuffer Main Height
-        setVariable(0x08363ba1, 256);                     // Framebuffer Road Specular width
-        setVariable(0x08363ba8, 256);                     // Framebuffer Road Specular height
-        setVariable(0x08363bc7, getConfig()->width);      // Framebuffer Glare Width
-        setVariable(0x08363bce, getConfig()->height);     // Framebuffer Glare Height
-        setVariable(0x08363bf4, getConfig()->width >> 2); // Framebuffer Reduced width
-        patchMemory(0x08363c19, "00000001");              // Enable Cube Secular
+        }
+        if (gWidth >= 1360 && gHeight >= 768)
+        {
+            patchMemory(0x08363c24, "bb01000000eb6b"); // Prevents renrer.ini from loading
+            setVariable(0x08363b00, gWidth);           // Framebuffer Main Width
+            setVariable(0x08363b07, gHeight);          // Framebuffer Main Height
+            setVariable(0x08363ba1, 256);              // Framebuffer Road Specular width
+            setVariable(0x08363ba8, 256);              // Framebuffer Road Specular height
+            setVariable(0x08363bc7, gWidth);           // Framebuffer Glare Width
+            setVariable(0x08363bce, gHeight);          // Framebuffer Glare Height
+            setVariable(0x08363bf4, gWidth >> 2);      // Framebuffer Reduced width
+            patchMemory(0x08363c19, "00000001");       // Enable Cube Secular
+            if (origRes)
+                break;
+        }
+        patchMemory(0x0855a48d, "E9f000"); // Accept different Resolutions
+        setVariable(0x0855a583, gWidth);   // Set ResX
+        setVariable(0x0855a588, gHeight);  // Set ResY
         // Fix Press start and Insert coins text
         idDisplayTextureCAVEAddress = (void *)0x084fdfa0 + 5;
         detourFunction(0x084fdfa0, idDisplayTexture);
         // setViewport for track selection screen
-        setVariable(0x0821e75e, (int)(getConfig()->height * (112.0 / 768)));
-        setVariable(0x0821e766, (int)(getConfig()->width * (724.0 / 1315)));
-        setVariable(0x0821e76e, (int)(getConfig()->height * (592.0 / 768)));
-        setVariable(0x0821e776, (int)(getConfig()->width * (962.0 / 1315)));
-        setVariable(0x0821e77e, getConfig()->height);
+        setVariable(0x0821e75e, (int)(gHeight * (112.0 / 768)));
+        setVariable(0x0821e766, (int)(gWidth * (724.0 / 1315)));
+        setVariable(0x0821e76e, (int)(gHeight * (592.0 / 768)));
+        setVariable(0x0821e776, (int)(gWidth * (962.0 / 1315)));
+        setVariable(0x0821e77e, gHeight);
         // FSAA
         patchMemory(0x087775f6, "9090");
         patchMemory(0x087a5499, "01"); // FSAA Enabled
@@ -1895,15 +2007,15 @@ int initResolutionPatches()
         replaceCallAtAddress(0x0825d4e8, idBalloonPut);
         replaceCallAtAddress(0x0825d5a9, idBalloonPut);
         // START and VIEW CHANGE Text fix
-        float explanationScaleX = getConfig()->width - (1360.0 - 815.0);
-        float explanationScaleY = (getConfig()->height / 768.0) * 680.0;
+        float explanationScaleX = gWidth - (1360.0 - 815.0);
+        float explanationScaleY = (gHeight / 768.0) * 680.0;
         setVariable(0x082737b5, *(unsigned int *)&explanationScaleY);
         setVariable(0x0827382d, *(unsigned int *)&explanationScaleX);
         // Scale Testmode text
-        if (isTestMode() && getConfig()->width >= 1920)
+        if (isTestMode() && gWidth >= 1920)
         {
             patchMemory(0x08ca3d00, "02");
-            idTextShift = (getConfig()->width == 1920 ? 27 : ((1920 / getConfig()->width) * 27) + 2);
+            idTextShift = (gWidth == 1920 ? 27 : ((1920 / gWidth) * 27) + 2);
             idTestTextAddress = (void *)0x0879276c;
             replaceCallAtAddress(0x0852528a, idTestText);
         }
@@ -1911,30 +2023,38 @@ int initResolutionPatches()
     break;
     case INITIALD_5_EXP_20A:
     {
-        if (getConfig()->width == 1360 && getConfig()->height == 768)
+        bool origRes = (gWidth == 1360 && gHeight == 768);
+        if (!getConfig()->boostRenderRes && origRes)
+        {
             break;
-        patchMemory(0x0855a6dd, "E9f000");            // Accept different Resolutions
-        setVariable(0x0855a7d3, getConfig()->width);  // Set ResX
-        setVariable(0x0855a7d8, getConfig()->height); // Set ResY
+        }
+        if (gWidth >= 1360 && gHeight >= 768)
+        {
+            patchMemory(0x08363d94, "bb01000000eb6b"); // Prevents renrer.ini from loading
+            setVariable(0x08363c70, gWidth);           // Framebuffer Main Width
+            setVariable(0x08363c77, gHeight);          // Framebuffer Main Height
+            setVariable(0x08363d11, 256);              // Framebuffer Road Specular width
+            setVariable(0x08363d18, 256);              // Framebuffer Road Specular height
+            setVariable(0x08363d37, gWidth);           // Framebuffer Glare Width
+            setVariable(0x08363d3e, gHeight);          // Framebuffer Glare Height
+            setVariable(0x08363d64, gWidth >> 2);      // Framebuffer Reduced width
+            patchMemory(0x08363d89, "00000001");       // Enable Cube Secular
+            if (origRes)
+                break;
+        }
+        patchMemory(0x0855a6dd, "E9f000"); // Accept different Resolutions
+        setVariable(0x0855a7d3, gWidth);   // Set ResX
+        setVariable(0x0855a7d8, gHeight);  // Set ResY
 
-        patchMemory(0x08363d94, "bb01000000eb6b");        // Prevents renrer.ini from loading
-        setVariable(0x08363c70, getConfig()->width);      // Framebuffer Main Width
-        setVariable(0x08363c77, getConfig()->height);     // Framebuffer Main Height
-        setVariable(0x08363d11, 256);                     // Framebuffer Road Specular width
-        setVariable(0x08363d18, 256);                     // Framebuffer Road Specular height
-        setVariable(0x08363d37, getConfig()->width);      // Framebuffer Glare Width
-        setVariable(0x08363d3e, getConfig()->height);     // Framebuffer Glare Height
-        setVariable(0x08363d64, getConfig()->width >> 2); // Framebuffer Reduced width
-        patchMemory(0x08363d89, "00000001");              // Enable Cube Secular
         // Fix Press start and Insert coins text
         idDisplayTextureCAVEAddress = (void *)0x084fe1d0 + 5;
         detourFunction(0x084fe1d0, idDisplayTexture);
         // setViewport for track selection screen
-        setVariable(0x0821e8ee, (int)(getConfig()->height * (112.0 / 768)));
-        setVariable(0x0821e8f6, (int)(getConfig()->width * (724.0 / 1315)));
-        setVariable(0x0821e8fe, (int)(getConfig()->height * (592.0 / 768)));
-        setVariable(0x0821e906, (int)(getConfig()->width * (962.0 / 1315)));
-        setVariable(0x0821e90e, getConfig()->height);
+        setVariable(0x0821e8ee, (int)(gHeight * (112.0 / 768)));
+        setVariable(0x0821e8f6, (int)(gWidth * (724.0 / 1315)));
+        setVariable(0x0821e8fe, (int)(gHeight * (592.0 / 768)));
+        setVariable(0x0821e906, (int)(gWidth * (962.0 / 1315)));
+        setVariable(0x0821e90e, gHeight);
         // FSAA
         patchMemory(0x08777846, "9090");
         patchMemory(0x087a56e9, "01"); // FSAA Enabled
@@ -1946,15 +2066,15 @@ int initResolutionPatches()
         replaceCallAtAddress(0x0825d656, idBalloonPut);
         replaceCallAtAddress(0x0825d717, idBalloonPut);
         // START and VIEW CHANGE Text fix
-        float explanationScaleX = getConfig()->width - (1360.0 - 815.0);
-        float explanationScaleY = (getConfig()->height / 768.0) * 680.0;
+        float explanationScaleX = gWidth - (1360.0 - 815.0);
+        float explanationScaleY = (gHeight / 768.0) * 680.0;
         setVariable(0x08273915, *(unsigned int *)&explanationScaleY);
         setVariable(0x0827398d, *(unsigned int *)&explanationScaleX);
         // Scale Testmode text
-        if (isTestMode() && getConfig()->width >= 1920)
+        if (isTestMode() && gWidth >= 1920)
         {
             patchMemory(0x08ca3d00, "02");
-            idTextShift = (getConfig()->width == 1920 ? 27 : ((1920 / getConfig()->width) * 27) + 2);
+            idTextShift = (gWidth == 1920 ? 27 : ((1920 / gWidth) * 27) + 2);
             idTestTextAddress = (void *)0x087929bc;
             replaceCallAtAddress(0x085254ea, idTestText);
         }
@@ -1962,30 +2082,38 @@ int initResolutionPatches()
     break;
     case INITIALD_5_JAP_REVA: // ID5 - DVP-0070A
     {
-        if (getConfig()->width == 1360 && getConfig()->height == 768)
+        bool origRes = (gWidth == 1360 && gHeight == 768);
+        if (!getConfig()->boostRenderRes && origRes)
+        {
             break;
-        patchMemory(0x0853ccdd, "E9f000");            // Accept different Resolutions
-        setVariable(0x0853cdd3, getConfig()->width);  // Set ResX
-        setVariable(0x0853cdd8, getConfig()->height); // Set ResY
+        }
+        if (gWidth >= 1360 && gHeight >= 768)
+        {
+            patchMemory(0x083557f4, "bb01000000eb6b"); // Prevents renrer.ini from loading
+            setVariable(0x083556d0, gWidth);           // Framebuffer Main Width
+            setVariable(0x083556d7, gHeight);          // Framebuffer Main Height
+            setVariable(0x08355771, 256);              // Framebuffer Road Specular width
+            setVariable(0x08355778, 256);              // Framebuffer Road Specular height
+            setVariable(0x08355797, gWidth);           // Framebuffer Glare Width
+            setVariable(0x0835579e, gHeight);          // Framebuffer Glare Height
+            setVariable(0x083557c4, gWidth >> 2);      // Framebuffer Reduced width
+            patchMemory(0x083557e9, "00000001");       // Enable Cube Secular
+            if (origRes)
+                break;
+        }
+        patchMemory(0x0853ccdd, "E9f000"); // Accept different Resolutions
+        setVariable(0x0853cdd3, gWidth);   // Set ResX
+        setVariable(0x0853cdd8, gHeight);  // Set ResY
 
-        patchMemory(0x083557f4, "bb01000000eb6b");        // Prevents renrer.ini from loading
-        setVariable(0x083556d0, getConfig()->width);      // Framebuffer Main Width
-        setVariable(0x083556d7, getConfig()->height);     // Framebuffer Main Height
-        setVariable(0x08355771, 256);                     // Framebuffer Road Specular width
-        setVariable(0x08355778, 256);                     // Framebuffer Road Specular height
-        setVariable(0x08355797, getConfig()->width);      // Framebuffer Glare Width
-        setVariable(0x0835579e, getConfig()->height);     // Framebuffer Glare Height
-        setVariable(0x083557c4, getConfig()->width >> 2); // Framebuffer Reduced width
-        patchMemory(0x083557e9, "00000001");              // Enable Cube Secular
         // Fix Press start and Insert coins text
         idDisplayTextureCAVEAddress = (void *)0x084e1770 + 5;
         detourFunction(0x084e1770, idDisplayTexture);
         // setViewport for track selection screen
-        setVariable(0x08214b9e, (int)(getConfig()->height * (112.0 / 768)));
-        setVariable(0x08214ba6, (int)(getConfig()->width * (724.0 / 1315)));
-        setVariable(0x08214bae, (int)(getConfig()->height * (592.0 / 768)));
-        setVariable(0x08214bb6, (int)(getConfig()->width * (962.0 / 1315)));
-        setVariable(0x08214bbe, getConfig()->height);
+        setVariable(0x08214b9e, (int)(gHeight * (112.0 / 768)));
+        setVariable(0x08214ba6, (int)(gWidth * (724.0 / 1315)));
+        setVariable(0x08214bae, (int)(gHeight * (592.0 / 768)));
+        setVariable(0x08214bb6, (int)(gWidth * (962.0 / 1315)));
+        setVariable(0x08214bbe, gHeight);
         // FSAA
         patchMemory(0x08759eb6, "9090");
         patchMemory(0x08787d59, "01"); // FSAA Enabled
@@ -1997,15 +2125,15 @@ int initResolutionPatches()
         replaceCallAtAddress(0x08253b48, idBalloonPut);
         replaceCallAtAddress(0x08253c09, idBalloonPut);
         // START and VIEW CHANGE Text fix
-        float explanationScaleX = getConfig()->width - (1360.0 - 815.0);
-        float explanationScaleY = (getConfig()->height / 768.0) * 680.0;
+        float explanationScaleX = gWidth - (1360.0 - 815.0);
+        float explanationScaleY = (gHeight / 768.0) * 680.0;
         setVariable(0x08269c25, *(unsigned int *)&explanationScaleY);
         setVariable(0x08269c9d, *(unsigned int *)&explanationScaleX);
         // Scale Testmode text
-        if (isTestMode() && getConfig()->width >= 1920)
+        if (isTestMode() && gWidth >= 1920)
         {
             patchMemory(0x08c55b80, "02");
-            idTextShift = (getConfig()->width == 1920 ? 27 : ((1920 / getConfig()->width) * 27) + 2);
+            idTextShift = (gWidth == 1920 ? 27 : ((1920 / gWidth) * 27) + 2);
             idTestTextAddress = (void *)0x0877502c;
             replaceCallAtAddress(0x0850783e, idTestText);
         }
@@ -2013,30 +2141,38 @@ int initResolutionPatches()
     break;
     case INITIALD_5_JAP_REVF: // ID5 - DVP-0070F
     {
-        if (getConfig()->width == 1360 && getConfig()->height == 768)
+        bool origRes = (gWidth == 1360 && gHeight == 768);
+        if (!getConfig()->boostRenderRes && origRes)
+        {
             break;
-        patchMemory(0x08556bbd, "E9f000");            // Accept different Resolutions
-        setVariable(0x08556cb3, getConfig()->width);  // Set ResX
-        setVariable(0x08556cb8, getConfig()->height); // Set ResY
+        }
+        if (gWidth >= 1360 && gHeight >= 768)
+        {
+            patchMemory(0x08364484, "bb01000000eb6b"); // Prevents renrer.ini from loading
+            setVariable(0x08364360, gWidth);           // Framebuffer Main Width
+            setVariable(0x08364367, gHeight);          // Framebuffer Main Height
+            setVariable(0x08364401, 256);              // Framebuffer Road Specular width
+            setVariable(0x08364408, 256);              // Framebuffer Road Specular height
+            setVariable(0x08364427, gWidth);           // Framebuffer Glare Width
+            setVariable(0x0836442e, gHeight);          // Framebuffer Glare Height
+            setVariable(0x08364454, gWidth >> 2);      // Framebuffer Reduced width
+            patchMemory(0x08364479, "00000001");       // Enable Cube Secular
+            if (origRes)
+                break;
+        }
+        patchMemory(0x08556bbd, "E9f000"); // Accept different Resolutions
+        setVariable(0x08556cb3, gWidth);   // Set ResX
+        setVariable(0x08556cb8, gHeight);  // Set ResY
 
-        patchMemory(0x08364484, "bb01000000eb6b");        // Prevents renrer.ini from loading
-        setVariable(0x08364360, getConfig()->width);      // Framebuffer Main Width
-        setVariable(0x08364367, getConfig()->height);     // Framebuffer Main Height
-        setVariable(0x08364401, 256);                     // Framebuffer Road Specular width
-        setVariable(0x08364408, 256);                     // Framebuffer Road Specular height
-        setVariable(0x08364427, getConfig()->width);      // Framebuffer Glare Width
-        setVariable(0x0836442e, getConfig()->height);     // Framebuffer Glare Height
-        setVariable(0x08364454, getConfig()->width >> 2); // Framebuffer Reduced width
-        patchMemory(0x08364479, "00000001");              // Enable Cube Secular
         // Fix Press start and Insert coins text
         idDisplayTextureCAVEAddress = (void *)0x084fa3c0 + 5;
         detourFunction(0x084fa3c0, idDisplayTexture);
         // setViewport for track selection screen
-        setVariable(0x0821ec6e, (int)(getConfig()->height * (112.0 / 768)));
-        setVariable(0x0821ec76, (int)(getConfig()->width * (724.0 / 1315)));
-        setVariable(0x0821ec7e, (int)(getConfig()->height * (592.0 / 768)));
-        setVariable(0x0821ec86, (int)(getConfig()->width * (962.0 / 1315)));
-        setVariable(0x0821ec8e, getConfig()->height);
+        setVariable(0x0821ec6e, (int)(gHeight * (112.0 / 768)));
+        setVariable(0x0821ec76, (int)(gWidth * (724.0 / 1315)));
+        setVariable(0x0821ec7e, (int)(gHeight * (592.0 / 768)));
+        setVariable(0x0821ec86, (int)(gWidth * (962.0 / 1315)));
+        setVariable(0x0821ec8e, gHeight);
         // FSAA
         patchMemory(0x08773d26, "9090");
         patchMemory(0x087a1bc9, "01"); // FSAA Enabled
@@ -2048,15 +2184,15 @@ int initResolutionPatches()
         replaceCallAtAddress(0x0825d9f8, idBalloonPut);
         replaceCallAtAddress(0x0825dab9, idBalloonPut);
         // START and VIEW CHANGE Text fix
-        float explanationScaleX = getConfig()->width - (1360.0 - 815.0);
-        float explanationScaleY = (getConfig()->height / 768.0) * 680.0;
+        float explanationScaleX = gWidth - (1360.0 - 815.0);
+        float explanationScaleY = (gHeight / 768.0) * 680.0;
         setVariable(0x08273ce5, *(unsigned int *)&explanationScaleY);
         setVariable(0x08273d5d, *(unsigned int *)&explanationScaleX);
         // Scale Testmode text
-        if (isTestMode() && getConfig()->width >= 1920)
+        if (isTestMode() && gWidth >= 1920)
         {
             patchMemory(0x08c92040, "02");
-            idTextShift = (getConfig()->width == 1920 ? 27 : ((1920 / getConfig()->width) * 27) + 2);
+            idTextShift = (gWidth == 1920 ? 27 : ((1920 / gWidth) * 27) + 2);
             idTestTextAddress = (void *)0x0878ee9c;
             replaceCallAtAddress(0x08521aaa, idTestText);
         }
@@ -2064,24 +2200,67 @@ int initResolutionPatches()
     break;
     case LETS_GO_JUNGLE_REVA:
     {
-        setVariable(0x082e1323, getConfig()->width);  // Set ResX
-        setVariable(0x082e1330, getConfig()->height); // Set ResY
+        setVariable(0x082e1323, gWidth);  // Set ResX
+        setVariable(0x082e1330, gHeight); // Set ResY
         // FSAA
         patchMemory(0x082e12ff, "01");
+
+        // Render Res
+        setVariable(0x080ce59a, gWidth);  // 800
+        setVariable(0x080ce5a4, gHeight); // 600
     }
     break;
     case LETS_GO_JUNGLE:
     {
-        setVariable(0x082E006b, getConfig()->width);  // Set ResX
-        setVariable(0x082E0078, getConfig()->height); // Set ResY
+        setVariable(0x082E006b, gWidth);  // Set ResX
+        setVariable(0x082E0078, gHeight); // Set ResY
         // FSAA
         patchMemory(0x082e0047, "01");
+
+        // Render Res
+        setVariable(0x080ce2f2, gWidth);  // 800
+        setVariable(0x080ce2fc, gHeight); // 600
     }
     break;
     case LETS_GO_JUNGLE_SPECIAL:
     {
-        // setVariable(0x08303C4B, 0x00000780); // Set ResX
-        // setVariable(0x08303C58, 0x00000438); // Set ResY
+        if ((gWidth == 1024 && gHeight == 768) || (gWidth == 2048 && gHeight == 768))
+            break;
+        setVariable(0x08303C4B, gWidth * 2); // Set ResX  Width x 2
+        setVariable(0x08303C58, gHeight);    // Set ResY
+
+        setVariable(0x080d6e8c, gWidth);  // 1024
+        setVariable(0x080d6e96, gHeight); // 768
+
+        setVariable(0x080d6ea0, gWidth);  // 800
+        setVariable(0x080d6eaa, gHeight); // 600
+
+        setVariable(0x080cf6ac, gWidth);  // 800
+        setVariable(0x080cf6b9, gHeight); // 600
+        patchMemory(0x08303c27, "01");    // FSAA
+
+        float newWidthLGJ = (float)gWidth;
+        float newHeightLGJ = (float)gHeight;
+        uint32_t *newWidthPtrLGJ = (uint32_t *)&newWidthLGJ;
+        uint32_t *newHeightPtrLGJ = (uint32_t *)&newHeightLGJ;
+
+        float newWidth2LGJ = (float)gWidth * 2.0;
+        uint32_t *newWidth2PtrLGJ = (uint32_t *)&newWidth2LGJ;
+        unsigned int address = 0x080cb730;
+
+        float newWidthHLGJ = (float)gWidth / 2.0;
+        uint32_t *newWidthHPtrLGJ = (uint32_t *)&newWidthHLGJ;
+        float newWidthSLGJ = 1360.0 / (float)gWidth;
+        uint32_t *newWidthSPtrLGJ = (uint32_t *)&newWidthSLGJ;
+        unsigned int addressC = 0x080cb3be;
+
+        setVariable(0x082dcd10, (size_t)newHeightPtrLGJ); // LGJSceneManagerbegin
+
+        setVariable(address, (size_t)newHeightPtrLGJ); // StageSelect
+        setVariable(address + 0xF, (size_t)newWidth2PtrLGJ);
+
+        setVariable(addressC, (size_t)newWidthHPtrLGJ); // StageSelectonCursor
+        setVariable(addressC + 0x8, (size_t)newWidthSPtrLGJ);
     }
     break;
     case MJ4_REVG:
@@ -2089,27 +2268,27 @@ int initResolutionPatches()
         // Not Supported yet.
         //  patchMemory(0x080524a1, "01");         // Enable Anti Alias
         //  patchMemory(0x08053668, "b80a000000"); // Skips resolution set by the Dip Switches.
-        //  vf5FSwidth = (getConfig()->height * 4) / 3;
+        //  vf5FSwidth = (gHeight * 4) / 3;
         //  setVariable(0x08901598, vf5FSwidth);
-        //  setVariable(0x0890159c, getConfig()->height);
+        //  setVariable(0x0890159c, gHeight);
         //  setVariable(0x089015a4, vf5FSwidth);
 
-        // setVariable(0x089015a8, getConfig()->height);
+        // setVariable(0x089015a8, gHeight);
 
         // setVariable(0x08901544, vf5FSwidth);
-        // setVariable(0x08901548, getConfig()->height);
+        // setVariable(0x08901548, gHeight);
 
         // setVariable(0x0890158c, vf5FSwidth);
-        // setVariable(0x08901590, getConfig()->height);
+        // setVariable(0x08901590, gHeight);
     }
     break;
     case OUTRUN_2_SP_SDX:
     {
-        if (getConfig()->width <= 800 && getConfig()->height <= 480)
+        if (gWidth <= 800 && gHeight <= 480)
             break;
         // If resolution is not the native of the game this patch kind of fix the Sun when the LensGlare effect is
         // shown.
-        if ((getConfig()->width > 800) && (getConfig()->height > 480))
+        if ((gWidth > 800) && (gHeight > 480))
         {
             patchMemory(0x080e8e72, "9090909090"); // removes a call to a light function
             patchMemory(0x080e8e83, "9090909090"); // removes a call to a light function
@@ -2125,17 +2304,17 @@ int initResolutionPatches()
     break;
     case OUTRUN_2_SP_SDX_TEST:
     {
-        setVariable(0x0804a490, getConfig()->width);
-        setVariable(0x0804a4ad, getConfig()->height);
+        setVariable(0x0804a490, gWidth);
+        setVariable(0x0804a4ad, gHeight);
     }
     break;
     case OUTRUN_2_SP_SDX_REVA:
     {
-        if (getConfig()->width <= 800 && getConfig()->height <= 480)
+        if (gWidth <= 800 && gHeight <= 480)
             break;
         // If resolution is not the native of the game this patch kind of fix the Sun when the LensGlare effect is
         // shown.
-        if ((getConfig()->width > 800) && (getConfig()->height > 480))
+        if ((gWidth > 800) && (gHeight > 480))
         {
             patchMemory(0x080e8e06, "9090909090"); // removes a call to a light function
             patchMemory(0x080e8e17, "9090909090"); // removes a call to a light function
@@ -2169,21 +2348,26 @@ int initResolutionPatches()
     case OUTRUN_2_SP_SDX_REVA_TEST:
     case OUTRUN_2_SP_SDX_REVA_TEST2:
     {
-        if (getConfig()->width <= 800 && getConfig()->height <= 480)
+        if (gWidth <= 800 && gHeight <= 480)
             break;
-        setVariable(0x0804a490, getConfig()->width);
-        setVariable(0x0804a4ad, getConfig()->height);
+        setVariable(0x0804a490, gWidth);
+        setVariable(0x0804a4ad, gHeight);
     }
     break;
     case PRIMEVAL_HUNT:
     {
-        if (getConfig()->width <= 640 && getConfig()->height <= 480)
+        if (gWidth <= 1280 && gHeight <= 480)
             break;
+
+        if (isTestMode())
+        {
+            EmulatorConfig *config = getConfig();
+            config->phMode = 2;
+        }
         phX = 0;
         phY = 0;
-        phW = getConfig()->width;
-        phH = getConfig()->height;
-        int phX2, phY2, phW2, phH2;
+        phW = gWidth;
+        phH = gHeight;
         switch (getConfig()->phMode)
         {
         case 0:
@@ -2194,8 +2378,8 @@ int initResolutionPatches()
         {
             if (getConfig()->keepAspectRatio)
             {
-                phX = (getConfig()->width - (getConfig()->height / 3) * 4) / 2;
-                phW = (getConfig()->height / 3) * 4;
+                phX = (gWidth - (gHeight / 3) * 4) / 2;
+                phW = (gHeight / 3) * 4;
             }
             phW2 = 0;
             phH2 = 0;
@@ -2207,8 +2391,8 @@ int initResolutionPatches()
         {
             if (getConfig()->keepAspectRatio)
             {
-                phH = ((getConfig()->width / 2) / 4) * 3;
-                phY = (getConfig()->height - phH) / 2;
+                phH = ((gWidth / 2) / 4) * 3;
+                phY = (gHeight - phH) / 2;
             }
             phX = 0;
             phW = phW / 2;
@@ -2222,26 +2406,26 @@ int initResolutionPatches()
         {
             // We always force 4:3 aspect ratio for this mode.
             phX = 0;
-            phW = (getConfig()->height / 3) * 4;
-            phH2 = ((getConfig()->width - phW) / 4) * 3;
+            phW = (gHeight / 3) * 4;
+            phH2 = ((gWidth - phW) / 4) * 3;
 
             phX2 = phW;
             phY2 = (phH - phH2) / 2;
-            phW2 = getConfig()->width - phW;
+            phW2 = gWidth - phW;
         }
         break;
-        case 4:
+        case 4: // 3ds Mode 1 (Small screen to the bottom)
         {
             // We always force 4:3 aspect ratio for this mode.
-            phW = (getConfig()->height / 3) * 4;
-            phX2 = (getConfig()->width / 2) - ((getConfig()->width - phW) / 2);
-            phW2 = getConfig()->width - phW;
+            phW = (gHeight / 3) * 4;
+            phX2 = (gWidth / 2) - ((gWidth - phW) / 2);
+            phW2 = gWidth - phW;
             phY2 = 0; // phH - ((phW2 / 4) * 3);
             phH2 = (phW2 / 4) * 3;
 
             phW = phW - phW2;
             phH = phH - phH2;
-            phX = (getConfig()->width - (phH / 3) * 4) / 2;
+            phX = (gWidth - (phH / 3) * 4) / 2;
             phY = phH2;
         }
         break;
@@ -2250,7 +2434,6 @@ int initResolutionPatches()
         setVariable(0x0805b0fd, phY); // Y 1st screen
         setVariable(0x0805b0f5, phW); // Width 1st screen
         setVariable(0x0805b0ed, phH); // Height 1st screen
-
         setVariable(0x0805afa2, phX2); // X 2nd screen
         setVariable(0x0805af9b, phY2); // Y 2st screen
         setVariable(0x0805af93, phW2); // Width 2nd screen
@@ -2259,16 +2442,34 @@ int initResolutionPatches()
         detourFunction(0x0804c628, glClearColorPH);
         if (getConfig()->phMode == 4) // In mode 4, the screens are inverted.
             phY = 0;
+
+        // Test Menu
+        if (isTestMode())
+        {
+            setVariable(0x0807f95d, gHeight); // test   HxW
+            setVariable(0x0807f965, gWidth);
+
+            setVariable(0x08055d3e, gHeight); // text right screen   HxW
+            setVariable(0x08055d46, gWidth / 2);
+        }
     }
     break;
     case RAMBO:
     {
-        if (getConfig()->width <= 1360 && getConfig()->height <= 768)
+        if (gWidth == 1360 && gHeight == 768)
+        {
+            if (getConfig()->boostRenderRes)
+                setVariable(0x08416df0, gWidth); // render res
             break;
-        patchMemory(0x080c70d0, "9090909090");       // setresolutiontype
-        setVariable(0x08416df0, getConfig()->width); // render res
-        setVariable(0x08416d60, getConfig()->width); // main res
-        setVariable(0x08416d64, getConfig()->height);
+        }
+        else if (gWidth == 640 && gHeight == 480)
+        {
+            break;
+        }
+        patchMemory(0x080c70d0, "9090909090"); // setresolutiontype
+        setVariable(0x08416df0, gWidth);       // render res
+        setVariable(0x08416d60, gWidth);       // main res
+        setVariable(0x08416d64, gHeight);
         patchMemory(0x08416d68, "5005"); // Allwinres
         patchMemory(0x08416d6c, "0003");
 
@@ -2281,8 +2482,8 @@ int initResolutionPatches()
     {
         patchMemory(0x08051c2b, "01");         // Enable Anti Alias
         patchMemory(0x08052d58, "b80a000000"); // Skips resolution set by the Dip Switches.
-        setVariable(0x083c7db8, getConfig()->width);
-        setVariable(0x083c7dbc, getConfig()->height);
+        setVariable(0x083c7db8, gWidth);
+        setVariable(0x083c7dbc, gHeight);
         patchMemory(0x083c7dc0, "00");
     }
     break;
@@ -2294,8 +2495,8 @@ int initResolutionPatches()
         patchMemory(0x08050c12, "07");
         patchMemory(0x08050c25, "07");
         patchMemory(0x08050c37, "07");
-        setVariable(0x08064611, getConfig()->width);
-        setVariable(0x080645c6, getConfig()->height);
+        setVariable(0x08064611, gWidth);
+        setVariable(0x080645c6, gHeight);
     }
     break;
     case SEGABOOT_2_4:
@@ -2307,103 +2508,124 @@ int initResolutionPatches()
         patchMemory(0x080597c7, "07");
         patchMemory(0x08059780, "07");
         patchMemory(0x08059768, "07");
-        setVariable(0x0809129d, getConfig()->width);
-        setVariable(0x08091252, getConfig()->height);
+        setVariable(0x0809129d, gWidth);
+        setVariable(0x08091252, gHeight);
     }
     break;
     case SEGA_RACE_TV:
     {
-        if (getConfig()->width == 640 && getConfig()->height == 480)
+        if (gWidth == 640 && gHeight == 480)
             break;
         if (getConfig()->keepAspectRatio)
         {
-            srtvX = (getConfig()->width - (getConfig()->height / 3) * 4) / 2;
-            srtvW = (getConfig()->height / 3) * 4;
+            srtvX = (gWidth - (gHeight / 3) * 4) / 2;
+            srtvW = (gHeight / 3) * 4;
         }
         else
         {
-            srtvW = getConfig()->width;
+            srtvW = gWidth;
         }
-        srtvH = getConfig()->height;
+        srtvH = gHeight;
     }
     break;
     case THE_HOUSE_OF_THE_DEAD_4_REVA:
     {
-        if (getConfig()->width <= 1280 && getConfig()->height <= 768)
+        if (gWidth == 1280 && gHeight == 768)
+        {
+            if (getConfig()->boostRenderRes)
+                setVariable(0x084c9dbc, 1280);
+            return 0;
+        }
+        else if (gWidth == 640 && gHeight == 480)
+        {
             break;
+        }
         patchMemory(0x0804d142, "9090909090"); // setresolutiontype
         // patchMemory(0x084c9dbc, "0005");
         // patchMemory(0x08448458, "0005");
         // patchMemory(0x0844845c, "0003");
-        setVariable(0x084c9dbc, getConfig()->width);
-        setVariable(0x08448458, getConfig()->width);
-        setVariable(0x0844845c, getConfig()->height);
+        setVariable(0x084c9dbc, gWidth);
+        setVariable(0x08448458, gWidth);
+        setVariable(0x0844845c, gHeight);
         patchMemory(0x08448460, "0005");
         patchMemory(0x08448464, "0003");
         patchMemory(0x0817ff6d, "e80ed5ecff"); // call crtgetresolution
         patchMemory(0x08448468, "0005");       // set crtgetresolution to 640x480
         patchMemory(0x0844846c, "0003");
 
-        setVariable(0x08448338, getConfig()->width);
-        setVariable(0x0844833c, getConfig()->height);
+        setVariable(0x08448338, gWidth);
+        setVariable(0x0844833c, gHeight);
 
         detourFunction(0x0804c024, glVertex3fHOD4);
-        detourFunction(0x0804ca54, glBindTextureGE);
+        detourFunction(0x0804ca54, myGlBindTexture);
     }
     break;
     case THE_HOUSE_OF_THE_DEAD_4_REVB:
     {
-        if (getConfig()->width <= 1280 && getConfig()->height <= 768)
+        if (gWidth == 1280 && gHeight == 768)
+        {
+            if (getConfig()->boostRenderRes)
+                setVariable(0x084c3a9c, 1280);
+            return 0;
+        }
+        else if (gWidth == 640 && gHeight == 480)
+        {
             break;
+        }
         patchMemory(0x0804d174, "9090909090"); // setresolutiontype
-        setVariable(0x084c3a9c, getConfig()->width);
-        setVariable(0x08443118, getConfig()->width);
-        setVariable(0x0844311c, getConfig()->height);
+        setVariable(0x084c3a9c, gWidth);
+        setVariable(0x08443118, gWidth);
+        setVariable(0x0844311c, gHeight);
         patchMemory(0x08443120, "0005");
         patchMemory(0x08443124, "0003");
         patchMemory(0x0818080d, "e89eccecff"); // call crtgetresolution
         patchMemory(0x08443128, "0005");       // set crtgetresolution to 640x480
         patchMemory(0x0844312c, "0003");
 
-        setVariable(0x08442ff8, getConfig()->width);
-        setVariable(0x08442ffc, getConfig()->height);
+        setVariable(0x08442ff8, gWidth);
+        setVariable(0x08442ffc, gHeight);
 
         detourFunction(0x0804c014, glVertex3fHOD4);
-        detourFunction(0x0804ca84, glBindTextureGE);
+        detourFunction(0x0804ca84, myGlBindTexture);
     }
     break;
     case THE_HOUSE_OF_THE_DEAD_4_REVC:
     {
-        if (getConfig()->width <= 1280 && getConfig()->height <= 768)
+        if (gWidth == 1280 && gHeight == 768)
         {
-            setVariable(0x084c3a9c, 1280);
+            if (getConfig()->boostRenderRes)
+                setVariable(0x084c3a9c, 1280);
             return 0;
         }
+        else if (gWidth == 640 && gHeight == 480)
+        {
+            break;
+        }
         patchMemory(0x0804d174, "9090909090"); // setresolutiontype
-        setVariable(0x084c3a9c, getConfig()->width);
-        setVariable(0x08443118, getConfig()->width);
-        setVariable(0x0844311c, getConfig()->height);
+        setVariable(0x084c3a9c, gWidth);
+        setVariable(0x08443118, gWidth);
+        setVariable(0x0844311c, gHeight);
         patchMemory(0x08443120, "0005"); // gallwinres (2D)
         patchMemory(0x08443124, "0003");
         patchMemory(0x0818080d, "e89eccecff"); // sideselect fix
         patchMemory(0x08443128, "0005");
         patchMemory(0x0844312c, "0003");
 
-        setVariable(0x08442ff8, getConfig()->width);
-        setVariable(0x08442ffc, getConfig()->height);
+        setVariable(0x08442ff8, gWidth);
+        setVariable(0x08442ffc, gHeight);
 
         detourFunction(0x0804c014, glVertex3fHOD4);
-        detourFunction(0x0804ca84, glBindTextureGE);
+        detourFunction(0x0804ca84, myGlBindTexture);
     }
     break;
     case THE_HOUSE_OF_THE_DEAD_4_SPECIAL:
     {
-        if (getConfig()->width <= 1024 && getConfig()->height <= 768)
+        if (gWidth <= 1024 && gHeight <= 768)
             break;
         patchMemory(0x0804d2f4, "9090909090"); // setresolutiontype
-        setVariable(0x084563c4, getConfig()->width);
-        setVariable(0x08424448, getConfig()->width);
-        setVariable(0x0842444c, getConfig()->height);
+        setVariable(0x084563c4, gWidth);
+        setVariable(0x08424448, gWidth);
+        setVariable(0x0842444c, gHeight);
         patchMemory(0x0815bfa9, "e8de7f0100"); // sideselect fix
         patchMemory(0x08424450, "0004");
         patchMemory(0x08424454, "0003");
@@ -2411,12 +2633,12 @@ int initResolutionPatches()
     break;
     case THE_HOUSE_OF_THE_DEAD_4_SPECIAL_REVB:
     {
-        if (getConfig()->width <= 1024 && getConfig()->height <= 768)
+        if (gWidth <= 1024 && gHeight <= 768)
             break;
         patchMemory(0x0804d7e2, "9090909090"); // setresolutiontype
-        setVariable(0x084c35c4, getConfig()->width);
-        setVariable(0x08491648, getConfig()->width);
-        setVariable(0x0849164c, getConfig()->height);
+        setVariable(0x084c35c4, gWidth);
+        setVariable(0x08491648, gWidth);
+        setVariable(0x0849164c, gHeight);
         patchMemory(0x081b268f, "e8264d0200"); // sideselect fix
         patchMemory(0x08491650, "0004");
         patchMemory(0x08491654, "0003");
@@ -2424,159 +2646,185 @@ int initResolutionPatches()
     break;
     case THE_HOUSE_OF_THE_DEAD_EX:
     {
+        if (gWidth == 1360 && gHeight == 768)
+        {
+            if (getConfig()->boostRenderRes)
+                setVariable(0x087aa080, 1280); // render res
+            break;
+        }
+        else if (gWidth == 640 && gHeight == 480)
+        {
+            break;
+        }
     }
     break;
     case TOO_SPICY:
     {
-        patchMemory(0x08202b22, "0005"); // render res 1280
+        if (gWidth == 1280 && gHeight == 768)
+        {
+            if (getConfig()->boostRenderRes)
+                setVariable(0x08202b22, 1280); // render res
+            break;
+        }
+        else if (gWidth == 640 && gHeight == 480)
+        {
+            break;
+        }
+    }
+    break;
+    case TOO_SPICY_TEST:
+    {
+        if (gWidth <= 1280 && gHeight <= 768)
+            break;
+        setVariable(0x080565b3, gWidth);
+        setVariable(0x080565bb, gHeight);
     }
     break;
     case VIRTUA_FIGHTER_5:
     {
-        if ((getConfig()->width == 640 && getConfig()->height == 480) || (getConfig()->width == 1280 && getConfig()->height == 768))
+        if ((gWidth == 640 && gHeight == 480) || (gWidth == 1280 && gHeight == 768))
             return 0;
         patchMemory(0x08054057, "b80a000000"); // Skips resolution set by the Dip Switches.
-        setVariable(0x0847cf58, getConfig()->width);
-        setVariable(0x0847cf5c, getConfig()->height);
+        setVariable(0x0847cf58, gWidth);
+        setVariable(0x0847cf5c, gHeight);
         replaceCallAtAddress(0x080d40c4, vf5WidthFix);
     }
     break;
     case VIRTUA_FIGHTER_5_EXPORT:
     {
-        if ((getConfig()->width == 640 && getConfig()->height == 480) || (getConfig()->width == 1280 && getConfig()->height == 768))
+        if ((gWidth == 640 && gHeight == 480) || (gWidth == 1280 && gHeight == 768))
             break;
         patchMemory(0x08052b97, "01");         // Enable Anti Alias
         patchMemory(0x08053c67, "b80a000000"); // Skips resolution set by the Dip Switches.
-        setVariable(0x085259f8, getConfig()->width);
-        setVariable(0x085259fc, getConfig()->height);
+        setVariable(0x085259f8, gWidth);
+        setVariable(0x085259fc, gHeight);
     }
     break;
     case VIRTUA_FIGHTER_5_FINAL_SHOWDOWN_REVA:
     {
-        if ((getConfig()->width == 640 && getConfig()->height == 480) || (getConfig()->width == 1280 && getConfig()->height == 768))
+        if ((gWidth == 640 && gHeight == 480) || (gWidth == 1280 && gHeight == 768))
             break;
         patchMemory(0x08054b5e, "01");         // Enable Anti Alias
         patchMemory(0x08055980, "b80a000000"); // Skips resolution set by the Dip Switches.
-        vf5FSwidth = (getConfig()->height * 5) / 3;
+        vf5FSwidth = (gHeight * 5) / 3;
         setVariable(0x088b2bd8, vf5FSwidth);
-        setVariable(0x088b2bdc, getConfig()->height);
-        setVariable(0x088b2bec, getConfig()->width);
-        setVariable(0x088b2bf0, getConfig()->height);
+        setVariable(0x088b2bdc, gHeight);
+        setVariable(0x088b2bec, gWidth);
+        setVariable(0x088b2bf0, gHeight);
     }
     break;
     case VIRTUA_FIGHTER_5_FINAL_SHOWDOWN_REVB:
     {
-        if ((getConfig()->width == 640 && getConfig()->height == 480) || (getConfig()->width == 1280 && getConfig()->height == 768))
+        if ((gWidth == 640 && gHeight == 480) || (gWidth == 1280 && gHeight == 768))
             break;
         patchMemory(0x080548c4, "01");         // Enable Anti Alias
         patchMemory(0x080556e6, "b80a000000"); // Skips resolution set by the Dip Switches.
-        vf5FSwidth = (getConfig()->height * 5) / 3;
+        vf5FSwidth = (gHeight * 5) / 3;
         setVariable(0x088d2b78, vf5FSwidth);
-        setVariable(0x088d2b7c, getConfig()->height);
-        setVariable(0x088d2b8c, getConfig()->width);
-        setVariable(0x088d2b90, getConfig()->height);
+        setVariable(0x088d2b7c, gHeight);
+        setVariable(0x088d2b8c, gWidth);
+        setVariable(0x088d2b90, gHeight);
     }
     break;
     case VIRTUA_FIGHTER_5_FINAL_SHOWDOWN_REVB_6000:
     {
-        if ((getConfig()->width == 640 && getConfig()->height == 480) || (getConfig()->width == 1280 && getConfig()->height == 768))
+        if ((gWidth == 640 && gHeight == 480) || (gWidth == 1280 && gHeight == 768))
             break;
         patchMemory(0x08054bfe, "01");         // Enable Anti Alias
         patchMemory(0x08055a20, "b80a000000"); // Skips resolution set by the Dip Switches.
-        vf5FSwidth = (getConfig()->height * 5) / 3;
+        vf5FSwidth = (gHeight * 5) / 3;
         setVariable(0x088d53d8, vf5FSwidth);
-        setVariable(0x088d53dc, getConfig()->height);
-        setVariable(0x088d53ec, getConfig()->width);
-        setVariable(0x088d53f0, getConfig()->height);
+        setVariable(0x088d53dc, gHeight);
+        setVariable(0x088d53ec, gWidth);
+        setVariable(0x088d53f0, gHeight);
     }
     break;
     case VIRTUA_FIGHTER_5_R:
     {
-        if ((getConfig()->width == 640 && getConfig()->height == 480) || (getConfig()->width == 1280 && getConfig()->height == 768))
+        if ((gWidth == 640 && gHeight == 480) || (gWidth == 1280 && gHeight == 768))
             break;
         patchMemory(0x0805421a, "01");         // Enable Anti Alias
         patchMemory(0x080554b0, "b80a000000"); // Skips resolution set by the Dip Switches.
-        vf5FSwidth = (getConfig()->height * 5) / 3;
+        vf5FSwidth = (gHeight * 5) / 3;
         setVariable(0x08767d58, vf5FSwidth);
-        setVariable(0x08767d5c, getConfig()->height);
-        setVariable(0x08767d6c, getConfig()->width);
-        setVariable(0x08767d70, getConfig()->height);
+        setVariable(0x08767d5c, gHeight);
+        setVariable(0x08767d6c, gWidth);
+        setVariable(0x08767d70, gHeight);
     }
     break;
     case VIRTUA_FIGHTER_5_R_REVD:
     {
-        if ((getConfig()->width == 640 && getConfig()->height == 480) || (getConfig()->width == 1280 && getConfig()->height == 768))
+        if ((gWidth == 640 && gHeight == 480) || (gWidth == 1280 && gHeight == 768))
             break;
         patchMemory(0x080543aa, "01");         // Enable Anti Alias
         patchMemory(0x080555f6, "b80a000000"); // Skips resolution set by the Dip Switches.
-        vf5FSwidth = (getConfig()->height * 5) / 3;
+        vf5FSwidth = (gHeight * 5) / 3;
         setVariable(0x08822b18, vf5FSwidth);
-        setVariable(0x08822b1c, getConfig()->height);
-        setVariable(0x08822b2c, getConfig()->width);
-        setVariable(0x08822b30, getConfig()->height);
+        setVariable(0x08822b1c, gHeight);
+        setVariable(0x08822b2c, gWidth);
+        setVariable(0x08822b30, gHeight);
     }
     break;
     case VIRTUA_FIGHTER_5_R_REVG:
     {
-        if ((getConfig()->width == 640 && getConfig()->height == 480) || (getConfig()->width == 1280 && getConfig()->height == 768))
+        if ((gWidth == 640 && gHeight == 480) || (gWidth == 1280 && gHeight == 768))
             break;
         patchMemory(0x0805436a, "01");         // Enable Anti Alias
         patchMemory(0x0805577c, "b80a000000"); // Skips resolution set by the Dip Switches.
-        vf5FSwidth = (getConfig()->height * 5) / 3;
+        vf5FSwidth = (gHeight * 5) / 3;
         setVariable(0x0887d4d8, vf5FSwidth);
-        setVariable(0x0887d4dc, getConfig()->height);
-        setVariable(0x0887d4ec, getConfig()->width);
-        setVariable(0x0887d4f0, getConfig()->height);
+        setVariable(0x0887d4dc, gHeight);
+        setVariable(0x0887d4ec, gWidth);
+        setVariable(0x0887d4f0, gHeight);
     }
     break;
     case VIRTUA_FIGHTER_5_REVA:
     {
-        if ((getConfig()->width == 640 && getConfig()->height == 480) || (getConfig()->width == 1280 && getConfig()->height == 768))
+        if ((gWidth == 640 && gHeight == 480) || (gWidth == 1280 && gHeight == 768))
             break;
         patchMemory(0x8053167, "01");          // Enable Anti Alias
         patchMemory(0x080541af, "b80a000000"); // Skips resolution set by the Dip Switches.
-        setVariable(0x08487df8, getConfig()->width);
-        setVariable(0x08487dfc, getConfig()->height);
+        setVariable(0x08487df8, gWidth);
+        setVariable(0x08487dfc, gHeight);
     }
     break;
     case VIRTUA_FIGHTER_5_REVB:
     {
-        if ((getConfig()->width == 640 && getConfig()->height == 480) || (getConfig()->width == 1280 && getConfig()->height == 768))
+        if ((gWidth == 640 && gHeight == 480) || (gWidth == 1280 && gHeight == 768))
             break;
         patchMemory(0x08053673, "01");         // Enable Anti Alias
         patchMemory(0x080546cf, "b80a000000"); // Skips resolution set by the Dip Switches.
-        setVariable(0x08536bb8, getConfig()->width);
-        setVariable(0x08536bbc, getConfig()->height);
+        setVariable(0x08536bb8, gWidth);
+        setVariable(0x08536bbc, gHeight);
     }
     break;
     case VIRTUA_FIGHTER_5_REVE: // Also the public REV C version
     {
-        if ((getConfig()->width == 640 && getConfig()->height == 480) || (getConfig()->width == 1280 && getConfig()->height == 768))
+        if ((gWidth == 640 && gHeight == 480) || (gWidth == 1280 && gHeight == 768))
             break;
         patchMemory(0x080546c7, "01");         // Enable Anti Alias
         patchMemory(0x080557a3, "b80a000000"); // Skips resolution set by the Dip Switches.
-        setVariable(0x085efb18, getConfig()->width);
-        setVariable(0x085efb1c, getConfig()->height);
+        setVariable(0x085efb18, gWidth);
+        setVariable(0x085efb1c, gHeight);
     }
     break;
-
     case VIRTUA_TENNIS_3:
     {
-        if (getConfig()->width <= 1360 && getConfig()->height <= 768)
+        if (gWidth <= 1360 && gHeight <= 768)
             break;
         patchMemory(0x081759b3, "9090");
-        setVariable(0x081759bb, getConfig()->width);
-        setVariable(0x081759c5, getConfig()->height);
+        setVariable(0x081759bb, gWidth);
+        setVariable(0x081759c5, gHeight);
 
         // setPerspective
-        newVT3 = getConfig()->width / 1360.0;
+        newVT3 = gWidth / 1360.0;
         intnewVT3PTr = (uint32_t *)&newVT3;
 
         setVariable(0x082682b6, (size_t)intnewVT3PTr);
 
         // vecToScr_check
-        newVT3HW = (getConfig()->width / 1360.0) * 320.0;
-        newVT3HH = (getConfig()->height / 768.0) * 240.0;
+        newVT3HW = (gWidth / 1360.0) * 320.0;
+        newVT3HH = (gHeight / 768.0) * 240.0;
         intnewVT3HWPTr = (uint32_t *)&newVT3HW;
         intnewVT3HHPTr = (uint32_t *)&newVT3HH;
         uint32_t addressvt31 = 0x0817a55e;
@@ -2586,21 +2834,21 @@ int initResolutionPatches()
     break;
     case VIRTUA_TENNIS_3_REVA:
     {
-        if (getConfig()->width <= 1360 && getConfig()->height <= 768)
+        if (gWidth <= 1360 && gHeight <= 768)
             break;
         patchMemory(0x081759e3, "9090");
-        setVariable(0x081759eb, getConfig()->width);
-        setVariable(0x081759f5, getConfig()->height);
+        setVariable(0x081759eb, gWidth);
+        setVariable(0x081759f5, gHeight);
 
         // setPerspective
-        newVT3 = getConfig()->width / 1360.0;
+        newVT3 = gWidth / 1360.0;
         intnewVT3PTr = (uint32_t *)&newVT3;
 
         setVariable(0x082682e6, (size_t)intnewVT3PTr);
 
         // vecToScr_check
-        newVT3HW = (getConfig()->width / 1360.0) * 320.0;
-        newVT3HH = (getConfig()->height / 768.0) * 240.0;
+        newVT3HW = (gWidth / 1360.0) * 320.0;
+        newVT3HH = (gHeight / 768.0) * 240.0;
         intnewVT3HWPTr = (uint32_t *)&newVT3HW;
         intnewVT3HHPTr = (uint32_t *)&newVT3HH;
         uint32_t addressvt31 = 0x0817a58e;
@@ -2610,21 +2858,21 @@ int initResolutionPatches()
     break;
     case VIRTUA_TENNIS_3_REVB:
     {
-        if (getConfig()->width <= 1360 && getConfig()->height <= 768)
+        if (gWidth <= 1360 && gHeight <= 768)
             break;
         patchMemory(0x08175ad7, "9090");
-        setVariable(0x08175adf, getConfig()->width);
-        setVariable(0x08175ae9, getConfig()->height);
+        setVariable(0x08175adf, gWidth);
+        setVariable(0x08175ae9, gHeight);
 
         // setPerspective
-        newVT3 = getConfig()->width / 1360.0;
+        newVT3 = gWidth / 1360.0;
         intnewVT3PTr = (uint32_t *)&newVT3;
 
         setVariable(0x082684d2, (size_t)intnewVT3PTr);
 
         // vecToScr_check
-        newVT3HW = (getConfig()->width / 1360.0) * 320.0;
-        newVT3HH = (getConfig()->height / 768.0) * 240.0;
+        newVT3HW = (gWidth / 1360.0) * 320.0;
+        newVT3HH = (gHeight / 768.0) * 240.0;
         intnewVT3HWPTr = (uint32_t *)&newVT3HW;
         intnewVT3HHPTr = (uint32_t *)&newVT3HH;
         uint32_t addressvt31 = 0x0817a77a;
@@ -2634,21 +2882,21 @@ int initResolutionPatches()
     break;
     case VIRTUA_TENNIS_3_REVC:
     {
-        if (getConfig()->width <= 1360 && getConfig()->height <= 768)
+        if (gWidth <= 1360 && gHeight <= 768)
             break;
         patchMemory(0x08175b03, "9090");
-        setVariable(0x08175b0b, getConfig()->width);
-        setVariable(0x08175b15, getConfig()->height);
+        setVariable(0x08175b0b, gWidth);
+        setVariable(0x08175b15, gHeight);
 
         // setPerspective
-        newVT3 = getConfig()->width / 1360.0;
+        newVT3 = gWidth / 1360.0;
         intnewVT3PTr = (uint32_t *)&newVT3;
 
         setVariable(0x082684fe, (size_t)intnewVT3PTr);
 
         // vecToScr_check
-        newVT3HW = (getConfig()->width / 1360.0) * 320.0;
-        newVT3HH = (getConfig()->height / 768.0) * 240.0;
+        newVT3HW = (gWidth / 1360.0) * 320.0;
+        newVT3HH = (gHeight / 768.0) * 240.0;
         intnewVT3HWPTr = (uint32_t *)&newVT3HW;
         intnewVT3HHPTr = (uint32_t *)&newVT3HH;
         uint32_t addressvt31 = 0x0817a7a6;
@@ -2658,8 +2906,8 @@ int initResolutionPatches()
     break;
     case VIRTUA_TENNIS_3_REVC_TEST:
     {
-        setVariable(0x0806fb3b, getConfig()->width);
-        setVariable(0x0806fb04, getConfig()->height);
+        setVariable(0x0806fb3b, gWidth);
+        setVariable(0x0806fb04, gHeight);
     }
     break;
     default:

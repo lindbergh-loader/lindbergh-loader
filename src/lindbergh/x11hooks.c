@@ -19,6 +19,7 @@
 #include "securityboard.h"
 #include "fps_limiter.h"
 #include "sdlcalls.h"
+#include "customcursor.h"
 
 extern bool SDLWindowCreated;
 extern bool gettingGPUVendor;
@@ -26,10 +27,13 @@ extern bool GLUTGame;
 
 bool creatingWindow = false;
 
-Window win;
+Window window;
 
 extern Display *x11Display;
 extern Window x11Window;
+
+extern void *customCursor;
+extern void *phTouchCursor;
 
 /**
  * Stop the house of the dead games turning keyboard repeating off.
@@ -42,12 +46,17 @@ int XAutoRepeatOff(Display *display)
 Display *XOpenDisplay(const char *display_name)
 {
     Display *(*_XOpenDisplay)(const char *display_name) = dlsym(RTLD_NEXT, "XOpenDisplay");
-    if (SDLWindowCreated || gettingGPUVendor || GLUTGame || getConfig()->noSDL)
-        return _XOpenDisplay(display_name);
 
-    creatingWindow = true;
-    initSDL(0, 0);
-    creatingWindow = false;
+    if (SDLWindowCreated || gettingGPUVendor || getConfig()->noSDL)
+    {
+        x11Display = _XOpenDisplay(display_name);
+    }
+    else
+    {
+        creatingWindow = true;
+        initSDL(0, 0);
+        creatingWindow = false;
+    }
     return x11Display;
 }
 
@@ -61,19 +70,16 @@ Window XCreateWindow(Display *display, Window parent, int x, int y, unsigned int
 
     if ((gettingGPUVendor || creatingWindow) || (GLUTGame && getConfig()->noSDL == 0))
     {
-        Window window = _XCreateWindow(display, parent, x, y, width, height, border_width, depth, class, visual,
-                                       valueMask, attributes);
-        return window;
+        window = _XCreateWindow(display, parent, x, y, width, height, border_width, depth, class, visual, valueMask, attributes);
     }
-
-    if (getConfig()->noSDL)
+    else if (getConfig()->noSDL)
     {
         width = getConfig()->width;
         height = getConfig()->height;
 
         attributes->event_mask = attributes->event_mask | KeyPressMask | KeyReleaseMask | PointerMotionMask;
 
-        Window window = _XCreateWindow(display, parent, x, y, width, height, border_width, depth, class, visual, valueMask, attributes);
+        window = _XCreateWindow(display, parent, x, y, width, height, border_width, depth, class, visual, valueMask, attributes);
         printf("  X11 RESOLUTION: %dx%d\n\n", width, height);
 
         if (getConfig()->fullscreen)
@@ -82,13 +88,17 @@ Window XCreateWindow(Display *display, Window parent, int x, int y, unsigned int
             Atom wm_fullscreen = XInternAtom(display, "_NET_WM_STATE_FULLSCREEN", true);
             XChangeProperty(display, window, wm_state, XA_ATOM, 32, PropModeReplace, (unsigned char *)&wm_fullscreen, 1);
         }
-        win = window;
+        x11Window = window;
+        loadCursors();
+        setCursor(customCursor);
+        if (getConfig()->hideCursor)
+            hideCursor();
     }
     else
     {
-        win = x11Window;
+        window = x11Window;
     }
-    return win;
+    return window;
 }
 
 int XGrabPointer(Display *display, Window grab_window, Bool owner_events, unsigned int event_mask, int pointer_mode,
@@ -202,38 +212,6 @@ int XF86VidModeGetAllModeLines(Display *display, int screen, int *modecount_retu
     }
     return true;
 }
-
-// Cursor XCreatePixmapCursor(Display *display, Pixmap source, Pixmap mask, XColor *fg, XColor *bg, unsigned int x,
-//                            unsigned int y)
-// {
-//     int (*_XCreatePixmapCursor)(Display *display, Pixmap source, Pixmap mask, XColor *fg, XColor *bg, unsigned int x,
-//                                 unsigned int y) = dlsym(RTLD_NEXT, "XCreatePixmapCursor");
-//     if (SDLGame)
-//         return 0;
-//     return _XCreatePixmapCursor(display, source, mask, fg, bg, x, y);
-// }
-
-// int XFreePixmap(Display *display, Pixmap pixmap)
-// {
-//     int (*_XFreePixmap)(Display *display, Pixmap pixmap) = dlsym(RTLD_NEXT, "XFreePixmap");
-//     if (SDLGame)
-//         return 0;
-//     return _XFreePixmap(display, pixmap);
-// }
-
-// Pixmap XCreateBitmapFromData(Display *display, Drawable drawable, const char *data, unsigned int x, unsigned int y)
-// {
-//     Pixmap (*_XCreateBitmapFromData)(Display *display, Drawable drawable, const char *data, unsigned int x,
-//                                      unsigned int y) = dlsym(RTLD_NEXT, "XCreateBitmapFromData");
-//     if (SDLGame)
-//         return 0;
-//     return _XCreateBitmapFromData(display, drawable, data, x, y);
-// }
-
-// int XDefineCursor(Display *display, Window w, Cursor cursor)
-// {
-//     return 0;
-// }
 
 typedef unsigned int uint;
 

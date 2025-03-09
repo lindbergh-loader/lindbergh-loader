@@ -2,7 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.0.3]
+## [2.0.4] 
+### Added
+    - Boost render res option for Rambo, LGJ, HOD4, HOD-EX, ID4/ID5, 2Spicy and Harley.
+    - Flatpak build as a bundle. (For installation, read the guide in docs folder.)
+    - Add COINS with evdev for player 2.
+    - Merged code that adds support for COINS with evdev.
+    - Makefile, lindbergh.c and shader_patches.c changes to support Flatpak.
+    - "--zink" option in lindbergh elf to run the games using Zink.
+    - "--nvidia" option in lindbergh elf to force the secondary nVidia GPU in laptops.
+    - Click and drag in PH touchscreen.
+    - Hide custom crosshair cursor in PH when not needed.
+    - Custom mouse cursors working with X11, GLX and Glut.
+    - Custom mouse cursor in Primeval Hunt TouchScreen.
+    - TouchScreen emulation fro Primeval Hunt
+    - Display a warning if the distro you are running is not based on Debian.
+    - Cleaned up most of the code changing Ifs to Switch and sorting Alphabetically.
+    - Let's go Jungle and Let's go Jungle Special resolution patches.
+    
+## [2.0.3] 2025-02-02
 ### Added
     - Display a warning when loading an Elf that is not clean.
     - Added to the lib folder, common libraries that are usually missing.

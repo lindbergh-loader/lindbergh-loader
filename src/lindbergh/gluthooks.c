@@ -24,6 +24,7 @@
 #include "border.h"
 #include "resolution.h"
 
+extern uint32_t gId;
 extern SDL_Window *SDLwindow;
 extern char SDLgameTitle[];
 extern fps_limit fpsLimit;
@@ -36,7 +37,9 @@ void *idleFunc = NULL;
 
 void FGAPIENTRY glutInit(int *argcp, char **argv)
 {
-    if (*argcp > 1 && getConfig()->crc32 == SEGA_RACE_TV)
+    void FGAPIENTRY (*_glutInit)(int *argcp, char **argv) = dlsym(RTLD_NEXT, "glutInit");
+
+    if (*argcp > 1 && gId == SEGA_RACE_TV)
     {
         if (isTestMode())
         {
@@ -45,8 +48,14 @@ void FGAPIENTRY glutInit(int *argcp, char **argv)
             printf("Forced to use SDL to make Test mode render fine.\n");
         }
     }
-    GLUTGame = true;
 
+    if (getConfig()->noSDL)
+    {
+        _glutInit(argcp, argv);
+        return;
+    }
+
+    GLUTGame = true;
     initSDL(argcp, argv);
 }
 
@@ -102,10 +111,13 @@ void FGAPIENTRY glutSwapBuffers(void)
         return;
     }
 
-    int gId = config->crc32;
-    if (gId == OUTRUN_2_SP_SDX || gId == OUTRUN_2_SP_SDX_REVA || gId == OUTRUN_2_SP_SDX_REVA_TEST || gId == OUTRUN_2_SP_SDX_REVA_TEST2 ||
-        gId == OUTRUN_2_SP_SDX_TEST)
+    switch (gId)
     {
+    case OUTRUN_2_SP_SDX:
+    case OUTRUN_2_SP_SDX_REVA:
+    case OUTRUN_2_SP_SDX_REVA_TEST:
+    case OUTRUN_2_SP_SDX_REVA_TEST2:
+    case OUTRUN_2_SP_SDX_TEST:
         pollEvents();
     }
 
@@ -174,11 +186,15 @@ void FGAPIENTRY glutSetCursor(int glutCursor)
     if (getConfig()->noSDL)
     {
         void FGAPIENTRY (*_glutSetCursor)(int glutCursor) = dlsym(RTLD_NEXT, "glutSetCursor");
-        _glutSetCursor(glutCursor);
+        if(strcmp(getConfig()->customCursor, "") == 0)
+            _glutSetCursor(glutCursor);
         return;
     }
-    SDL_Cursor *cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
-    SDL_SetCursor(cursor);
+    if (strcmp(getConfig()->customCursor, "") == 0)
+    {
+        SDL_Cursor *cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+        SDL_SetCursor(cursor);
+    }
 }
 
 void FGAPIENTRY glutDisplayFunc(void (*callback)(void))

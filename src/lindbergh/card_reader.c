@@ -1,7 +1,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -10,6 +9,8 @@
 #include "card_reader.h"
 
 #define BLOCKSIZE 8
+
+extern uint32_t gId;
 
 uint8_t cardHeader[] = {0x08, 0x00, 0x00, 0x00, 0x81, 0x00, 0x59, 0xda, 0x00, 0x00, 0x54, 0x4d, 0x50, 0x06, 0x03, 0x23, 0x10, 0x41, 0x62,
                         0xad, 0x00, 0x2b, 0x0b, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x95, 0x71, 0x52, 0x70, 0x00, 0x00,
@@ -38,17 +39,27 @@ void initWriteCmd(int fdIdx)
 
 int initCardReader()
 {
-    uint32_t gId = getConfig()->crc32;
-    if (gId != VIRTUA_TENNIS_3 && gId != VIRTUA_TENNIS_3_TEST && gId != VIRTUA_TENNIS_3_REVA && gId != VIRTUA_TENNIS_3_REVA_TEST &&
-        gId != VIRTUA_TENNIS_3_REVB && gId != VIRTUA_TENNIS_3_REVB_TEST && gId != VIRTUA_TENNIS_3_REVC &&
-        gId != VIRTUA_TENNIS_3_REVC_TEST && gId != R_TUNED)
+    EmulatorConfig *config = getConfig();
+
+    switch (gId)
     {
-        printf("Warning: This Game does not support Card Reader, please disable the card reader emulation in the config file.\n");
-        printf("         I will disable the card reader for you.\n");
-        EmulatorConfig *config = getConfig();
+    case R_TUNED:
+    case VIRTUA_TENNIS_3:
+    case VIRTUA_TENNIS_3_TEST:
+    case VIRTUA_TENNIS_3_REVA:
+    case VIRTUA_TENNIS_3_REVA_TEST:
+    case VIRTUA_TENNIS_3_REVB:
+    case VIRTUA_TENNIS_3_REVB_TEST:
+    case VIRTUA_TENNIS_3_REVC:
+    case VIRTUA_TENNIS_3_REVC_TEST:
+        // Code for supported games
+        break;
+    default:
+        printf("Warning: This Game does not support Card Reader, I will disable the card reader for you.\n");
         config->emulateCardreader = 0;
         return 0;
     }
+
     if (getConfig()->emulateCardreader && getConfig()->emulateDriveboard && gId != R_TUNED)
     {
         printf("Warning: This Game does not support Card Reader and Driver Board emulation enabled at the same time.\n");

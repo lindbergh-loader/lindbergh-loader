@@ -1,0 +1,36 @@
+diff --color -ruN ncurses-5.9.orig/c++/cursesf.h ncurses-5.9/c++/cursesf.h
+--- ncurses-5.9.orig/c++/cursesf.h	2005-08-13 20:08:24.000000000 +0200
++++ ncurses-5.9/c++/cursesf.h	2025-02-21 14:45:57.002814632 +0100
+@@ -703,7 +703,7 @@
+   virtual ~NCursesUserForm() {
+   };
+ 
+-  inline T* UserData (void) const {
++  inline T* UserData (void) {
+     return reinterpret_cast<T*>(get_user ());
+   };
+ 
+diff --color -ruN ncurses-5.9.orig/c++/cursesm.h ncurses-5.9/c++/cursesm.h
+--- ncurses-5.9.orig/c++/cursesm.h	2005-08-13 20:10:36.000000000 +0200
++++ ncurses-5.9/c++/cursesm.h	2025-02-21 14:47:21.238076003 +0100
+@@ -659,7 +659,7 @@
+   virtual ~NCursesUserMenu() {
+   };
+ 
+-  inline T* UserData (void) const {
++  inline T* UserData (void) {
+     return reinterpret_cast<T*>(get_user ());
+   };
+ 
+diff --color -ruN ncurses-5.9.orig/c++/cursesp.h ncurses-5.9/c++/cursesp.h
+--- ncurses-5.9.orig/c++/cursesp.h	2008-08-16 19:20:23.000000000 +0200
++++ ncurses-5.9/c++/cursesp.h	2025-02-21 14:45:19.718735744 +0100
+@@ -251,7 +251,7 @@
+ 
+   virtual ~NCursesUserPanel() {};
+ 
+-  T* UserData (void) const
++  T* UserData (void)
+   {
+     return reinterpret_cast<T*>(get_user ());
+   };

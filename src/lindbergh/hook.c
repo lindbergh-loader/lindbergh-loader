@@ -46,6 +46,7 @@
 #include "fps_limiter.h"
 #include "evdevinput.h"
 #include "card_reader.h"
+#include "touchscreen.h"
 #include "log.h"
 #include "resources/font.h"
 #include "resources/logo.h"
@@ -80,9 +81,12 @@ int logoTGAidx = 0;
 
 uint32_t elf_crc = 0;
 
+uint32_t gId = 0;
+
 extern int hummerExtremeShaderFileIndex;
 extern bool cachedShaderFilesLoaded;
 extern char vf5StageNameAbbr[5];
+bool phShowCursorInGame = false;
 
 extern fps_limit fpsLimit;
 Controllers controllers = {0};
@@ -102,7 +106,9 @@ static void handleSegfault(int signal, siginfo_t *info, void *ptr)
     ucontext_t *ctx = ptr;
 
     // Get the address of the instruction causing the segfault
-    uint8_t *code = (uint8_t *)ctx->uc_mcontext.gregs[REG_EIP];
+    // uint8_t *code = (uint8_t *)ctx->uc_mcontext.gregs[REG_EIP];
+    greg_t eip_value = ctx->uc_mcontext.gregs[REG_EIP];
+    uint8_t *code = (uint8_t *)(uintptr_t)eip_value; // Use uintptr_t to ensure proper alignment
 
     switch (*code)
     {
@@ -171,9 +177,36 @@ static void handleSegfault(int signal, siginfo_t *info, void *ptr)
     }
 }
 
+char *checkIDlike()
+{
+    FILE *file = fopen("/etc/os-release", "r");
+    if (!file)
+    {
+        perror("Failed to open /etc/os-release");
+        return NULL;
+    }
+
+    char line[256];
+    char *result = NULL;
+
+    while (fgets(line, sizeof(line), file))
+    {
+        if (strncmp(line, "ID_LIKE=", 8) == 0)
+        {
+            char *id_like = strchr(line, '=');
+            if (id_like)
+            {
+                result = strdup(id_like);
+                break;
+            }
+        }
+    }
+    fclose(file);
+    return result;
+}
+
 void __attribute__((constructor)) hook_init()
 {
-
     // Get offsets of the Game's ELF and calculate CRC32.
     dl_iterate_phdr(callback, NULL);
 
@@ -183,15 +216,27 @@ void __attribute__((constructor)) hook_init()
     act.sa_flags = SA_SIGINFO;
     sigaction(SIGSEGV, &act, NULL);
 
-    char *(*_getenv)(const char *name) = dlsym(RTLD_NEXT, "getenv");
-    char* envPath = _getenv("LINDBERGH_CONFIG_PATH");
+    char *envPath = getenv("LINDBERGH_CONFIG_PATH");
     initConfig(envPath);
+
+    gId = getConfig()->crc32;
+
+    char *id_like = checkIDlike();
+    if (id_like == NULL)
+    {
+        log_warn("Unable to get system info on current OS");
+    }
+    else if (strstr(id_like, "debian") == NULL)
+    {
+        log_warn("Seems like you're not in debian-like system. There might be unexpected issues.");
+    }
 
     if (getConfig()->fpsLimiter == 1)
     {
         fpsLimit.targetFrameTime = 1000000 / getConfig()->fpsTarget;
         fpsLimit.frameEnd = Clock_now();
     }
+
     getGPUVendor();
 
     if (initPatch() != 0)
@@ -236,8 +281,6 @@ void __attribute__((constructor)) hook_init()
     if (initControllers(&controllers) != 0)
         exit(1);
 
-
-
     securityBoardSetDipResolution(getConfig()->width, getConfig()->height);
 
     printf("\nSEGA Lindbergh Emulator\nBy the Lindbergh Development Team 2025\n\n");
@@ -255,16 +298,26 @@ void __attribute__((constructor)) hook_init()
     }
     printf("\n");
 
-    if (getConfig()->GPUVendor == ATI_GPU &&
-        ((getConfig()->crc32 == LETS_GO_JUNGLE) || (getConfig()->crc32 == LETS_GO_JUNGLE_REVA) ||
-         (getConfig()->crc32 == LETS_GO_JUNGLE_SPECIAL) || (getConfig()->crc32 == AFTER_BURNER_CLIMAX) ||
-         (getConfig()->crc32 == AFTER_BURNER_CLIMAX_REVA) || (getConfig()->crc32 == AFTER_BURNER_CLIMAX_REVB) ||
-         (getConfig()->crc32 == AFTER_BURNER_CLIMAX_SDX) || (getConfig()->crc32 == AFTER_BURNER_CLIMAX_SDX_REVA) ||
-         (getConfig()->crc32 == AFTER_BURNER_CLIMAX_SE) || (getConfig()->crc32 == AFTER_BURNER_CLIMAX_SE_REVA) ||
-         (getConfig()->crc32 == INITIALD_5_JAP_REVA) || (getConfig()->crc32 == INITIALD_5_JAP_REVF) ||
-         (getConfig()->crc32 == INITIALD_5_EXP_20) || (getConfig()->crc32 == INITIALD_5_EXP_20A)))
+    switch (gId)
     {
-        printf("WARNING: Game %s is unsupported in AMD GPU with ATI driver\n", getGameName());
+    case LETS_GO_JUNGLE:
+    case LETS_GO_JUNGLE_REVA:
+    case LETS_GO_JUNGLE_SPECIAL:
+    case AFTER_BURNER_CLIMAX:
+    case AFTER_BURNER_CLIMAX_REVA:
+    case AFTER_BURNER_CLIMAX_REVB:
+    case AFTER_BURNER_CLIMAX_SDX:
+    case AFTER_BURNER_CLIMAX_SDX_REVA:
+    case AFTER_BURNER_CLIMAX_SE:
+    case AFTER_BURNER_CLIMAX_SE_REVA:
+    case INITIALD_5_JAP_REVA:
+    case INITIALD_5_JAP_REVF:
+    case INITIALD_5_EXP_20:
+    case INITIALD_5_EXP_20A:
+        if (getConfig()->GPUVendor == ATI_GPU)
+        {
+            printf("WARNING: Game %s is unsupported in AMD GPU with ATI driver\n", getGameName());
+        }
     }
 }
 
@@ -272,9 +325,13 @@ DIR *opendir(const char *dirname)
 {
     DIR *(*_opendir)(const char *dirname) = dlsym(RTLD_NEXT, "opendir");
 
-    int gId = getConfig()->crc32;
-    if (gId == INITIALD_5_EXP || gId == INITIALD_5_EXP_20 || gId == INITIALD_5_EXP_20A || gId == INITIALD_5_JAP_REVA || gId == INITIALD_5_JAP_REVF)
+    switch (gId)
     {
+    case INITIALD_5_EXP:
+    case INITIALD_5_EXP_20:
+    case INITIALD_5_EXP_20A:
+    case INITIALD_5_JAP_REVA:
+    case INITIALD_5_JAP_REVF:
         if (strcmp(dirname, "/tmp/") == 0)
         {
             return _opendir(dirname + 1);
@@ -317,10 +374,11 @@ int open(const char *pathname, int flags, ...)
 
     if (strcmp(pathname, "/dev/ttyS0") == 0 || strcmp(pathname, "/dev/tts/0") == 0)
     {
-        if (getConfig()->emulateDriveboard == 0 && getConfig()->emulateRideboard == 0 && getConfig()->emulateCardreader == 0)
+        if (getConfig()->emulateDriveboard == 0 && getConfig()->emulateRideboard == 0 && getConfig()->emulateCardreader == 0 &&
+            getConfig()->emulateTouchscreen == 0)
             return _open(getConfig()->serial1Path, flags, mode);
 
-        if (hooks[SERIAL0] != -1 && getConfig()->emulateCardreader && getConfig()->crc32 != R_TUNED)
+        if (hooks[SERIAL0] != -1 && getConfig()->emulateCardreader && gId != R_TUNED)
         {
             return hooks[SERIAL0];
         }
@@ -328,7 +386,7 @@ int open(const char *pathname, int flags, ...)
         hooks[SERIAL0] = _open(HOOK_FILE_NAME, flags, mode);
         printf("Warning: SERIAL0 Opened %d\n", hooks[SERIAL0]);
 
-        if (getConfig()->emulateCardreader == 1 && getConfig()->crc32 != R_TUNED)
+        if (getConfig()->emulateCardreader == 1 && gId != R_TUNED)
             cardReaderSetFd(0, hooks[SERIAL0], getConfig()->cardFile1);
 
         return hooks[SERIAL0];
@@ -339,7 +397,7 @@ int open(const char *pathname, int flags, ...)
         if (getConfig()->emulateDriveboard == 0 && getConfig()->emulateMotionboard == 0 && getConfig()->emulateCardreader == 0)
             return _open(getConfig()->serial2Path, flags, mode);
 
-        if (hooks[SERIAL1] != -1 && getConfig()->emulateCardreader && getConfig()->crc32 != R_TUNED)
+        if (hooks[SERIAL1] != -1 && getConfig()->emulateCardreader && gId != R_TUNED)
         {
             return hooks[SERIAL1];
         }
@@ -392,6 +450,11 @@ int open64(const char *pathname, int flags, ...)
 FILE *fopen(const char *restrict pathname, const char *restrict mode)
 {
     FILE *(*_fopen)(const char *restrict pathname, const char *restrict mode) = dlsym(RTLD_NEXT, "fopen");
+
+    if (strcmp(pathname, "/proc/net/route") == 0)
+    {
+        return NULL;
+    }
 
     if (strcmp(pathname, "/root/lindbergrc") == 0)
     {
@@ -515,13 +578,6 @@ FILE *fopen(const char *restrict pathname, const char *restrict mode)
         return 0;
     }
 
-    if (strcmp("./../fs/data/cse_credit.bnk", pathname) == 0)
-    {
-        void *addr = __builtin_return_address(0);
-        fileHooks[FILE_HARLEY] = _fopen(pathname, mode);
-        return fileHooks[FILE_HARLEY];
-    }
-
     if (cachedShaderFilesLoaded)
     {
         void *addr = __builtin_return_address(0);
@@ -554,13 +610,33 @@ FILE *fopen(const char *restrict pathname, const char *restrict mode)
         }
     }
 
-    int gId = getConfig()->crc32;
-    if (gId == INITIALD_5_EXP || gId == INITIALD_5_EXP_20 || gId == INITIALD_5_EXP_20A || gId == INITIALD_5_JAP_REVA || gId == INITIALD_5_JAP_REVF)
+    switch (gId)
     {
+    case INITIALD_5_EXP:
+    case INITIALD_5_EXP_20:
+    case INITIALD_5_EXP_20A:
+    case INITIALD_5_JAP_REVA:
+    case INITIALD_5_JAP_REVF:
         if (strncmp(pathname, "/tmp/", 5) == 0)
         {
             return fopen(pathname + 1, mode);
         }
+    }
+
+    if (gId == PRIMEVAL_HUNT)
+    {
+        if (strstr(pathname, "/data/lua/texture/start_stage") != NULL)
+            phShowCursorInGame = true;
+        else if (strstr(pathname, "/data/texture/weapon_select/") != NULL)
+            phShowCursorInGame = false;
+        else if (strstr(pathname, "/data/texture/stage_select/") != NULL)
+            phShowCursorInGame = false;
+        else if (strstr(pathname, "/data/texture/name_entry/") != NULL)
+            phShowCursorInGame = false;
+        else if (strstr(pathname, "/data/texture/game_end/") != NULL)
+            phShowCursorInGame = false;
+        else if (strstr(pathname, "/data/lua/stage/bonus_0") != NULL)
+            phShowCursorInGame = true;
     }
 
     // printf("Path= %s\n", pathname);
@@ -636,28 +712,31 @@ FILE *fopen64(const char *pathname, const char *mode)
         }
     }
 
-    if ((getConfig()->crc32 == HUMMER) || (getConfig()->crc32 == HUMMER_SDLX) ||
-        (getConfig()->crc32 == HUMMER_EXTREME) || (getConfig()->crc32 == HUMMER_EXTREME_MDX))
+    int idx;
+    switch (gId)
     {
-        int idx;
+    case HUMMER:
+    case HUMMER_SDLX:
+    case HUMMER_EXTREME:
+    case HUMMER_EXTREME_MDX:
         if (shaderFileInList(pathname, &idx))
         {
             hummerExtremeShaderFileIndex = idx;
         }
-    }
-
-    if ((getConfig()->crc32 == VIRTUA_FIGHTER_5_FINAL_SHOWDOWN_REVA || getConfig()->crc32 == VIRTUA_FIGHTER_5_FINAL_SHOWDOWN_REVB ||
-         getConfig()->crc32 == VIRTUA_FIGHTER_5_FINAL_SHOWDOWN_REVB_6000) &&
-        (getConfig()->GPUVendor != NVIDIA_GPU && getConfig()->GPUVendor != ATI_GPU))
-    {
-        char *filename = basename((char *)pathname);
-        if (strstr(filename, "light_") || strstr(filename, "glow_"))
+        break;
+    case VIRTUA_FIGHTER_5_FINAL_SHOWDOWN_REVA:
+    case VIRTUA_FIGHTER_5_FINAL_SHOWDOWN_REVB:
+    case VIRTUA_FIGHTER_5_FINAL_SHOWDOWN_REVB_6000:
+        if (getConfig()->GPUVendor != NVIDIA_GPU && getConfig()->GPUVendor != ATI_GPU)
         {
-            printf("Stage: %s\n", filename);
-            char *start = strchr(filename, '_') + 1;
-            char *end = strstr(filename, ".txt");
-            strncpy(vf5StageNameAbbr, start, end - start);
-            vf5StageNameAbbr[end - start] = '\0';
+            char *filename = basename((char *)pathname);
+            if (strstr(filename, "light_") || strstr(filename, "glow_"))
+            {
+                char *start = strchr(filename, '_') + 1;
+                char *end = strstr(filename, ".txt");
+                strncpy(vf5StageNameAbbr, start, end - start);
+                vf5StageNameAbbr[end - start] = '\0';
+            }
         }
     }
 
@@ -785,6 +864,11 @@ ssize_t read(int fd, void *buf, size_t count)
     // If we don't hook the serial just reply with nothing
     if (fd == hooks[SERIAL0] || fd == hooks[SERIAL1])
     {
+        if (gId == PRIMEVAL_HUNT && getConfig()->emulateTouchscreen == 1)
+        {
+            phRead(fd, buf, count);
+            return 1;
+        }
         return -1;
     }
 
@@ -817,10 +901,10 @@ size_t fread(void *buf, size_t size, size_t count, FILE *stream)
         return freadReplace(buf, size, count, fileRead[FILE_RW2]);
     }
 
-    if (stream == fileHooks[FILE_HARLEY])
-    {
-        return harleyFreadReplace(buf, size, count, fileHooks[FILE_HARLEY]);
-    }
+    // if (stream == fileHooks[FILE_HARLEY])
+    // {
+    //     return harleyFreadReplace(buf, size, count, fileHooks[FILE_HARLEY]);
+    // }
 
     if (stream == fileHooks[FILE_FONT_ABC])
     {
@@ -926,7 +1010,7 @@ ssize_t write(int fd, const void *buf, size_t count)
         return driveboardWrite(fd, buf, count);
     }
 
-    if (fd == hooks[SERIAL1] && getConfig()->emulateDriveboard && getConfig()->crc32 != R_TUNED)
+    if (fd == hooks[SERIAL1] && getConfig()->emulateDriveboard && gId != R_TUNED)
     {
         return driveboardWrite(fd, buf, count);
     }
@@ -960,10 +1044,9 @@ int ioctl(int fd, unsigned int request, void *data)
         return baseboardIoctl(fd, request, data);
     }
 
-    // Just accept any IOCTL on serial ports and ignore it
     if (fd == hooks[SERIAL0] || fd == hooks[SERIAL1])
     {
-        if (request == 0x541b && getConfig()->crc32 == R_TUNED && fd == hooks[SERIAL1])
+        if (request == 0x541b && gId == R_TUNED && fd == hooks[SERIAL1])
         {
             uint8_t d = 1;
             memcpy(data, &d, sizeof(uint8_t));
@@ -1232,26 +1315,40 @@ int setenv(const char *name, const char *value, int overwrite)
 char *getenv(const char *name)
 {
     char *(*_getenv)(const char *name) = dlsym(RTLD_NEXT, "getenv");
-    int gId = getConfig()->crc32;
-    if ((strcmp(name, "TEA_DIR") == 0) &&
-        ((gId == VIRTUA_TENNIS_3) || (gId == VIRTUA_TENNIS_3_TEST) || (gId == VIRTUA_TENNIS_3_REVA) ||
-         (gId == VIRTUA_TENNIS_3_REVA_TEST) || (gId == VIRTUA_TENNIS_3_REVB) || (gId == VIRTUA_TENNIS_3_REVB_TEST) ||
-         (gId == VIRTUA_TENNIS_3_REVC) || (gId == VIRTUA_TENNIS_3_REVC_TEST) || ((gId == RAMBO)) || (gId == TOO_SPICY)))
+
+    if (strcmp(name, "TEA_DIR") == 0)
     {
-        if (getcwd(envpath, 100) == NULL)
-            return "";
-        char *ptr = strrchr(envpath, '/');
-        if (ptr == NULL)
-            return "";
-        *ptr = '\0';
-        return envpath;
+        switch (gId)
+        {
+        case VIRTUA_TENNIS_3:
+        case VIRTUA_TENNIS_3_TEST:
+        case VIRTUA_TENNIS_3_REVA:
+        case VIRTUA_TENNIS_3_REVA_TEST:
+        case VIRTUA_TENNIS_3_REVB:
+        case VIRTUA_TENNIS_3_REVB_TEST:
+        case VIRTUA_TENNIS_3_REVC:
+        case VIRTUA_TENNIS_3_REVC_TEST:
+        case RAMBO:
+        case TOO_SPICY:
+        {
+            if (getcwd(envpath, 100) == NULL)
+                return "";
+            char *ptr = strrchr(envpath, '/');
+            if (ptr == NULL)
+                return "";
+            *ptr = '\0';
+            return envpath;
+        }
+        break;
+        default:
+        {
+            if (getcwd(envpath, 100) == NULL)
+                return "";
+            return envpath;
+        }
+        }
     }
-    else if (strcmp(name, "TEA_DIR") == 0)
-    {
-        if (getcwd(envpath, 100) == NULL)
-            return "";
-        return envpath;
-    }
+
     if (strcmp(name, "__GL_SYNC_TO_VBLANK") == 0)
     {
         return "";
@@ -1292,7 +1389,7 @@ struct tm *localtime_r(const time_t *timep, struct tm *result)
     struct tm *(*_localtime_r)(const time_t *, struct tm *) =
         (struct tm * (*)(const time_t *, struct tm *)) dlsym(RTLD_NEXT, "localtime_r");
 
-    if ((getConfig()->crc32 == MJ4_REVG || getConfig()->crc32 == MJ4_EVO) && getConfig()->mj4EnabledAtT == 1)
+    if ((gId == MJ4_REVG || gId == MJ4_EVO) && getConfig()->mj4EnabledAtT == 1)
     {
         time_t target_time = 1735286445;
         struct tm *res = _localtime_r(&target_time, result);
