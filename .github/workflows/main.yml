@@ -35,14 +35,22 @@ jobs:
       - name: Display Downloaded Artifacts
         run: find ./artifacts/
 
+      - name: Add 161 to github.run_number
+        run: |
+          NEW_RUN_NUMBER=$(( ${{ github.run_number }} + 161 ))
+          echo "NEW_RUN_NUMBER=$NEW_RUN_NUMBER" >> $GITHUB_ENV
+
+      - name: Display Updated Number
+        run: echo "Updated Run Number: ${{ env.NEW_RUN_NUMBER }}"
+
       - name: Create Preview Release
         if: github.ref == 'refs/heads/master'
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: v${{ github.run_number }}
+          automatic_release_tag: v${{ env.NEW_RUN_NUMBER }}
           prerelease: false
-          title: "Build v${{ github.run_number }}"
+          title: "Build v${{ env.NEW_RUN_NUMBER }}"
           files: |
             ./artifacts/linux-flatpak/lindbergh-loader.flatpak
             ./artifacts/linux-build/build.tar.gz
