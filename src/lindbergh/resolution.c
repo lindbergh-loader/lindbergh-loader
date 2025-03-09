@@ -370,8 +370,8 @@ int isTestMode()
 
 void myGlBindTexture(GLenum target, GLuint texture)
 {
-    // const char *targetName = "";
-    // switch (target)
+    curTarget = target;
+    curTextureID = texture;
 
     void (*_glBindTexture)(GLenum, GLuint) = dlsym(RTLD_NEXT, "glBindTexture");
     _glBindTexture(target, texture);
