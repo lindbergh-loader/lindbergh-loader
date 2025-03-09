@@ -621,10 +621,13 @@ void sdlEventShooting(SDL_Event *event)
             setSwitch(PLAYER_2, BUTTON_1, event->type == SDL_KEYDOWN);
 
         else if (event->key.keysym.sym == SDLK_x)
-            setSwitch(PLAYER_2, BUTTON_1, event->type == SDL_KEYDOWN);
+            setSwitch(PLAYER_2, BUTTON_2, event->type == SDL_KEYDOWN);
 
         else if (event->key.keysym.sym == SDLK_c)
-            setSwitch(PLAYER_2, BUTTON_1, event->type == SDL_KEYDOWN);
+            setSwitch(PLAYER_2, BUTTON_3, event->type == SDL_KEYDOWN);
+
+        else if (event->key.keysym.sym == SDLK_v)
+            setSwitch(PLAYER_2, BUTTON_4, event->type == SDL_KEYDOWN);
 
         else if (event->key.keysym.sym == SDLK_u)
             setSwitch(PLAYER_2, BUTTON_UP, event->type == SDL_KEYDOWN);

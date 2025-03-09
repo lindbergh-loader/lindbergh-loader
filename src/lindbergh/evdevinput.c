@@ -922,11 +922,11 @@ static ControllerStatus listControllers(Controllers *controllers)
                     strcat(controllerInput->inputName, "_");
                     strcat(controllerInput->inputName, codename(EV_KEY, code));
                     normaliseName(controllerInput->inputName);
-                    //                    if(snprintf(controllerInput->inputTechName, SIZE, "%s:KEY:%i", controllers->controller[i].path,
-                    //                    code) >= 1024) {
-                    //                      // hum ok, truncated value
-                    //                    }
-                    //		    strcpy(controllerInput->inputTechNegName, "-"); // unassignable value (not "" while some conf are empty)
+                    if (snprintf(controllerInput->inputTechName, SIZE, "%s:KEY:%i", controllers->controller[i].path, code) >= 1024)
+                    {
+                        // hum ok, truncated value
+                    }
+                    strcpy(controllerInput->inputTechNegName, "-"); // unassignable value (not "" while some conf are empty)
                 }
             }
         }
@@ -948,14 +948,14 @@ static ControllerStatus listControllers(Controllers *controllers)
                     strcat(controllerInput->inputName, "_");
                     strcat(controllerInput->inputName, codename(EV_ABS, code));
                     normaliseName(controllerInput->inputName);
-                    //                    if(snprintf(controllerInput->inputTechName, SIZE, "%s:ABS:%i", controllers->controller[i].path,
-                    //                    code) >= 1024) {
-                    //                      // hum ok, truncated value
-                    //                    }
-                    //                    if(snprintf(controllerInput->inputTechNegName, SIZE, "%s:ABS_NEG:%i",
-                    //                    controllers->controller[i].path, code) >= 1024) {
-                    //                      // hum ok, truncated value
-                    //                    }
+                    if (snprintf(controllerInput->inputTechName, SIZE, "%s:ABS:%i", controllers->controller[i].path, code) >= 1024)
+                    {
+                        // hum ok, truncated value
+                    }
+                    if (snprintf(controllerInput->inputTechNegName, SIZE, "%s:ABS_NEG:%i", controllers->controller[i].path, code) >= 1024)
+                    {
+                        // hum ok, truncated value
+                    }
 
                     ControllerInput *minControllerInput =
                         &controllers->controller[i].inputs[controllers->controller[i].inputCount++];
@@ -964,14 +964,15 @@ static ControllerStatus listControllers(Controllers *controllers)
                     minControllerInput->specialFunction = ANALOGUE_TO_DIGITAL_MIN;
                     strcpy(minControllerInput->inputName, controllerInput->inputName);
                     strcat(minControllerInput->inputName, "_MIN");
-                    //                    if(snprintf(minControllerInput->inputTechName, SIZE, "%s:ABS:%i:MIN",
-                    //                    controllers->controller[i].path, code) >= 1024) {
-                    //                      // hum ok, truncated value
-                    //                    }
-                    //                    if(snprintf(minControllerInput->inputTechNegName, SIZE, "%s:ABS_NEG:%i:MIN",
-                    //                    controllers->controller[i].path, code) >= 1024) {
-                    //                      // hum ok, truncated value
-                    //                    }
+                    if (snprintf(minControllerInput->inputTechName, SIZE, "%s:ABS:%i:MIN", controllers->controller[i].path, code) >= 1024)
+                    {
+                        // hum ok, truncated value
+                    }
+                    if (snprintf(minControllerInput->inputTechNegName, SIZE, "%s:ABS_NEG:%i:MIN", controllers->controller[i].path, code) >=
+                        1024)
+                    {
+                        // hum ok, truncated value
+                    }
 
                     ControllerInput *maxControllerInput =
                         &controllers->controller[i].inputs[controllers->controller[i].inputCount++];
@@ -980,27 +981,28 @@ static ControllerStatus listControllers(Controllers *controllers)
                     maxControllerInput->specialFunction = ANALOGUE_TO_DIGITAL_MAX;
                     strcpy(maxControllerInput->inputName, controllerInput->inputName);
                     strcat(maxControllerInput->inputName, "_MAX");
-                    //                    if(snprintf(maxControllerInput->inputTechName, SIZE, "%s:ABS:%i:MAX",
-                    //                    controllers->controller[i].path, code) >= 1024) {
-                    //                      // hum ok, truncated value
-                    //                    }
-                    //                    if(snprintf(maxControllerInput->inputTechNegName, SIZE, "%s:ABS_NEG:%i:MAX",
-                    //                    controllers->controller[i].path, code) >= 1024) {
-                    //                      // hum ok, truncated value
-                    //                    }
+                    if (snprintf(maxControllerInput->inputTechName, SIZE, "%s:ABS:%i:MAX", controllers->controller[i].path, code) >= 1024)
+                    {
+                        // hum ok, truncated value
+                    }
+                    if (snprintf(maxControllerInput->inputTechNegName, SIZE, "%s:ABS_NEG:%i:MAX", controllers->controller[i].path, code) >=
+                        1024)
+                    {
+                        // hum ok, truncated value
+                    }
 
-                    //		    ControllerInput *shakeControllerInput =
-                    //		      &controllers->controller[i].inputs[controllers->controller[i].inputCount++];
-                    //                    shakeControllerInput->evType = EV_ABS;
-                    //                    shakeControllerInput->evCode = code;
-                    //                    shakeControllerInput->specialFunction = ANALOGUE_SHAKE;
-                    //                    strcpy(shakeControllerInput->inputName, controllerInput->inputName);
-                    //                    strcat(shakeControllerInput->inputName, "_SHAKE");
-                    //                    if(snprintf(shakeControllerInput->inputTechName, SIZE, "%s:ABS:%i:SHAKE",
-                    //                    controllers->controller[i].path, code) >= 1024) {
-                    //                      // hum ok, truncated value
-                    //                    }
-                    //
+                    ControllerInput *shakeControllerInput = &controllers->controller[i].inputs[controllers->controller[i].inputCount++];
+                    shakeControllerInput->evType = EV_ABS;
+                    shakeControllerInput->evCode = code;
+                    shakeControllerInput->specialFunction = ANALOGUE_SHAKE;
+                    strcpy(shakeControllerInput->inputName, controllerInput->inputName);
+                    strcat(shakeControllerInput->inputName, "_SHAKE");
+                    if (snprintf(shakeControllerInput->inputTechName, SIZE, "%s:ABS:%i:SHAKE", controllers->controller[i].path, code) >=
+                        1024)
+                    {
+                        // hum ok, truncated value
+                    }
+
                     struct input_absinfo absoluteFeatures;
                     ioctl(controller, EVIOCGABS(code), &absoluteFeatures);
                     controllers->controller[i].absMin[code] = absoluteFeatures.minimum;
