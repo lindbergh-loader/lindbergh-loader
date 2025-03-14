@@ -444,7 +444,7 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        if (strcmp(argv[i], "-z") == 0 || strcmp(argv[i], "--ziink") == 0)
+        if (strcmp(argv[i], "-z") == 0 || strcmp(argv[i], "--zink") == 0)
         {
             zink = 1;
             continue;

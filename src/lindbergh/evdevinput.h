@@ -2,7 +2,7 @@
 
 #include <linux/input-event-codes.h>
 
-#define SIZE 128
+#define SIZE 1024
 #define CONTROLLER_THREAD_MAX 256
 
 
@@ -31,14 +31,6 @@ typedef struct
     int maxEnabled;
 
     int isAnalogue;
-    int isNeg; // reversed axis
-
-    char shakeName[SIZE];
-    int shakeChannel;
-    int shakeEnabled;
-    int shakePlayer;
-    double shakePreviousScaled;
-
     int isCoin;
 } ArcadeInput;
 
@@ -52,15 +44,12 @@ typedef enum {
     NO_SPECIAL_FUNCTION = 0,
     ANALOGUE_TO_DIGITAL_MAX,
     ANALOGUE_TO_DIGITAL_MIN,
-    DIGITAL_TO_ANALOGUE,
-    ANALOGUE_SHAKE
+    DIGITAL_TO_ANALOGUE
 } SpecialFunction;
 
 typedef struct
 {
     char inputName[SIZE];
-    char inputTechName[SIZE];
-    char inputTechNegName[SIZE];
     int evType;
     int evCode;
     SpecialFunction specialFunction;
@@ -69,12 +58,12 @@ typedef struct
 typedef struct
 {
     char name[SIZE];
-    char path[320];
-    char physicalLocation[128];
+    char path[SIZE];
+    char physicalLocation[SIZE];
     int absMax[ABS_MAX];
     int absMin[ABS_MAX];
 
-    ControllerInput inputs[320];
+    ControllerInput inputs[SIZE];
     int inputCount;
 
     ArcadeInput keyTriggers[KEY_MAX];
