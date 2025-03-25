@@ -90,6 +90,10 @@ sudo ln -s /lib/i386-linux-gnu/libglut.so /lib/i386-linux-gnu/libglut.so.3
 
 - You need to set `SKIP_OUTRUN_CABINET_CHECK` to 1 in `lindbergh.conf` to play in DX, SDX or Standard cabinet types.
 
+### Hummer (all versions)
+
+The games will ask for libGLcore.so.1 and libnvidia-tls.so.1 you can copy for example libkswapapi.so as libGLcore.so.1 and libnvidia-tls.so.1 and the game will work fine.
+
 ## Configuration File : lindbergh.conf
 
 All configurable options are set and explained in the [`lindbergh.conf`](lindbergh.conf) file itself, and should be reasonably easy to understand. This chapter further explains some of those setup options.

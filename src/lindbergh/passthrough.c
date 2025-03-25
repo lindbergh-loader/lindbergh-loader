@@ -160,10 +160,10 @@ void *readJVSFrameThread(void * arg)
         waitForEnd = 0;
 
         do {
-            while(jvsFrameBuffer.ready == 1) {
-                usleep(10);
+            while (jvsFrameBuffer.ready == 1)
+            {
+                usleep(1);
             }
-
             // printf("SERIAL thread debug: trying to read byte.\n");
             // Try to read a byte from serial, this call will be blocking if VMIN > 0 and VTIME = 0
             bytesRead = read(fd, &localBuffer[byteCount], 1);
