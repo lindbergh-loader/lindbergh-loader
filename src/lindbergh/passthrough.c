@@ -159,11 +159,8 @@ void *readJVSFrameThread(void * arg)
         ackSize = 0;
         waitForEnd = 0;
 
-        do {
-            while (jvsFrameBuffer.ready == 1)
-            {
-                usleep(1);
-            }
+        do
+        {
             // printf("SERIAL thread debug: trying to read byte.\n");
             // Try to read a byte from serial, this call will be blocking if VMIN > 0 and VTIME = 0
             bytesRead = read(fd, &localBuffer[byteCount], 1);
@@ -197,7 +194,6 @@ void *readJVSFrameThread(void * arg)
                 }
             }
         } while (waitForEnd);
-
 
         // Lock the buffer while we write to it
         pthread_mutex_lock(&jvsBuffer_lock);
@@ -247,7 +243,7 @@ JVSFrame readJVSFrameFromThread() {
 
     // Check if we have a valid frame
     if (jvsFrameBuffer.ready == 1) {
-        memcpy(&frame, &jvsFrameBuffer, sizeof(JVSFrame));
+        frame = jvsFrameBuffer;
         // It has been red, we disable this frame
         jvsFrameBuffer.ready = 0;
     } else {
