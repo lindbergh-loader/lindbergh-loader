@@ -337,7 +337,65 @@ DIR *opendir(const char *dirname)
             return _opendir(dirname + 1);
         }
     }
+
+    // Fix for Outrun high scores
+    switch (gId)
+    {
+    case OUTRUN_2_SP_SDX:
+    case OUTRUN_2_SP_SDX_REVA:
+    case OUTRUN_2_SP_SDX_TEST:
+    case OUTRUN_2_SP_SDX_REVA_TEST:
+    case OUTRUN_2_SP_SDX_REVA_TEST2:
+    {
+        if (strcmp(dirname, "/home/disk1/rankingdata") == 0)
+        {
+            return _opendir("./rankingdata");
+        }
+    }
+    }
     return _opendir(dirname);
+}
+
+int remove(const char *path)
+{
+    int (*_remove)(const char *path) = dlsym(RTLD_NEXT, "remove");
+
+    switch (gId)
+    {
+    case OUTRUN_2_SP_SDX:
+    case OUTRUN_2_SP_SDX_REVA:
+    case OUTRUN_2_SP_SDX_TEST:
+    case OUTRUN_2_SP_SDX_REVA_TEST:
+    case OUTRUN_2_SP_SDX_REVA_TEST2:
+    {
+        if (strcmp(path, "/home/disk1/rankingdata/%s") == 0)
+        {
+            return _remove("./rankingdata/%s");
+        }
+    }
+    }
+    return _remove(path);
+}
+
+int mkdir(const char *path, mode_t mode)
+{
+    int (*_mkdir)(const char *path, mode_t mode) = dlsym(RTLD_NEXT, "mkdir");
+
+    switch (gId)
+    {
+    case OUTRUN_2_SP_SDX:
+    case OUTRUN_2_SP_SDX_REVA:
+    case OUTRUN_2_SP_SDX_TEST:
+    case OUTRUN_2_SP_SDX_REVA_TEST:
+    case OUTRUN_2_SP_SDX_REVA_TEST2:
+    {
+        if (strcmp(path, "/home/disk1/rankingdata") == 0)
+        {
+            return _mkdir("./rankingdata", mode);
+        }
+    }
+    }
+    return _mkdir(path, mode);
 }
 
 int __xstat64(int ver, const char *path, struct stat64 *stat_buf)
@@ -570,6 +628,22 @@ FILE *fopen(const char *restrict pathname, const char *restrict mode)
         memmove(newPathname + 2, newPathname + 11, strlen(newPathname + 11) + 1);
         memcpy(newPathname, "..", 2);
         pathname = newPathname;
+    }
+
+    // Fix for Outrun high scores
+    switch (gId)
+    {
+    case OUTRUN_2_SP_SDX:
+    case OUTRUN_2_SP_SDX_REVA:
+    case OUTRUN_2_SP_SDX_TEST:
+    case OUTRUN_2_SP_SDX_REVA_TEST:
+    case OUTRUN_2_SP_SDX_REVA_TEST2:
+    {
+        if ((newPathname = strstr(pathname, "/home/disk1")) != NULL)
+        {
+            pathname = newPathname + 12;
+        }
+    }
     }
 
     // This forces LGJ games and ID games to not use the pre-compiled shaders.
