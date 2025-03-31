@@ -6,12 +6,14 @@ on:
     paths-ignore:
       - '**.md'
       - '.github/ISSUE_TEMPLATE/*'
+      - '.docs/changelog'
   push:
     branches:
       - master
     paths-ignore:
       - '**.md'
       - '.github/ISSUE_TEMPLATE/*'
+      - '.docs/changelog'
 
 jobs:
   linux-build:

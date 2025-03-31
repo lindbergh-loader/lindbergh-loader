@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.6]
+### Fixed
+    - Reverted (Fixed LGJ, VT3 and ID4/ID5 JVS passthrough).
+    - Outrun 2 High Scores.
+    
 ## [2.0.5]
 ### Fixed
     - Fixed LGJ, VT3 and ID4/ID5 JVS passthrough.
