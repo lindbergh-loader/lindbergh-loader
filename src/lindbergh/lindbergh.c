@@ -1,8 +1,12 @@
 #include <dirent.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <sys/stat.h>
+#include <time.h>
+#include <unistd.h>
 
 #include "evdevinput.h"
 #include "version.h"
@@ -14,8 +18,10 @@
 #define PRELOAD_FILE_FLATPAK "/app/lib32/lindbergh.so"
 #define TEAM "bobbydilley, retrofan, dkeruza-neo, doozer, francesco, rolel, caviar-x"
 #define LINDBERGH_CONFIG_PATH "LINDBERGH_CONFIG_PATH"
+#define MAX_PATH_LEN 1024
 
 uint32_t elf_crc = 0;
+char *ldPreloadLibrary = "";
 
 // List of all lindbergh executables known, not including the test executables
 char *games[] = {"main.exe",
@@ -231,6 +237,95 @@ void testModePath(char *name)
     strcat(name, " -t");
 }
 
+bool isValidDirectory(const char *path)
+{
+    struct stat statbuf;
+
+    if (stat(path, &statbuf) != 0)
+        return false;
+
+    return S_ISDIR(statbuf.st_mode);
+}
+
+char *find32bLibFolder(void)
+{
+    const char *candidates[] = {"lib32", "lib/i386-linux-gnu", "lib/i686-linux-gnu", "lib"};
+    int num_candidates = sizeof(candidates) / sizeof(candidates[0]);
+
+    char current_path[PATH_MAX];
+    struct stat st;
+    char *result_path = NULL;
+
+    for (int i = 0; i < num_candidates; ++i)
+    {
+        int written = snprintf(current_path, sizeof(current_path), "/usr/%s", candidates[i]);
+
+        if (written < 0 || (size_t)written >= sizeof(current_path))
+            continue;
+
+        if (stat(current_path, &st) == 0 && S_ISDIR(st.st_mode))
+        {
+            size_t path_len = strlen(current_path);
+            result_path = (char *)malloc(path_len + 1);
+
+            if (result_path == NULL)
+            {
+                log_fatal("Failed to allocate memory for result path.");
+                return NULL;
+            }
+
+            strcpy(result_path, current_path);
+            return result_path;
+        }
+    }
+    return NULL;
+}
+
+char *findLDPreloadLibrary()
+{
+    const char *library_name = PRELOAD_FILE_NAME;
+    static char *empty_string = "";
+    char *found_path_ptr = NULL;
+
+    char *search_dir = find32bLibFolder();
+
+    if (search_dir == NULL || search_dir[0] == '\0')
+    {
+        log_error("Error: search_dir is NULL or empty.\n");
+        return empty_string;
+    }
+
+    char full_library_path[PATH_MAX];
+
+    int len_written = snprintf(full_library_path, sizeof(full_library_path), "%s/%s", search_dir, library_name);
+
+    if (len_written < 0 || (size_t)len_written >= sizeof(full_library_path))
+    {
+        log_error("find_preload_library_in_specific_dir: Warning: Constructed path is too long or invalid: %s/%s\n", search_dir,
+                  library_name);
+        return empty_string;
+    }
+
+    if (access(full_library_path, F_OK) == 0)
+    {
+        found_path_ptr = (char *)malloc(strlen(full_library_path) + 1);
+        if (found_path_ptr == NULL)
+        {
+            log_error("find_preload_library_in_specific_dir: Failed to allocate memory for result path");
+            return empty_string;
+        }
+        else
+        {
+            strcpy(found_path_ptr, full_library_path);
+            return found_path_ptr;
+        }
+    }
+    else
+    {
+        return empty_string;
+    }
+}
+
 /**
  * Makes sure the environment variables are set correctly
  * to run the game.
@@ -252,10 +347,12 @@ void setEnvironmentVariables(int isFlatpak, int zink, int nvidia)
     setenv(LD_LIBRARY_PATH, libraryPath, 1);
 
     // Ensure the preload path is set correctly
-    if (!isFlatpak)
-        setenv(LD_PRELOAD, PRELOAD_FILE_NAME, 1);
-    else
+    if (isFlatpak)
         setenv(LD_PRELOAD, PRELOAD_FILE_FLATPAK, 1);
+    else if (strcmp(ldPreloadLibrary, "") != 0)
+        setenv(LD_PRELOAD, ldPreloadLibrary, 1);
+    else
+        setenv(LD_PRELOAD, PRELOAD_FILE_NAME, 1);
 
     if (zink)
         setenv("MESA_LOADER_DRIVER_OVERRIDE", "zink", 1);
@@ -283,6 +380,7 @@ void printUsage(char *argv[])
     printf("  --version           Displays the version of the loader and team's names\n");
     printf("  --help              Displays this usage text\n");
     printf("  --config | -c       Specifies configuration path\n");
+    printf("  --gamepath | -g     Specifies game path\n");
 }
 
 /**
@@ -339,9 +437,48 @@ int main(int argc, char *argv[])
         return EXIT_SUCCESS;
     }
 
+    char curDir[MAX_PATH_LEN];
+    if (getcwd(curDir, sizeof(curDir)) == NULL)
+    {
+        log_error("Error: could not get the current directory.");
+        return EXIT_FAILURE;
+    }
+
+    // Check if a folder was passed as a parameter
+    char gamePath[PATH_MAX] = {0};
+    for (int i = 1; i < argc; i++)
+    {
+        if (strcmp(argv[i], "-g") == 0 || strcmp(argv[i], "--gamepath") == 0)
+        {
+            if (i + 1 >= argc)
+            {
+                break;
+            }
+            strncpy(gamePath, argv[i + 1], PATH_MAX);
+            i += 1;
+            continue;
+        }
+    }
+
+    // Check if the passed folder is valid
+    if (!isValidDirectory(gamePath))
+    {
+        log_error("The game folder is invalid.");
+        return EXIT_FAILURE;
+    }
+
     // Look for the games
     struct dirent *ent;
-    DIR *dir = opendir(".");
+    DIR *dir;
+
+    if (gamePath[0] != '\0')
+    {
+        dir = opendir(gamePath);
+    }
+    else
+    {
+        dir = opendir(curDir);
+    }
 
     if (dir == NULL)
     {
@@ -398,6 +535,8 @@ int main(int argc, char *argv[])
         return listControllers();
     }
 
+    ldPreloadLibrary = findLDPreloadLibrary();
+
     if (!lindberghSharedObjectFound)
     {
         FILE *file = fopen(PRELOAD_FILE_FLATPAK, "r");
@@ -406,7 +545,7 @@ int main(int argc, char *argv[])
             fclose(file);
             isFlatpak = 1;
         }
-        else
+        else if (strcmp(ldPreloadLibrary, "") == 0)
         {
             log_error("The preload object lindbergh.so was not found in this directory.");
             return EXIT_FAILURE;
@@ -466,6 +605,15 @@ int main(int argc, char *argv[])
             i += 1;
             continue;
         }
+
+        if (strcmp(argv[i], "-g") == 0 || strcmp(argv[i], "--gamepath") == 0)
+        {
+            if (i + 1 >= argc)
+                break;
+            i += 1;
+            continue;
+        }
+
         // Treat the argument as the game name
         strcpy(forceGamePath, argv[i]);
         forceGame = 1;
@@ -475,14 +623,18 @@ int main(int argc, char *argv[])
     setEnvironmentVariables(isFlatpak, zink, nvidia);
 
     char command[128] = {0};
-    strcpy(command, "./");
+    if (gamePath[0] != '\0')
+        sprintf(command, "%s/", gamePath);
+    else
+        strcpy(command, "./");
+
     if (forceGame)
     {
         strcat(command, forceGamePath);
     }
     else if (segaboot)
     {
-       strcat(command, "segaboot -t");
+        strcat(command, "segaboot -t");
     }
     else
     {
@@ -514,5 +666,24 @@ int main(int argc, char *argv[])
 
     log_info("Starting $ %s", command);
 
-    return system(command);
+    if (gamePath[0] != '\0')
+    {
+        if (chdir(gamePath) != 0)
+        {
+            log_error("Could not change to game path.");
+            return EXIT_FAILURE;
+        }
+    }
+    int sysCmd = system(command);
+
+    if (gamePath[0] != '\0')
+    {
+        if (chdir(curDir) != 0)
+        {
+            log_error("Could not return to the original directory.");
+            return EXIT_FAILURE;
+        }
+    }
+
+    return sysCmd;
 }
