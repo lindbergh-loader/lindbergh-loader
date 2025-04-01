@@ -177,32 +177,76 @@ static void handleSegfault(int signal, siginfo_t *info, void *ptr)
     }
 }
 
-char *checkIDlike()
+char *trimOS_ID(char *str)
 {
-    FILE *file = fopen("/etc/os-release", "r");
-    if (!file)
+    if (!str)
+        return str;
+
+    char *end;
+    while (isspace((unsigned char)*str) || *str == '"' || *str == '\'')
+        str++;
+
+    if (*str == 0)
+        return str;
+
+    end = str + strlen(str) - 1;
+    while (end > str && (isspace((unsigned char)*end) || *end == '"' || *end == '\''))
+        end--;
+
+    *(end + 1) = '\0';
+
+    return str;
+}
+
+bool checkOS_ID()
+{
+    FILE *fp = fopen("/etc/os-release", "r");
+    if (!fp)
     {
-        perror("Failed to open /etc/os-release");
-        return NULL;
+        return false;
     }
 
     char line[256];
-    char *result = NULL;
+    bool found = false;
 
-    while (fgets(line, sizeof(line), file))
+    while (fgets(line, sizeof(line), fp))
     {
-        if (strncmp(line, "ID_LIKE=", 8) == 0)
+        if (strncmp(line, "ID=", 3) == 0)
         {
-            char *id_like = strchr(line, '=');
-            if (id_like)
+            char *value = trimOS_ID(line + 3);
+            if (strcmp(value, "debian") == 0 || strcmp(value, "ubuntu") == 0)
             {
-                result = strdup(id_like);
+                found = true;
                 break;
             }
         }
+        else if (strncmp(line, "ID_LIKE=", 8) == 0)
+        {
+            char value_part[256];
+            strncpy(value_part, line + 8, sizeof(value_part) - 1);
+            value_part[sizeof(value_part) - 1] = '\0';
+
+            char *value_trimmed = trimOS_ID(value_part);
+            char *token = strtok(value_trimmed, " \t\n");
+
+            while (token != NULL)
+            {
+                char *clean_token = trimOS_ID(token);
+                if (strcmp(clean_token, "debian") == 0 || strcmp(clean_token, "ubuntu") == 0)
+                {
+                    found = true;
+                    break;
+                }
+                token = strtok(NULL, " \t\n");
+            }
+
+            if (found)
+                break;
+        }
     }
-    fclose(file);
-    return result;
+
+    fclose(fp);
+    return found;
 }
 
 void __attribute__((constructor)) hook_init()
@@ -221,12 +265,7 @@ void __attribute__((constructor)) hook_init()
 
     gId = getConfig()->crc32;
 
-    char *id_like = checkIDlike();
-    if (id_like == NULL)
-    {
-        log_warn("Unable to get system info on current OS");
-    }
-    else if (strstr(id_like, "debian") == NULL)
+    if (!checkOS_ID())
     {
         log_warn("Seems like you're not in debian-like system. There might be unexpected issues.");
     }

@@ -3,6 +3,9 @@ name: Automated Builds
 on:
   workflow_dispatch:
   pull_request:
+    branches:
+      - master
+  workflow_call:
     paths-ignore:
       - '**.md'
       - '.github/ISSUE_TEMPLATE/*'
