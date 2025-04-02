@@ -21,13 +21,13 @@ jobs:
   linux-build:
     name: 💻 Linux
     uses: "./.github/workflows/linux-build.yml"
-  linux-flatpak:
-    name: 📦 Linux Flatpak
-    uses: "./.github/workflows/flatpak-build.yml"
+  # linux-flatpak:
+  #   name: 📦 Linux Flatpak
+  #   uses: "./.github/workflows/flatpak-build.yml"
 
   create-release:
     name: 📤 Create Release
-    needs: [linux-build, linux-flatpak]
+    needs: [linux-build]
     runs-on: ubuntu-22.04
     if: github.ref == 'refs/heads/master'
     steps:
@@ -41,7 +41,7 @@ jobs:
 
       - name: Add 161 to github.run_number
         run: |
-          NEW_RUN_NUMBER=$(( ${{ github.run_number }} + 161 ))
+          NEW_RUN_NUMBER=$(( ${{ github.run_number }}))
           echo "NEW_RUN_NUMBER=$NEW_RUN_NUMBER" >> $GITHUB_ENV
 
       - name: Create Preview Release
@@ -53,5 +53,4 @@ jobs:
           prerelease: false
           title: "Build v${{ env.NEW_RUN_NUMBER }}"
           files: |
-            ./artifacts/linux-flatpak/lindbergh-loader.flatpak
             ./artifacts/linux-build/build.tar.gz
