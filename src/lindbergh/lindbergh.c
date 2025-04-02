@@ -155,12 +155,28 @@ int lookupCrcTable(uint32_t crc)
 
 void isCleanElf(char *command)
 {
-    const char *space_pos = strchr(command, ' ');
-    size_t length = space_pos ? (size_t)(space_pos - command) : strlen(command);
+    char *last_space = strrchr(command, ' ');
+    size_t length;
+    if (last_space != NULL && strcmp(last_space, " -t") == 0)
+        length = (size_t)(last_space - command);
+    else
+        length = strlen(command);
 
     char elfName[256];
     strncpy(elfName, command, length);
     elfName[length] = '\0';
+
+    // Remove double quotes from path if it was added.
+    int j = 0;
+    for (int i = 0; elfName[i] != '\0'; i++)
+    {
+        if (elfName[i] != '"')
+        {
+            elfName[j] = elfName[i];
+            j++;
+        }
+    }
+    elfName[j] = '\0';
 
     FILE *file = fopen(elfName, "rb");
     if (!file)
@@ -202,34 +218,54 @@ void isCleanElf(char *command)
  */
 void testModePath(char *name)
 {
+    char *pos;
     // Check if a different testmode elf is used
-    if (strcmp(name, "./hod4M.elf") == 0)
+    pos = strstr(name, "/hod4M.elf");
+    if (pos != NULL)
     {
-        strcpy(name, "./hod4testM.elf");
+        strcpy(pos, "/hod4testM.elf");
         return;
     }
 
-    if (strcmp(name, "./hodexRI.elf") == 0)
+    pos = strstr(name, "/hodexRI.elf");
+    if (pos != NULL)
     {
-        strcpy(name, "./hodextestR.elf");
+        strcpy(pos, "/hodextestR.elf");
         return;
     }
 
-    if (strcmp(name, "./Jennifer") == 0)
+    pos = strstr(name, "/Jennifer\"/Jennifer");
+    if (pos != NULL)
     {
-        strcpy(name, "../JenTest/JenTest");
+        strcpy(pos, "/Jennifer\"/../JenTest/JenTest");
         return;
     }
 
-    if (strcmp(name, "./apacheM.elf") == 0)
+    pos = strstr(name, "/Jennifer");
+    if (pos != NULL)
     {
-        strcpy(name, "./apachetestM.elf");
+        strcpy(pos, "/../JenTest/JenTest");
         return;
     }
 
-    if (strcmp(name, "./vt3_Lindbergh") == 0)
+    pos = strstr(name, "/apacheM.elf");
+    if (pos != NULL)
     {
-        strcpy(name, "./vt3_testmode");
+        strcpy(pos, "/apachetestM.elf");
+        return;
+    }
+
+    pos = strstr(name, "/vt3_Lindbergh\"/vt3_Lindbergh");
+    if (pos != NULL)
+    {
+        strcpy(pos, "/vt3_Lindbergh\"/vt3_testmode");
+        return;
+    }
+
+    pos = strstr(name, "/vt3_Lindbergh");
+    if (pos != NULL)
+    {
+        strcpy(pos, "/vt3_testmode");
         return;
     }
 
@@ -437,6 +473,18 @@ int main(int argc, char *argv[])
         return EXIT_SUCCESS;
     }
 
+    if (argc > 1 && strcmp(argv[1], "--help") == 0)
+    {
+        printUsage(argv);
+        return EXIT_SUCCESS;
+    }
+
+    if (argc > 1 && strcmp(argv[1], "--list-controllers") == 0)
+    {
+        return listControllers();
+    }
+
+    // We save the current dir to return to it later
     char curDir[MAX_PATH_LEN];
     if (getcwd(curDir, sizeof(curDir)) == NULL)
     {
@@ -444,7 +492,7 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    // Check if a folder was passed as a parameter
+    // Check if a game folder was passed as a parameter
     char gamePath[PATH_MAX] = {0};
     for (int i = 1; i < argc; i++)
     {
@@ -460,19 +508,18 @@ int main(int argc, char *argv[])
         }
     }
 
-    // Check if the passed folder is valid
-    if (!isValidDirectory(gamePath))
-    {
-        log_error("The game folder is invalid.");
-        return EXIT_FAILURE;
-    }
-
     // Look for the games
     struct dirent *ent;
     DIR *dir;
 
     if (gamePath[0] != '\0')
     {
+        // Check if the passed folder is valid
+        if (!isValidDirectory(gamePath))
+        {
+            log_error("The game folder is invalid.");
+            return EXIT_FAILURE;
+        }
         dir = opendir(gamePath);
     }
     else
@@ -523,17 +570,6 @@ int main(int argc, char *argv[])
     }
 
     closedir(dir);
-
-    if (argc > 1 && strcmp(argv[1], "--help") == 0)
-    {
-        printUsage(argv);
-        return EXIT_SUCCESS;
-    }
-
-    if (argc > 1 && strcmp(argv[1], "--list-controllers") == 0)
-    {
-        return listControllers();
-    }
 
     ldPreloadLibrary = findLDPreloadLibrary();
 
@@ -624,7 +660,7 @@ int main(int argc, char *argv[])
 
     char command[128] = {0};
     if (gamePath[0] != '\0')
-        sprintf(command, "%s/", gamePath);
+        sprintf(command, "\"%s\"/", gamePath);
     else
         strcpy(command, "./");
 
