@@ -102,19 +102,40 @@ You will see the value `AUTO` by default for some of the config options. This is
 
 ### Controller Setup
 
-There are 2 modes for the controller setup in the emulator, these are set using the `INPUT_MODE` flag in the configuration file.
+There are 3 modes for the controller setup in the emulator, these are set using the `INPUT_MODE` flag in the configuration file.
 
 #### Input Mode 0
 
-In this input mode, both input mode 1 and input mode 2 are active.
+In this input mode, SDL / keyboard and SDL controller inputs are active.
+SDL controllers are automatically configured to support modern controller devices like Xbox & Playstation controllers.
+The implementation is considered plug & play and does not require configuration file changes.
+
+This is the recommended input setting for fighting & driving games.
+
+SDL Controller driving games layout:
+
+South button (A or X) = Change View
+East button (B or O) = Boost
+L1 = Gear Down
+R1 = Gear Up
+L2 = Brake
+R2 = Acceleration
+Select = Coin
+Start = Start
+
+Left analogue stick & directional hat buttons work as expected.
 
 #### Input Mode 1
 
-In the first input mode, the keys on the keyboard are used to control the game play. If playing a light gun game, the mouse pointer in the window is used as the player 1 light gun. There are no configurable options in this mode.
+In this input mode, evdev and the keyboard are used to control the game play.
+You can configure additional devices such as multiple light guns, controllers and steering wheels.
+Controllers need to be configured (as per below)
 
 #### Input Mode 2
 
-In the second input mode, inputs are taken directly from the evdev library in linux and so you can configure additional devices such as light guns, controllers and steering wheels.
+In the final input mode, inputs are taken directly from the evdev linux library only without keyboard input.
+
+#### Evdev controller options
 
 To list the available inputs you should type:
 
