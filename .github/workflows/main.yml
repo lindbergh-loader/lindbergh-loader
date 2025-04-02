@@ -27,7 +27,7 @@ jobs:
 
   create-release:
     name: 📤 Create Release
-    needs: [linux-build]
+    needs: [linux-build, linux-flatpak]
     runs-on: ubuntu-22.04
     if: github.ref == 'refs/heads/master'
     steps:
