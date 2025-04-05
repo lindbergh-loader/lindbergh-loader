@@ -1,5 +1,4 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#pragma once
 
 #include <stdint.h>
 #include <sys/types.h>
@@ -300,4 +299,3 @@ const char *getLindberghColourString(Colour lindberghColour);
 const char *getGameRegionString(GameRegion region);
 const char *getGpuTypeString(GpuType gpuType);
 
-#endif

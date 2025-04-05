@@ -1,5 +1,4 @@
-#ifndef LINDBERGH_LOADER_LOG_H
-#define LINDBERGH_LOADER_LOG_H
+#pragma once
 
 
 #include <stdarg.h>
@@ -46,5 +45,3 @@ LogFormattedMessage logFormatMessage(const char *message, va_list args);
 FILE* logGetStream();
 void logInitTimer();
 void logGetElapsedTime(long *seconds, long *milliseconds);
-
-#endif //LINDBERGH_LOADER_LOG_H

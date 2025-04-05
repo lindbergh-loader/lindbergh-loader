@@ -1,6 +1,3 @@
-#ifndef ID_H
-#define ID_H
-
 #include "common.h"
 
 ShaderFilesToMod idShaderFilesToMod[] = {{"/shader/Cg/inc/es_shd_base.cg", 0, ""},
@@ -63,5 +60,3 @@ SearchReplace id5ShaderReplaceSetForSmoke[] = {
      "0.5h);\nh4OutputColor.a = 0.2h;\n#else\nh4OutputColor.a = h4Color_ColorMap.a;\n#endif"}};
 
 int id5ShaderReplaceSetForSmokeCount = sizeof(id5ShaderReplaceSetForSmoke) / sizeof(SearchReplace);
-
-#endif

@@ -1,7 +1,4 @@
-#ifndef VF5_H
-#define VF5_H
 #include "common.h"
-#include <stdbool.h>
 
 // Fragment
 SearchReplace vf5FsMesa[] = {
@@ -400,5 +397,3 @@ Vf5StagesList vf5StageList[] = {{"are", "Arena", true},
                                 {"yuk", "Snow Mountain", false}};
 
 int vf5StageListCount = sizeof(vf5StageList) / sizeof(Vf5StagesList);
-
-#endif

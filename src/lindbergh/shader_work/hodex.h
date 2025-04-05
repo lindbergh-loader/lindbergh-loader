@@ -1,6 +1,3 @@
-#ifndef HODEX_H
-#define HODEX_H
-
 #include "common.h"
 
 // File: average.frag
@@ -286,5 +283,3 @@ ShaderFilesToPatch hodexShaderPatches[] = {
 };
 
 int hodexShaderPatchesCount = sizeof(hodexShaderPatches) / sizeof(ShaderFilesToPatch);
-
-#endif

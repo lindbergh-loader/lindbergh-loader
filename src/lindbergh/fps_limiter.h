@@ -1,5 +1,4 @@
-#ifndef FPS_LIMITER_H
-#define FPS_LIMITER_H
+#pragma once
 
 typedef struct
 {
@@ -13,5 +12,3 @@ typedef struct
 long Clock_now();
 void FpsLimiter(fps_limit *stats);
 double calculateFps();
-
-#endif

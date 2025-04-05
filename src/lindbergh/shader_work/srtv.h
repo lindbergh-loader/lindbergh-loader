@@ -1,6 +1,3 @@
-#ifndef SRTV_H
-#define SRTV_H
-
 #include "common.h"
 
 ElfShaderOffsets srtvElfShaderOffsets[] = {
@@ -168,5 +165,3 @@ dec_retio_list_1[4] = nngluUserUniform[KL_USER_UNIFORM_INDEX_DIRT1].z;\r\n\t\t\t
 dec_retio_list_1[5] = nngluUserUniform[KL_USER_UNIFORM_INDEX_DIRT1].w;\r\n"}};
 
 int srtvVsMesaCount = sizeof(srtvVsMesa) / sizeof(SearchReplace);
-
-#endif

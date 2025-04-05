@@ -1,6 +1,3 @@
-#ifndef HOD4SP_H
-#define HOD4SP_H
-
 #include "common.h"
 #include "hod4.h"
 
@@ -163,5 +160,3 @@ ShaderFilesToPatch hod4spShaderPatches[] = {
 };
 
 int hod4spShaderPatchesCount = sizeof(hod4spShaderPatches) / sizeof(ShaderFilesToPatch);
-
-#endif

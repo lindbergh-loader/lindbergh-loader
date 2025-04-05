@@ -1,6 +1,3 @@
-#ifndef HUMMER_H
-#define HUMMER_H
-
 #include "common.h"
 
 int hummerExtremeShaderFileIndex;
@@ -44,4 +41,3 @@ SearchReplace hummerShaderReplaceFlicker[] = {
     {"#pragma optionNV(fastprecision on)", "#pragma optionNV(fastprecision off)"}};
 
 int hummerShaderReplaceFlickerCount = sizeof(hummerShaderReplaceFlicker) / sizeof(SearchReplace);
-#endif

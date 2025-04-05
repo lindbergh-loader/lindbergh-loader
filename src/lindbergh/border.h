@@ -1,6 +1,3 @@
-#ifndef BORDER_H
-#define BORDER_H
+#pragma once
 
 void drawGameBorder(int width, int height, float whiteBorderPercentage, float blackBorderPercentage);
-
-#endif // BORDER_H

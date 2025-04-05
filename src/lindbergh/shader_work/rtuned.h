@@ -1,5 +1,3 @@
-#ifndef RTUNED_H
-#define RTUNED_H
 #include "common.h"
 
 // Fragment
@@ -155,5 +153,3 @@ SearchReplace rtunedVsMesa[] = {
     {"DP3_SAT diff.w, normal_w, tmp;", "DP3 diff.w, normal_w, tmp;MAX diff.w, diff.w, 0.0;MIN diff.w, diff.w, 1.0;"}};
 
 int rtunedVsMesaCount = sizeof(rtunedVsMesa) / sizeof(SearchReplace);
-
-#endif

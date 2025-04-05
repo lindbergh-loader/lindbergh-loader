@@ -1,5 +1,3 @@
-#ifndef HARLEY_H
-#define HARLEY_H
 #include "common.h"
 
 // File: 16box.frag
@@ -1191,5 +1189,3 @@ ShaderFilesToPatch harleyShaderPatches[] = {
 };
 
 int harleyShaderPatchesCount = sizeof(harleyShaderPatches) / sizeof(ShaderFilesToPatch);
-
-#endif

@@ -1,6 +1,3 @@
-#ifndef MJ4_H
-#define MJ$_H
-
 #include "common.h"
 
 // Fragment
@@ -315,5 +312,3 @@ SearchReplace mj4VsMesa[] = {{"OPTION NV_vertex_program3;", "#OPTION NV_vertex_p
                              {"SEQC", "#SEQC "}};
 
 int mj4VsMesaCount = sizeof(mj4VsMesa) / sizeof(SearchReplace);
-
-#endif

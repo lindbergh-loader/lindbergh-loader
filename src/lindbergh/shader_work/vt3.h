@@ -1,6 +1,3 @@
-#ifndef VT3_H
-#define VT3_H
-
 #include "common.h"
 
 ShaderFilesToMod vt3ShaderFilesToMod[] = {{"/shader/baka.fx", 0, ""},        {"/shader/main_p.fx", 0, ""},
@@ -21,5 +18,3 @@ SearchReplace vt3ShaderReplaceSet2[] = {{"POSITION0", "ATTR0"},   {"COLOR", "ATT
                                         {"BLENDWEIGHT", "ATTR1"}, {"BLENDINDICES", "ATTR7"}};
 
 int vt3ShaderReplaceCount2 = sizeof(vt3ShaderReplaceSet2) / sizeof(SearchReplace);
-
-#endif

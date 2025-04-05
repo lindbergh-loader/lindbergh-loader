@@ -1,6 +1,3 @@
-#ifndef LGJ_H
-#define LGJ_H
-
 #include "common.h"
 
 ShaderFilesToMod lgjShaderFilesToMod[] = {{"/shader/Cg/inc/es_shd_base.cg", 0, ""},
@@ -26,5 +23,3 @@ SearchReplace lgjCompiledShadersPatch[] = {
     {"TEX R0.x, R0, texture[0], SHADOW2D;", "TEX R0.x, R0, texture[0], 2D;"}};
 
 int lgjCompiledShadersPatchCount = sizeof(lgjCompiledShadersPatch) / sizeof(SearchReplace);
-
-#endif

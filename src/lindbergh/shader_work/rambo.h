@@ -1,6 +1,3 @@
-#ifndef RAMBO_H
-#define RAMBO_H
-
 #include "common.h"
 
 // File: 16box.frag
@@ -1661,5 +1658,3 @@ ShaderFilesToPatch ramboNvidiaShaderPatches[] = {
 };
 
 int ramboNvidiaShaderPatchesCount = sizeof(ramboNvidiaShaderPatches) / sizeof(ShaderFilesToPatch);
-
-#endif
