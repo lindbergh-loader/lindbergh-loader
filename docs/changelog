@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## ## [2.0.8]
+### Added
+    - Changed preprocessor for avoiding multiple inclusions to #pragma once and clean some includes.
+### Fixed
+    - Test mode in HOD4 SP now stretches.
+
 ## [2.0.7]
 ### Added
     - Option -g | --gamepath to lindbergh to point to games in a different folder.

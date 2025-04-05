@@ -1,5 +1,4 @@
-#ifndef JVS_H_
-#define JVS_H_
+#pragma once
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -242,5 +241,3 @@ JVSIO* getJVSIO();
 int setSwitch(JVSPlayer player, JVSInput switchNumber, int value);
 int incrementCoin(JVSPlayer player, int amount);
 int setAnalogue(JVSInput channel, int value);
-
-#endif // JVS_H_

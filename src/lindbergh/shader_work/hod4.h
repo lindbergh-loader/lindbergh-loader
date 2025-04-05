@@ -1,6 +1,4 @@
-#ifndef HOD4_H
-#define HOD4_H
-
+#pragma once
 #include "common.h"
 
 // File: DoF.dat1
@@ -324,5 +322,3 @@ ShaderFilesToPatch hod4ShaderPatches[] = {
 };
 
 int hod4ShaderPatchesCount = sizeof(hod4ShaderPatches) / sizeof(ShaderFilesToPatch);
-
-#endif

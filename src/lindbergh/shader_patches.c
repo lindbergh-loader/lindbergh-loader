@@ -1,7 +1,6 @@
 #ifndef __i386__
 #define __i386__
 
-#include "shader_work/vf5.h"
 #include <stdint.h>
 #endif
 #undef __x86_64__
@@ -93,8 +92,8 @@ char *replaceSubstring(const char *buffer, int start, int end, const char *searc
         maxOccurrences++;
         tmp += searchLen;
     }
-    int maxNewLen = (bufferLen + (maxOccurrences * (replaceLen - searchLen))) +
-                    15; // 15 instead of 1 because it crashes with SRTV for no reason??
+    int maxNewLen =
+        (bufferLen + (maxOccurrences * (replaceLen - searchLen))) + 15; // 15 instead of 1 because it crashes with SRTV for no reason??
 
     char *newBuffer = malloc(maxNewLen);
     memset(newBuffer, '\0', maxNewLen);

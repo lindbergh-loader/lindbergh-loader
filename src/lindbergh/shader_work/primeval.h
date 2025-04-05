@@ -1,6 +1,3 @@
-#ifndef PRIMEVAL_H
-#define PRIMEVAL_H
-
 #include "common.h"
 
 // File: nnstdshader.frag
@@ -90,5 +87,3 @@ ShaderFilesToPatch phShaderPatches[] = {
 };
 
 int phShaderPatchesCount = sizeof(phShaderPatches) / sizeof(ShaderFilesToPatch);
-
-#endif

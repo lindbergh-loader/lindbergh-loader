@@ -214,13 +214,12 @@ void glViewport(GLint x, GLint y, GLsizei width, GLsizei height)
         }
     }
     break;
-    // case THE_HOUSE_OF_THE_DEAD_4_REVA:
-    // case THE_HOUSE_OF_THE_DEAD_4_REVB:
-    // case THE_HOUSE_OF_THE_DEAD_4_REVC:
     case THE_HOUSE_OF_THE_DEAD_4_REVA_TEST:
     case THE_HOUSE_OF_THE_DEAD_4_REVB_TEST:
     case THE_HOUSE_OF_THE_DEAD_4_REVC_TEST:
     case THE_HOUSE_OF_THE_DEAD_EX_TEST:
+    case THE_HOUSE_OF_THE_DEAD_4_SPECIAL_REVB_TEST:
+    case THE_HOUSE_OF_THE_DEAD_4_SPECIAL_TEST:
     {
         if (width == 640 && height == 480)
         {

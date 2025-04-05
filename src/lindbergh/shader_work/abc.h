@@ -1,5 +1,3 @@
-#ifndef ABC_H
-#define ABC_H
 #include "common.h"
 
 // Fragment ABC
@@ -63,5 +61,3 @@ SearchReplace abcVsMesa[] = {{"OPTION NV_vertex_program3;", "#OPTION NV_vertex_p
                              {"skinning_end:", " "}};
 
 int abcVsMesaCount = sizeof(abcVsMesa) / sizeof(SearchReplace);
-
-#endif

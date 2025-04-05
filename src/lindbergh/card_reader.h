@@ -1,5 +1,4 @@
-#ifndef CARD_READER_H
-#define CARD_READER_H
+#pragma once
 
 #include <stdint.h>
 #include <sys/types.h>
@@ -32,5 +31,3 @@ int initCardReader();
 size_t cardReaderWrite(int fd, const void *buf, size_t count);
 size_t cardReaderRead(int fd, void *buf, size_t count);
 void cardReaderSetFd(int serial, int fd, char *fName);
-
-#endif

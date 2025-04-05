@@ -1,6 +1,3 @@
-#ifndef OR2_H
-#define OR2_H
-
 #include "common.h"
 
 SearchReplace orFsMesa[] = {
@@ -123,5 +120,3 @@ SearchReplace orVsAti[] = {{"!!VP2.0\nBB1:\n",
                            {"v10", "vertex.attrib[10]"}};
 
 int orVsAtiCount = sizeof(orVsAti) / sizeof(SearchReplace);
-
-#endif

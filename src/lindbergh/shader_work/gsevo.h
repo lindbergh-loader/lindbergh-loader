@@ -1,6 +1,3 @@
-#ifndef GSEVO_H
-#define GSEVO_H
-
 #include "common.h"
 
 ElfShaderOffsets gsevoElfShaderOffsets[] = {
@@ -1194,5 +1191,3 @@ ShaderFilesToPatch gsevoNvidiaShaderPatches[] = {
 };
 
 int gsevoShaderPatchesCount = 4;
-
-#endif
