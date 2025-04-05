@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [2.0.9]
-    - - lindbergh elf mostly redone to make the loader work as a stand alone mode.
+    - lindbergh elf mostly redone to make the loader work as a stand alone mode (read guide.md).
 
 ## [2.0.8]
 ### Added
