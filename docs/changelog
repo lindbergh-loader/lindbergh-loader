@@ -2,7 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
-## ## [2.0.8]
+## [2.0.9]
+    - - lindbergh elf mostly redone to make the loader work as a stand alone mode.
+
+## [2.0.8]
 ### Added
     - Changed preprocessor for avoiding multiple inclusions to #pragma once and clean some includes.
 ### Fixed
