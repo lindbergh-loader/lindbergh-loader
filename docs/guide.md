@@ -224,3 +224,47 @@ flatpak install com.github.tchx84.Flatseal
 ```
 
 Then, run Flatseal and grant Lindbergh Loader access to additional directories.
+
+### Stand alone mode
+
+Now, you have the option to run the games without copying any files to the game's folder.
+Your system's 32 bit library folder, your current folder and the game's folder  will be added to LD_LIBRARY_PATH env variable,
+so you can han the loader libs in any of those locations.
+
+Passing -c option you can specify the location of the .conf file like this:
+
+```
+./lindbergh -c /my/custom/folder/myconfig.conf
+```
+
+## -g or --gamepath
+With this new option, you can specify the location of the game, where the game's ELF resides.
+
+```
+./lindbergh -g /my/custom/folder/hod4/elf
+```
+
+The loader will search for known elf files in that folder but you can also run it like this:
+
+```
+./lindbergh myCustom.elf -g /my/custom/folder/hod4/elf
+```
+
+The loader will load `myCustom.elf` inside the passed folder.
+
+## Passing a folder containing an elf
+With this option, you pass a full path, including an ELF name like this:
+
+```
+./lindbergh /my/custom/folder/hod4/elf/myCustom.elf
+```
+
+The loader will load the ELF in that folder.
+
+You can combine all options.
+
+You can have the needed libraries in the folder where `lindbergh` resides, in the system's 32 bit lib folder or in the game's folder.
+The loader will try to find the files.
+
+If by mistake, you pass both, a full path including an ELF and a path with -g option, the path passed with -g option will be omitted.
+Remember that if the path containg spaces, which is not recommended, pass the path inside double quotes or `\` before the space.
