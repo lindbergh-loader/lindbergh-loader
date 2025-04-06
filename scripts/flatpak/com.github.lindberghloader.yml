@@ -1,18 +1,17 @@
 app-id: com.github.lindberghloader
 runtime: org.freedesktop.Platform
-runtime-version: &runtime-version '24.08' # Define runtime version alias
+runtime-version: &runtime-version '24.08'
 sdk: org.freedesktop.Sdk
 
-# Define reusable aliases
-x-gl-versions: &gl-versions '24.08;1.4' # Define GL versions list alias
+x-gl-versions: &gl-versions '24.08;1.4'
 x-gl-merge-dirs: &gl-merge-dirs vulkan/icd.d;glvnd/egl_vendor.d;egl/egl_external_platform.d;OpenCL/vendors;lib/dri;lib/d3d;lib/gbm;vulkan/explicit_layer.d;vulkan/implicit_layer.d # Define GL merge dirs alias
-x-i386-build-options: &i386-build-options # Define 32-bit build options alias
-  libdir: /app/lib32 # Default library install dir for autotools/meson etc.
+x-i386-build-options: &i386-build-options
+  libdir: /app/lib32
   env:
     CC: /usr/lib/sdk/toolchain-i386/bin/i686-unknown-linux-gnu-gcc
     CXX: /usr/lib/sdk/toolchain-i386/bin/i686-unknown-linux-gnu-g++
     LD: /usr/lib/sdk/toolchain-i386/bin/i686-unknown-linux-gnu-ld
-    LDFLAGS: "-L/app/lib32" # Add custom lib dir to linker search path during build
+    LDFLAGS: "-L/app/lib32"
 
 command: lindbergh
 
@@ -21,41 +20,32 @@ sdk-extensions:
   - org.freedesktop.Sdk.Extension.toolchain-i386
   - org.freedesktop.Sdk.Compat.i386
 
-# Runtime arguments and permissions
 finish-args:
-  # Environment variables needed at runtime
-  - --env=LD_LIBRARY_PATH=/app/lib32:$LD_LIBRARY_PATH # Make custom 32-bit libs findable
+  - --env=LD_LIBRARY_PATH=/app/lib32:$LD_LIBRARY_PATH
   - --env=PATH=/app/bin:/usr/bin
-  # Permissions
-  - --allow=multiarch # Needed for running 32-bit code
+  - --allow=multiarch
   - --share=ipc
   - --share=network
   - --socket=x11
   - --socket=wayland
   - --socket=pulseaudio
-  # WARNING: --device=all grants broad hardware access. Consider using --device=dri and specific devices if possible.
-  - --device=all
-  # Filesystem access - adjust path as needed
-  - --filesystem=~/Games
+    - --device=all
+    - --filesystem=~/Games
 
-# Runtime extensions automatically downloaded and installed with the app
+# Runtime extensions automatically downloaded and installed with the app (For some reason does not work)
 add-extensions:
-  # 32-bit compatibility libraries from the runtime
   org.freedesktop.Platform.Compat.i386:
     directory: lib/i386-linux-gnu
-    version: *runtime-version # Match the main runtime version
-    # no-autodownload removed (or set to false) to ensure installation
-
+    version: *runtime-version
+    
   # 32-bit graphics driver extension
   org.freedesktop.Platform.GL32:
     directory: lib/i386-linux-gnu/GL
-    versions: *gl-versions # Use defined GL versions list
+    versions: *gl-versions 
     subdirectories: true
-    # no-autodownload removed (or set to false) to ensure installation
     autodelete: false
     add-ld-path: lib
-    merge-dirs: *gl-merge-dirs # Use defined merge dirs list
-    # Conditions for downloading and enabling the GL driver extension
+    merge-dirs: *gl-merge-dirs
     download-if: active-gl-driver
     enable-if: active-gl-driver
     autoprune-unless: active-gl-driver
@@ -75,12 +65,11 @@ modules:
   - name: libGLU
     buildsystem: autotools
     config-opts:
-      - --host=i686-unknown-linux-gnu # Specify 32-bit target host
-      - --prefix=/app # Base install prefix
-      # --libdir=/app/lib32 should be handled by build-options->libdir
+      - --host=i686-unknown-linux-gnu
+      - --prefix=/app
     build-options:
       arch:
-        x86_64: *i386-build-options # Apply 32-bit build options on 64-bit host
+        x86_64: *i386-build-options
     sources:
       - type: archive
         url: https://mesa.freedesktop.org/archive/glu/glu-9.0.2.tar.xz
@@ -91,15 +80,15 @@ modules:
     buildsystem: cmake
     config-opts:
       - -DCMAKE_BUILD_TYPE=Release
-      - -DCMAKE_INSTALL_PREFIX=/app # Base install prefix
-      - -DCMAKE_INSTALL_LIBDIR=/app/lib32 # Explicitly set library install dir for CMake
+      - -DCMAKE_INSTALL_PREFIX=/app
+      - -DCMAKE_INSTALL_LIBDIR=/app/lib32
     sources:
       - type: archive
         url: https://downloads.sourceforge.net/freeglut/freeglut-3.2.2.tar.gz
         sha256: c5944a082df0bba96b5756dddb1f75d0cd72ce27b5395c6c1dde85c2ff297a50
     build-options:
       arch:
-        x86_64: *i386-build-options # Apply 32-bit build options
+        x86_64: *i386-build-options
 
   # Build 32-bit libFAudio (dynamic)
   - name: libFAudio-Dynamic
@@ -107,40 +96,37 @@ modules:
     config-opts:
       - -DCMAKE_BUILD_TYPE=Release
       - -DCMAKE_INSTALL_PREFIX=/app
-      - -DBUILD_SDL3=off # Assuming SDL3 integration is not needed
-      - -DCMAKE_INSTALL_LIBDIR=/app/lib32 # Explicitly set library install dir
+      - -DBUILD_SDL3=off
+      - -DCMAKE_INSTALL_LIBDIR=/app/lib32
     build-options:
       arch:
-        x86_64: *i386-build-options # Apply 32-bit build options
+        x86_64: *i386-build-options
       env:
-        # Specific flags needed for FAudio 32-bit build?
         CFLAGS: "-m32 -mstackrealign"
         CXXFLAGS: "-m32 -mstackrealign"
     sources:
       - type: git
         url: https://github.com/FNA-XNA/FAudio.git
-        tag: "24.12" # Using a specific tag
+        tag: "24.12"
 
   # Build 32-bit libXmu
   - name: libxmu
     buildsystem: autotools
     config-opts:
-      # --libdir=/app/lib32 should be handled by build-options->libdir
       - --prefix=/app
-      - --with-shared # Ensure shared library is built
+      - --with-shared
     sources:
       - type: archive
         url: https://xorg.freedesktop.org/releases/individual/lib/libXmu-1.2.1.tar.gz
         sha256: bf0902583dd1123856c11e0a5085bd3c6e9886fbbd44954464975fd7d52eb599
     build-options:
       arch:
-        x86_64: *i386-build-options # Apply 32-bit build options (Standardized)
+        x86_64: *i386-build-options
 
   # Build 32-bit libmd
   - name: libmd
     buildsystem: autotools
     config-opts:
-      # --libdir=/app/lib32 should be handled by build-options->libdir
       - --prefix=/app
     sources:
       - type: archive
@@ -148,13 +134,12 @@ modules:
         sha256: 1bd6aa42275313af3141c7cf2e5b964e8b1fd488025caf2f971f43b00776b332
     build-options:
       arch:
-        x86_64: *i386-build-options # Apply 32-bit build options
+        x86_64: *i386-build-options
 
   # Build 32-bit libbsd
   - name: libbsd
     buildsystem: autotools
     config-opts:
-      # --libdir=/app/lib32 should be handled by build-options->libdir
       - --prefix=/app
     sources:
       - type: archive
@@ -162,14 +147,12 @@ modules:
         sha256: b88cc9163d0c652aaf39a99991d974ddba1c3a9711db8f1b5838af2a14731014
     build-options:
       arch:
-        x86_64: *i386-build-options # Apply 32-bit build options
+        x86_64: *i386-build-options
 
   # Build 32-bit ncurses (very old version)
   - name: ncurses
-    # WARNING: ncurses 5.9 is very old. Consider updating if possible.
     buildsystem: autotools
     config-opts:
-      # --libdir=/app/lib32 should be handled by build-options->libdir
       - --prefix=/app
       - --with-shared
       - --without-debug
@@ -178,24 +161,22 @@ modules:
         url: https://ftp.gnu.org/pub/gnu/ncurses/ncurses-5.9.tar.gz
         sha256: 9046298fb440324c9d4135ecea7879ffed8546dd1b58e59430ea07a4633f563b
       - type: patch
-        path: ./assets/ncurses-5.9.patch # Assuming this patch is necessary
+        path: ./assets/ncurses-5.9.patch
     build-options:
       arch:
-        x86_64: *i386-build-options # Apply 32-bit build options
+        x86_64: *i386-build-options
       env:
-        CPPFLAGS: "-P" # Often needed for ncurses builds
-        CXXFLAGS: "-std=c++14" # Is C++14 really needed for ncurses build? Check this.
+        CPPFLAGS: "-P"
+        CXXFLAGS: "-std=c++14"
 
   # Install pre-built 32-bit Nvidia Cg Toolkit (old)
   - name: nvidia-cg-toolkit
-    # WARNING: Cg Toolkit is deprecated and old.
     buildsystem: simple
     build-commands:
       - install -Dm755 usr/lib/libCg.so /app/lib32/libCg.so
       - install -Dm755 usr/lib/libCgGL.so /app/lib32/libCgGL.so
     sources:
       - type: archive
-        # Consider hosting this locally or finding a more reliable source if possible
         url: http://developer.download.nvidia.com/cg/Cg_3.1/Cg-3.1_April2012_x86.tgz
         sha256: cef3591e436f528852db0e8c145d3842f920e0c89bcfb219c466797cb7b18879
 
@@ -203,32 +184,27 @@ modules:
   - name: libsndio-dynamic
     buildsystem: autotools
     config-opts:
-      # --libdir=/app/lib32 should be handled by build-options->libdir
       - --prefix=/app
-      - --enable-dynamic # Build shared library
-      # - --disable-static # Don't build static library
-      - --enable-alsa # Enable ALSA backend
+      - --enable-dynamic
+      - --enable-alsa
     sources:
       - type: archive
         url: https://www.sndio.org/sndio-1.10.0.tar.gz
         sha256: bebd3bfd01c50c9376cf3e7814b9379bed9e17d0393b5113b7eb7a3d0d038c54
     build-options:
       arch:
-        x86_64: *i386-build-options # Apply 32-bit build options
+        x86_64: *i386-build-options
 
   # Build 32-bit libopenal (old version)
   - name: libopenal
-    # WARNING: OpenAL Soft 1.17.2 is quite old. Consider updating.
     buildsystem: cmake
     config-opts:
       - -DCMAKE_INSTALL_PREFIX=/app
-      - -DCMAKE_INSTALL_LIBDIR=/app/lib32 # Explicitly set library install dir
-      # Backend selection
+      - -DCMAKE_INSTALL_LIBDIR=/app/lib32
       - -DALSOFT_BACKEND_PULSEAUDIO=ON
       - -DALSOFT_BACKEND_ALSA=ON
       - -DALSOFT_BACKEND_JACK=OFF
-      - -DALSOFT_BACKEND_SNDIO=ON # Depends on libsndio-dynamic
-      # Point to the previously built sndio library/headers
+      - -DALSOFT_BACKEND_SNDIO=ON
       - -DSOUNDIO_INCLUDE_DIR=/app/include
       - -DSOUNDIO_LIBRARY=/app/lib32/libsndio.so
     sources:
@@ -237,29 +213,20 @@ modules:
         sha256: 11ea176f6cbf9763dbce0953dd77ab72d032b4ad95f07afffb91844abb174033
     build-options:
       arch:
-        x86_64: *i386-build-options # Apply 32-bit build options
+        x86_64: *i386-build-options
       env:
-        # Specific flags needed for OpenAL 32-bit build?
         CFLAGS: "-m32 -mstackrealign"
-        CXXFLAGS: "-m32 -std=c++14 -mstackrealign" # Needs C++14?
+        CXXFLAGS: "-m32 -std=c++14 -mstackrealign"
 
   # Build 32-bit OpenSSL (extremely old and insecure version)
   - name: openssl
-    # CRITICAL WARNING: OpenSSL 0.9.7 is extremely old, unsupported, and has known vulnerabilities.
-    # This should be updated or removed if at all possible. Using it poses a security risk.
     buildsystem: simple
     build-commands:
-      # Configure for 32-bit Linux (pentium target), shared libs, install to /app
       - ./Configure --prefix=/app --openssldir=/app/etc/ssl shared 386 no-asm no-krb5 linux-pentium
-      # Build using the 32-bit toolchain
-      # - make -j$(nproc) CC=/usr/lib/sdk/toolchain-i386/bin/i686-unknown-linux-gnu-gcc RANLIB=/usr/lib/sdk/toolchain-i386/bin/i686-unknown-linux-gnu-ranlib
       - make CC=/usr/lib/sdk/toolchain-i386/bin/i686-unknown-linux-gnu-gcc RANLIB=/usr/lib/sdk/toolchain-i386/bin/i686-unknown-linux-gnu-ranlib
-      # Manually move built libraries to the target lib32 directory
       - install -d /app/lib32
       - mv libcrypto.so* /app/lib32/
       - mv libssl.so* /app/lib32/
-      # Install headers (needed by other modules?) - will be cleaned later if not
-      # - make install_hdrs
     sources:
       - type: archive
         url: https://github.com/openssl/openssl/archive/refs/tags/OpenSSL_0_9_7.tar.gz
@@ -269,23 +236,16 @@ modules:
   - name: libpcsclite
     buildsystem: meson
     config-opts:
-      # --libdir=/app/lib32 should be handled by build-options->libdir
-      # - -Dprefix=/app
-      - -Dpolkit=false # Disable polkit integration
-      - -Dlibsystemd=false # Disable systemd integration
-      # -Dudevrulesdir=no # Might be needed if it tries to install udev rules
+      - -Dpolkit=false
+      - -Dlibsystemd=false
     build-options:
       arch:
-        x86_64: *i386-build-options # Apply 32-bit build options
+        x86_64: *i386-build-options
       env:
-        # Meson cross-compilation setup often requires explicit flags and paths
         CFLAGS: "-m32"
         CXXFLAGS: "-m32"
-        LDFLAGS: "-m32 -L/app/lib32" # Ensure LDFLAGS includes -L/app/lib32
-        # Point pkg-config to custom and SDK 32-bit locations
+        LDFLAGS: "-m32 -L/app/lib32"
         PKG_CONFIG_PATH: "/app/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/sdk/toolchain-i386/lib/pkgconfig"
-        # LD_LIBRARY_PATH might not be needed here if LDFLAGS is sufficient for linking stage
-        # LD_LIBRARY_PATH: "/app/lib32:/usr/lib/i386-linux-gnu/pkgconfig:$LD_LIBRARY_PATH"
     sources:
       - type: archive
         url: https://pcsclite.apdu.fr/files/pcsc-lite-2.3.1.tar.xz
@@ -295,59 +255,50 @@ modules:
   - name: lindbergh-loader
     buildsystem: simple
     build-commands:
-      # Ensure make finds the libraries built in previous steps
       - export LD_LIBRARY_PATH=/app/lib32:$LD_LIBRARY_PATH
-      - make -j$(nproc) # Build the application
-      # Install application binary and required libraries/symlinks
+      - make -j$(nproc)
+      - mkdir -p /app/lib/i386-linux-gnu
+      - mkdir -p /app/lib/i386-linux-gnu/GL
       - install -Dm755 ./build/lindbergh /app/bin/
       - install -Dm755 ./build/lindbergh.so /app/lib32/
       - install -Dm755 ./build/libsegaapi.so /app/lib32/
       - install -Dm755 ./build/libkswapapi.so /app/lib32/
       - install -Dm755 ./build/libposixtime.so /app/lib32/
-      # Install bundled library? Make sure this doesn't conflict with nvidia-cg-toolkit
       - install -Dm755 ./libs/libCg.so /app/lib32/libCg2.so
-      # Create necessary symlinks in the lib32 directory
       - ln -sf libposixtime.so /app/lib32/libposixtime.so.1
       - ln -sf libposixtime.so /app/lib32/libposixtime.so.2.4
-      - ln -sf libopenal.so.1 /app/lib32/libopenal.so.0 # Link to correct openal versioned so
+      - ln -sf libopenal.so.1 /app/lib32/libopenal.so.0
       - ln -sf libkswapapi.so /app/lib32/libGLcore.so.1
       - ln -sf libkswapapi.so /app/lib32/libnvidia-tls.so.1
       - mv /app/lib/libopenal* /app/lib32/
     build-options:
       arch:
-        x86_64: *i386-build-options # Apply 32-bit build options (for env vars mainly)
+        x86_64: *i386-build-options
     sources:
       - type: dir
-        path: ../.. # Assumes source code is one level up from manifest directory
+        path: ../..
 
   # Setup dynamic linker configuration
   - name: bundle-setup
     buildsystem: simple
     build-commands:
-      # Install ld.so.conf to ensure /app/lib32 is searched by the dynamic linker
       - install -Dm644 -t /app/etc ld.so.conf
     sources:
       - type: file
-        path: ./assets/ld.so.conf # Assumes this file contains "/app/lib32"
+        path: ./assets/ld.so.conf
 
   # Cleanup unnecessary files to reduce final flatpak size
   - name: cleanup
     buildsystem: simple
     build-commands:
-      # Remove static libraries and libtool archives
       - find /app/lib32 -name '*.a' -type f -delete
       - find /app/lib32 -name '*.la' -type f -delete
-      # Remove any executables other than the main command
-      #- find /app/bin -mindepth 1 ! -name "lindbergh" -exec rm -f {} \;
-      # Remove development/debugging/documentation files
-      #- rm -rf /app/lib/pkgconfig /app/lib32/pkgconfig /app/share/pkgconfig
-      #- rm -rf /app/lib32/cmake /app/lib/debug /app/include /app/man /app/share /app/etc/bash_completion.d
-      # Remove specific libraries if they are not needed at runtime
-      # (These were in the original, assuming they are safe to remove)
+      - find /app/bin -mindepth 1 ! -name "lindbergh" -exec rm -f {} \;
+      - rm -rf /app/lib/pkgconfig /app/lib32/pkgconfig /app/share/pkgconfig
+      - rm -rf /app/lib32/cmake /app/lib/debug /app/include /app/man /app/share /app/etc/bash_completion.d
       - rm -f /app/lib32/libmenu.so*
       - rm -f /app/lib32/libform.so*
       - rm -f /app/lib32/libpanel.so*
       - rm -f /app/lib32/libXmuu.so*
-      #- rm -f /app/lib32/libbsd.so*
-      # Remove ncurses terminfo db if not needed
+      - rm -f /app/lib32/libbsd.so*
       - rm -rf /app/lib/terminfo
