@@ -22,15 +22,16 @@ sdk-extensions:
 
 finish-args:
   - --env=LD_LIBRARY_PATH=/app/lib32:$LD_LIBRARY_PATH
+  - --env=LDFLAGS="-L/app/lib32"
   - --env=PATH=/app/bin:/usr/bin
   - --allow=multiarch
   - --share=ipc
   - --share=network
   - --socket=x11
   - --socket=wayland
+  - --device=all
   - --socket=pulseaudio
-    - --device=all
-    - --filesystem=~/Games
+  - --filesystem=~/Games
 
 # Runtime extensions automatically downloaded and installed with the app (For some reason does not work)
 add-extensions:
