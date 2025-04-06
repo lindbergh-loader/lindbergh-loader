@@ -96,6 +96,12 @@ static int callback(struct dl_phdr_info *info, size_t size, void *data);
 uint16_t basePortAddress = 0xFFFF;
 
 /**
+ * @brief Signal handler for SIGSEGV.
+ *
+ * This function handles segmentation faults (SIGSEGV) and attempts to recover
+ * from certain types of memory access errors, particularly those related to I/O ports.
+ */
+/**
  * Signal handler for the SIGSEGV signal, which is triggered when a process tries to access an illegal memory location.
  * @param signal
  * @param info
@@ -177,6 +183,13 @@ static void handleSegfault(int signal, siginfo_t *info, void *ptr)
     }
 }
 
+/**
+ * @brief Trims leading and trailing whitespace and quotes from a string.
+ *
+ * This function removes leading and trailing whitespace characters, as well as
+ * single and double quotes, from the input string.
+ * @param str The string to trim.
+ */
 char *trimOS_ID(char *str)
 {
     if (!str)
@@ -198,6 +211,12 @@ char *trimOS_ID(char *str)
     return str;
 }
 
+/**
+ * @brief Checks if the operating system is Debian-based.
+ *
+ * This function reads the /etc/os-release file to determine if the current
+ * operating system is Debian or Ubuntu, or a derivative of them.
+ */
 bool checkOS_ID()
 {
     FILE *fp = fopen("/etc/os-release", "r");
@@ -249,6 +268,12 @@ bool checkOS_ID()
     return found;
 }
 
+/**
+ * @brief Initialization function for the hook library.
+ *
+ * This function is called automatically when the library is loaded. It sets up
+ * signal handlers, initializes configuration, and performs other setup tasks.
+ */
 void __attribute__((constructor)) hook_init()
 {
     // Get offsets of the Game's ELF and calculate CRC32.
@@ -277,7 +302,6 @@ void __attribute__((constructor)) hook_init()
     }
 
     getGPUVendor();
-
     if (initPatch() != 0)
         exit(1);
 
@@ -360,6 +384,13 @@ void __attribute__((constructor)) hook_init()
     }
 }
 
+/**
+ * @brief Hook for the opendir function.
+ *
+ * This function intercepts calls to opendir and redirects them to different
+ * directories based on the game ID.
+ * @param dirname The name of the directory to open.
+ */
 DIR *opendir(const char *dirname)
 {
     DIR *(*_opendir)(const char *dirname) = dlsym(RTLD_NEXT, "opendir");
@@ -395,6 +426,13 @@ DIR *opendir(const char *dirname)
     return _opendir(dirname);
 }
 
+/**
+ * @brief Hook for the remove function.
+ *
+ * This function intercepts calls to remove and redirects them to different
+ * paths based on the game ID.
+ * @param path The path to remove.
+ */
 int remove(const char *path)
 {
     int (*_remove)(const char *path) = dlsym(RTLD_NEXT, "remove");
@@ -416,6 +454,13 @@ int remove(const char *path)
     return _remove(path);
 }
 
+/**
+ * @brief Hook for the mkdir function.
+ *
+ * This function intercepts calls to mkdir and redirects them to different
+ * paths based on the game ID.
+ * @param path The path to create.
+ */
 int mkdir(const char *path, mode_t mode)
 {
     int (*_mkdir)(const char *path, mode_t mode) = dlsym(RTLD_NEXT, "mkdir");
@@ -437,6 +482,13 @@ int mkdir(const char *path, mode_t mode)
     return _mkdir(path, mode);
 }
 
+/**
+ * @brief Hook for the __xstat64 function.
+ *
+ * This function intercepts calls to __xstat64 and redirects them to different
+ * paths based on the game ID.
+ * @param path The path to stat.
+ */
 int __xstat64(int ver, const char *path, struct stat64 *stat_buf)
 {
     int (*___xstat64)(int ver, const char *path, struct stat64 *stat_buf) = dlsym(RTLD_NEXT, "__xstat64");
@@ -448,6 +500,13 @@ int __xstat64(int ver, const char *path, struct stat64 *stat_buf)
     return ___xstat64(ver, path, stat_buf);
 }
 
+/**
+ * @brief Hook for the open function.
+ *
+ * This function intercepts calls to open and redirects them to different
+ * files or devices based on the pathname.
+ * @param pathname The path to open.
+ */
 int open(const char *pathname, int flags, ...)
 {
     va_list args;
@@ -534,6 +593,13 @@ int open(const char *pathname, int flags, ...)
     return _open(pathname, flags, mode);
 }
 
+/**
+ * @brief Hook for the open64 function.
+ *
+ * This function intercepts calls to open64 and redirects them to different
+ * files or devices based on the pathname.
+ * @param pathname The path to open.
+ */
 int open64(const char *pathname, int flags, ...)
 {
     va_list args;
@@ -544,6 +610,13 @@ int open64(const char *pathname, int flags, ...)
     return open(pathname, flags, mode);
 }
 
+/**
+ * @brief Hook for the fopen function.
+ *
+ * This function intercepts calls to fopen and redirects them to different
+ * files based on the pathname.
+ * @param pathname The path to open.
+ */
 FILE *fopen(const char *restrict pathname, const char *restrict mode)
 {
     FILE *(*_fopen)(const char *restrict pathname, const char *restrict mode) = dlsym(RTLD_NEXT, "fopen");
@@ -690,7 +763,6 @@ FILE *fopen(const char *restrict pathname, const char *restrict mode)
     {
         return 0;
     }
-
     if (cachedShaderFilesLoaded)
     {
         void *addr = __builtin_return_address(0);
@@ -757,6 +829,13 @@ FILE *fopen(const char *restrict pathname, const char *restrict mode)
     return _fopen(pathname, mode);
 }
 
+/**
+ * @brief Hook for the fopen64 function.
+ *
+ * This function intercepts calls to fopen64 and redirects them to different
+ * files based on the pathname.
+ * @param pathname The path to open.
+ */
 FILE *fopen64(const char *pathname, const char *mode)
 {
     FILE *(*_fopen64)(const char *restrict pathname, const char *restrict mode) = dlsym(RTLD_NEXT, "fopen64");
@@ -857,6 +936,13 @@ FILE *fopen64(const char *pathname, const char *mode)
     return _fopen64(pathname, mode);
 }
 
+/**
+ * @brief Hook for the fclose function.
+ *
+ * This function intercepts calls to fclose and performs cleanup operations
+ * for the file hooks.
+ * @param stream The file stream to close.
+ */
 int fclose(FILE *stream)
 {
     int (*_fclose)(FILE *stream) = dlsym(RTLD_NEXT, "fclose");
@@ -878,6 +964,14 @@ int fclose(FILE *stream)
     }
     return _fclose(stream);
 }
+
+/**
+ * @brief Hook for the openat function.
+ *
+ * This function intercepts calls to openat and redirects them to different
+ * files or devices based on the pathname.
+ * @param pathname The path to open.
+ */
 int openat(int dirfd, const char *pathname, int flags, ...)
 {
     int (*_openat)(int dirfd, const char *pathname, int flags) = dlsym(RTLD_NEXT, "openat");
@@ -892,6 +986,13 @@ int openat(int dirfd, const char *pathname, int flags, ...)
     return _openat(dirfd, pathname, flags);
 }
 
+/**
+ * @brief Hook for the close function.
+ *
+ * This function intercepts calls to close and performs cleanup operations
+ * for the file hooks.
+ * @param fd The file descriptor to close.
+ */
 int close(int fd)
 {
     int (*_close)(int fd) = dlsym(RTLD_NEXT, "close");
@@ -908,6 +1009,13 @@ int close(int fd)
     return _close(fd);
 }
 
+/**
+ * @brief Hook for the fgets function.
+ *
+ * This function intercepts calls to fgets and redirects them to different
+ * files based on the stream.
+ * @param stream The file stream to read from.
+ */
 char *fgets(char *str, int n, FILE *stream)
 {
     char *(*_fgets)(char *str, int n, FILE *stream) = dlsym(RTLD_NEXT, "fgets");
@@ -945,6 +1053,13 @@ char *fgets(char *str, int n, FILE *stream)
     return _fgets(str, n, stream);
 }
 
+/**
+ * @brief Hook for the read function.
+ *
+ * This function intercepts calls to read and redirects them to different
+ * files or devices based on the file descriptor.
+ * @param fd The file descriptor to read from.
+ */
 ssize_t read(int fd, void *buf, size_t count)
 {
     int (*_read)(int fd, void *buf, size_t count) = dlsym(RTLD_NEXT, "read");
@@ -994,6 +1109,13 @@ ssize_t read(int fd, void *buf, size_t count)
     return _read(fd, buf, count);
 }
 
+/**
+ * @brief Hook for the fread function.
+ *
+ * This function intercepts calls to fread and redirects them to different
+ * files based on the stream.
+ * @param stream The file stream to read from.
+ */
 size_t fread(void *buf, size_t size, size_t count, FILE *stream)
 {
     size_t (*_fread)(void *buf, size_t size, size_t count, FILE *stream) = dlsym(RTLD_NEXT, "fread");
@@ -1046,6 +1168,13 @@ size_t fread(void *buf, size_t size, size_t count, FILE *stream)
     return _fread(buf, size, count, stream);
 }
 
+/**
+ * @brief Hook for the ftell function.
+ *
+ * This function intercepts calls to ftell and redirects them to different
+ * files based on the stream.
+ * @param stream The file stream to get the position from.
+ */
 long int ftell(FILE *stream)
 {
     long int (*_ftell)(FILE *stream) = dlsym(RTLD_NEXT, "ftell");
@@ -1067,6 +1196,13 @@ long int ftell(FILE *stream)
     return _ftell(stream);
 }
 
+/**
+ * @brief Hook for the fseek function.
+ *
+ * This function intercepts calls to fseek and redirects them to different
+ * files based on the stream.
+ * @param stream The file stream to seek in.
+ */
 int fseek(FILE *stream, long int offset, int whence)
 {
     int (*_fseek)(FILE *stream, long int offset, int whence) = dlsym(RTLD_NEXT, "fseek");
@@ -1090,6 +1226,13 @@ int fseek(FILE *stream, long int offset, int whence)
     return _fseek(stream, offset, whence);
 }
 
+/**
+ * @brief Hook for the rewind function.
+ *
+ * This function intercepts calls to rewind and redirects them to different
+ * files based on the stream.
+ * @param stream The file stream to rewind.
+ */
 void rewind(FILE *stream)
 {
     void (*_rewind)(FILE *stream) = dlsym(RTLD_NEXT, "rewind");
@@ -1103,6 +1246,13 @@ void rewind(FILE *stream)
     _rewind(stream);
 }
 
+/**
+ * @brief Hook for the write function.
+ *
+ * This function intercepts calls to write and redirects them to different
+ * files or devices based on the file descriptor.
+ * @param fd The file descriptor to write to.
+ */
 ssize_t write(int fd, const void *buf, size_t count)
 {
     int (*_write)(int fd, const void *buf, size_t count) = dlsym(RTLD_NEXT, "write");
@@ -1141,6 +1291,13 @@ ssize_t write(int fd, const void *buf, size_t count)
     return _write(fd, buf, count);
 }
 
+/**
+ * @brief Hook for the ioctl function.
+ *
+ * This function intercepts calls to ioctl and redirects them to different
+ * devices based on the file descriptor.
+ * @param fd The file descriptor to perform the ioctl on.
+ */
 int ioctl(int fd, unsigned int request, void *data)
 {
     int (*_ioctl)(int fd, int request, void *data) = dlsym(RTLD_NEXT, "ioctl");
@@ -1170,6 +1327,13 @@ int ioctl(int fd, unsigned int request, void *data)
     return _ioctl(fd, request, data);
 }
 
+/**
+ * @brief Hook for the tcgetattr function.
+ *
+ * This function intercepts calls to tcgetattr and redirects them to different
+ * devices based on the file descriptor.
+ * @param fd The file descriptor to get the attributes from.
+ */
 int tcgetattr(int fd, struct termios *termios_p)
 {
     int (*_tcgetattr)(int fd, struct termios *termios_p) = dlsym(RTLD_NEXT, "tcgetattr");
@@ -1180,6 +1344,13 @@ int tcgetattr(int fd, struct termios *termios_p)
     return _tcgetattr(fd, termios_p);
 }
 
+/**
+ * @brief Hook for the tcsetattr function.
+ *
+ * This function intercepts calls to tcsetattr and redirects them to different
+ * devices based on the file descriptor.
+ * @param fd The file descriptor to set the attributes on.
+ */
 int tcsetattr(int fd, int optional_actions, const struct termios *termios_p)
 {
     int (*_tcsetattr)(int fd, int optional_actions, const struct termios *termios_p) = dlsym(RTLD_NEXT, "tcsetattr");
@@ -1190,6 +1361,13 @@ int tcsetattr(int fd, int optional_actions, const struct termios *termios_p)
     return _tcsetattr(fd, optional_actions, termios_p);
 }
 
+/**
+ * @brief Hook for the cfgetispeed function.
+ *
+ * This function intercepts calls to cfgetispeed and redirects them to different
+ * devices based on the file descriptor.
+ * @param termios_p The termios structure to get the input speed from.
+ */
 speed_t cfgetispeed(const struct termios *termios_p)
 {
     speed_t (*_cfgetispeed)(const struct termios *termios_p) = dlsym(RTLD_NEXT, "cfgetispeed");
@@ -1200,6 +1378,13 @@ speed_t cfgetispeed(const struct termios *termios_p)
     return _cfgetispeed(termios_p);
 }
 
+/**
+ * @brief Hook for the cfgetospeed function.
+ *
+ * This function intercepts calls to cfgetospeed and redirects them to different
+ * devices based on the file descriptor.
+ * @param termios_p The termios structure to get the output speed from.
+ */
 speed_t cfgetospeed(const struct termios *termios_p)
 {
     speed_t (*_cfgetospeed)(const struct termios *termios_p) = dlsym(RTLD_NEXT, "cfgetospeed");
@@ -1210,6 +1395,13 @@ speed_t cfgetospeed(const struct termios *termios_p)
     return _cfgetospeed(termios_p);
 }
 
+/**
+ * @brief Hook for the cfsetispeed function.
+ *
+ * This function intercepts calls to cfsetispeed and redirects them to different
+ * devices based on the file descriptor.
+ * @param termios_p The termios structure to set the input speed on.
+ */
 int cfsetispeed(struct termios *termios_p, speed_t speed)
 {
     int (*_cfsetispeed)(struct termios *termios_p, speed_t speed) = dlsym(RTLD_NEXT, "cfsetispeed");
@@ -1220,6 +1412,13 @@ int cfsetispeed(struct termios *termios_p, speed_t speed)
     return _cfsetispeed(termios_p, speed);
 }
 
+/**
+ * @brief Hook for the cfsetospeed function.
+ *
+ * This function intercepts calls to cfsetospeed and redirects them to different
+ * devices based on the file descriptor.
+ * @param termios_p The termios structure to set the output speed on.
+ */
 int cfsetospeed(struct termios *termios_p, speed_t speed)
 {
     int (*_cfsetospeed)(struct termios *termios_p, speed_t speed) = dlsym(RTLD_NEXT, "cfsetospeed");
@@ -1230,6 +1429,14 @@ int cfsetospeed(struct termios *termios_p, speed_t speed)
     return _cfsetospeed(termios_p, speed);
 }
 
+/**
+ * @brief Hook for the select function.
+ *
+ * This function intercepts calls to select and redirects them to different
+ * devices based on the file descriptor.
+ * @param nfds The highest file descriptor number plus one.
+ * @param readfds The file descriptors to check for readability.
+ */
 int select(int nfds, fd_set *restrict readfds, fd_set *restrict writefds, fd_set *restrict exceptfds,
            struct timeval *restrict timeout)
 {
@@ -1254,6 +1461,13 @@ int select(int nfds, fd_set *restrict readfds, fd_set *restrict writefds, fd_set
     return _select(nfds, readfds, writefds, exceptfds, timeout);
 }
 
+/**
+ * @brief Hook for the system function.
+ *
+ * This function intercepts calls to system and redirects them to different
+ * commands based on the command string.
+ * @param command The command to execute.
+ */
 int system(const char *command)
 {
     int (*_system)(const char *command) = dlsym(RTLD_NEXT, "system");
@@ -1291,6 +1505,36 @@ int system(const char *command)
     return _system(command);
 }
 
+/**
+ * @brief Hook for the strncpy function.
+ *
+ * This function intercepts calls to strncpy and redirects them to different
+ * strings based on the game ID.
+ * @param dest The destination string.
+ */
+char *strncpy(char *dest, const char *src, size_t n)
+{
+    char *(*_strncpy)(char *dest, const char *src, size_t n) = dlsym(RTLD_NEXT, "strncpy");
+
+    switch (gId)
+    {
+    case HARLEY_DAVIDSON:
+    case RAMBO:
+    case THE_HOUSE_OF_THE_DEAD_EX:
+    case TOO_SPICY:
+        if (getConfig()->GPUVendor != NVIDIA_GPU && (strstr(src, "../fs/compiledshader") != NULL || strstr(src, "../fs/compiled") != NULL))
+            return _strncpy(dest, "../fs/compiledmesa", n);
+    }
+    return _strncpy(dest, src, n);
+}
+
+/**
+ * @brief Hook for the iopl function.
+ *
+ * This function intercepts calls to iopl and always returns 0.
+ * @param level The I/O privilege level to set.
+ * @return Always returns 0.
+ */
 int iopl(int level)
 {
     return 0;
@@ -1306,10 +1550,11 @@ void kswap_collect(void *p)
 }
 
 /**
- * Hook for function used by Primevil
- * @param base The number to raise to the exponent
- * @param exp The exponent to raise the number to
- * @return The result of raising the number to the exponent
+ * @brief Hook for the powf function.
+ *
+ * This function intercepts calls to powf and redirects them to pow.
+ * @param base The base number.
+ * @param exponent The exponent.
  */
 float powf(float base, float exponent)
 {
@@ -1324,6 +1569,13 @@ int sem_wait(sem_t *sem)
 }
 */
 
+/**
+ * @brief Gets the machine's IP address.
+ *
+ * This function retrieves the machine's IP address and stores it in the
+ * provided sockaddr_in structure.
+ * @param addr The sockaddr_in structure to store the IP address in.
+ */
 int get_machine_ip(struct sockaddr_in *addr)
 {
     struct ifaddrs *ifaddr, *ifa;
@@ -1396,7 +1648,11 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 }
 
 /**
- * Callback function to get the offset and size of the execution program in memory of the ELF we hook to.
+ * @brief Callback function for dl_iterate_phdr.
+ *
+ * This function is called for each program header in the loaded shared
+ * objects. It is used to calculate the CRC32 of the ELF file.
+ * @param info Information about the program header.
  */
 static int callback(struct dl_phdr_info *info, size_t size, void *data)
 {
@@ -1408,7 +1664,11 @@ static int callback(struct dl_phdr_info *info, size_t size, void *data)
 }
 
 /**
- * Stop the game changing the DISPLAY environment variable
+ * @brief Hook for the setenv function.
+ *
+ * This function intercepts calls to setenv and prevents the game from
+ * changing the DISPLAY environment variable.
+ * @param name The name of the environment variable.
  */
 int setenv(const char *name, const char *value, int overwrite)
 {
@@ -1423,7 +1683,10 @@ int setenv(const char *name, const char *value, int overwrite)
 }
 
 /**
- * Fake the TEA_DIR environment variable to games that require it to run
+ * @brief Hook for the getenv function.
+ *
+ * This function iFake the TEA_DIR environment variable to games that require it to run
+ * @param name The name of the environment variable.
  */
 char *getenv(const char *name)
 {
@@ -1470,7 +1733,11 @@ char *getenv(const char *name)
 }
 
 /**
- * Stop the game unsetting the DISPLAY environment variable
+ * @brief Hook for the unsetenv function.
+ *
+ * This function intercepts calls to unsetenv and prevents the game from
+ * unsetting the DISPLAY environment variable.
+ * @param name The name of the environment variable.
  */
 int unsetenv(const char *name)
 {
@@ -1497,6 +1764,13 @@ char *__strdup(const char *string)
     return ___strdup(string);
 }
 
+/**
+ * @brief Hook for the localtime_r function.
+ *
+ * This function intercepts calls to localtime_r and redirects them to different
+ * times based on the game ID.
+ * @param timep The time to convert.
+ */
 struct tm *localtime_r(const time_t *timep, struct tm *result)
 {
     struct tm *(*_localtime_r)(const time_t *, struct tm *) =

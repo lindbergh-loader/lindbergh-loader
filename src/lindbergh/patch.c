@@ -628,11 +628,9 @@ int initPatch()
 
         if (GPUVendor != NVIDIA_GPU)
         {
-            cacheModedShaderFiles();
             loadLibCg();
+            cacheModedShaderFiles();
             cacheNnstdshader();
-            patchMemory(0x082d4437, "9090909090");                     // Stop the folder rename
-            patchMemory(0x088a6127, "66732f636f6d70696c65646d657361"); // Change folder to compiledshdmesa
             patchMemory(0x082646b3, "01");                             // Compile using CGC
             replaceCallAtAddress(0x082d48ac, compileWithCGC);
             replaceCallAtAddress(0x082d4b3b, compileWithCGC);
@@ -2059,12 +2057,9 @@ int initPatch()
         {
             loadLibCg();
             cacheNnstdshader();
-            patchMemory(0x08200c17, "9090909090");                     // Stop the folder rename
-            patchMemory(0x084173e7, "66732f636f6d70696c65646d657361"); // Change folder to compiledshdmesa
             patchMemory(0x080b3d71, "01");                             // Compile using CGC
             replaceCallAtAddress(0x082015bf, compileWithCGC);
             replaceCallAtAddress(0x082012c1, compileWithCGC);
-            // patchMemory(0x080b3d65, "00"); // Force recompile shaders
         }
     }
     break;
@@ -2487,9 +2482,8 @@ int initPatch()
         // Mesa Patches
         if (GPUVendor != NVIDIA_GPU)
         {
-            patchMemory(0x08503bfa, "6d657361"); // Rename compile folder to compmesa
-            cacheModedShaderFiles();
             loadLibCg();
+            cacheModedShaderFiles();
             cacheNnstdshader();
             replaceCallAtAddress(0x08370aa7, compileWithCGC);
             replaceCallAtAddress(0x08370bb6, compileWithCGC);
@@ -2550,10 +2544,9 @@ int initPatch()
         if (GPUVendor != NVIDIA_GPU)
         {
             loadLibCg();
-            cacheNnstdshader();
-            patchMemory(0x081ef9d8, "01");         // Force the game to recompile the shaders using cgc
-            patchMemory(0x08413f04, "646d657361"); // Changes compiledshader folder to compiledshdmesa
             cacheModedShaderFiles();
+            cacheNnstdshader();
+            patchMemory(0x081ef9d8, "01"); // Force the game to recompile the shaders using cgc
             replaceCallAtAddress(0x08259fe5, compileWithCGC);
             replaceCallAtAddress(0x0825a089, compileWithCGC);
         }

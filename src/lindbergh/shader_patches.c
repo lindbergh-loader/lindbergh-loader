@@ -1,6 +1,7 @@
 #ifndef __i386__
 #define __i386__
 
+#include "log.h"
 #include <stdint.h>
 #endif
 #undef __x86_64__
@@ -22,6 +23,7 @@
 #include "../libxdiff/xdiff/xdiff.h"
 #include "config.h"
 #include "patch.h"
+#include "log.h"
 
 #include "shader_work/2spicy.h"
 #include "shader_work/abc.h"
@@ -1541,41 +1543,99 @@ int parseCgcArgs(const char *input, const char ***compilerArgs, const char **out
     return 0;
 }
 
-void loadLibCg()
+char *findLibCg()
 {
-    int isFlatpak = 0;
-    void *handle = dlopen("./libCg.so", RTLD_NOW);
-    if (!handle)
+    const char *foundPath = NULL;
+    FILE *libCgF = NULL;
+
+    char *pathsToCheck[] = {NULL, "/app/lib32/libCg2.so", "./libCg.so", NULL};
+
+    if (strcmp(getConfig()->libCgPath, "") != 0)
     {
-        handle = dlopen("/app/lib32/libCg2.so", RTLD_NOW);
-        if (!handle)
+        pathsToCheck[0] = getConfig()->libCgPath;
+    }
+
+    const char *currentDir = getenv("LINDBERGH_LOADER_CURRENT_DIR");
+    if (currentDir != NULL)
+    {
+        size_t pathLen = strlen(currentDir) + strlen("/libCg.so") + 1;
+        pathsToCheck[3] = malloc(pathLen);
+        if (pathsToCheck[3] != NULL)
         {
-            fprintf(stderr, "Error: Unable to load library libCg.so %s\n", dlerror());
-            fprintf(stderr, "Error: libCg.so version 2.0 is needed to compile the shaders in the game's folder.\n");
-            exit(1);
-        }
-        else
-        {
-            isFlatpak = 1;
+            snprintf(pathsToCheck[3], pathLen, "%s/%s", currentDir, "libCg.so");
         }
     }
 
-    char libCgVersion[9];
-    FILE *libF;
-    if (isFlatpak)
-        libF = fopen("/app/lib32/libCg2.so", "r");
-    else
-        libF = fopen("./libCg.so", "r");
+    for (int i = 0; i < 4; ++i)
+    {
+        if (pathsToCheck[i] == NULL)
+            continue;
 
-    fseek(libF, 0x226d84, SEEK_SET);
-    fread(libCgVersion, 9, 1, libF);
-    fclose(libF);
+        if (access(pathsToCheck[i], F_OK) == 0)
+        {
+            foundPath = pathsToCheck[i];
+            break;
+        }
+    }
+
+    if (foundPath != pathsToCheck[3] && pathsToCheck[3] != NULL)
+    {
+        free(pathsToCheck[3]);
+    }
+
+    if (foundPath == NULL)
+    {
+        log_error("Error: Unable to find library libCg.so\n");
+        log_error("Error: libCg.so version 2.0 is needed to compile the shaders in the game's folder.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    char libCgVersion[9] = {0};
+    libCgF = fopen(foundPath, "rb");
+    if (libCgF == NULL)
+    {
+        log_error("Failed to open: %s\n", foundPath);
+        exit(EXIT_FAILURE);
+    }
+
+    fseek(libCgF, 0x226d84L, SEEK_SET);
+    if (fread(libCgVersion, 1, sizeof(libCgVersion) - 1, libCgF) != sizeof(libCgVersion) - 1)
+    {
+        log_error("Failed to read version from: %s\n", foundPath);
+        fclose(libCgF);
+        exit(EXIT_FAILURE);
+    }
+    fclose(libCgF);
 
     if (strcmp(libCgVersion, "2.0.0.12") != 0)
     {
-        printf("ERROR: Wrong libCg.so, version 2.0.0.12 is needed.\n");
-        exit(1);
+        log_error("ERROR: Wrong libCg.so version '%s', version 2.0.0.12 is needed.\n", libCgVersion);
+        exit(EXIT_FAILURE);
     }
+
+    char *resultPath = strdup(foundPath);
+    if (resultPath == NULL)
+    {
+        log_error("Error allocating memory for result path");
+        exit(EXIT_FAILURE);
+    }
+
+    return resultPath;
+}
+
+void loadLibCg()
+{
+    void *handle;
+    char *libCgFilePath = findLibCg();
+
+    handle = dlopen(libCgFilePath, RTLD_NOW);
+    if (!handle)
+    {
+        log_error("Error: Unable to find library libCg.so\n");
+        log_error("Error: libCg.so version 2.0 is needed to compile the shaders in the game's folder.\n");
+        exit(EXIT_FAILURE);
+    }
+    free(libCgFilePath);
     dlerror();
 
     char *error;
