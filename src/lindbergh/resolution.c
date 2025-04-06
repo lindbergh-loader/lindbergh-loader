@@ -1314,11 +1314,14 @@ void glVertex3f2SP(GLfloat x, GLfloat y, GLfloat z)
     float AdjOffsetX = OffsetX * scaleZ;
     float AdjOffsetY = OffsetY * scaleZ;
 
-    if (z == -3.000000f)
-    { // videos
+    if (z == -1.000000f || z == -3.000000f)
+    {
+        // We skip 3d and videos
+        ;
     }
     else if (z == -1.010000f)
-    { // bd main
+    {
+        // bd main
         x += AdjOffsetX;
         y -= AdjOffsetY;
 
@@ -1326,7 +1329,8 @@ void glVertex3f2SP(GLfloat x, GLfloat y, GLfloat z)
         y *= scaleY;
     }
     else if (z == -1.510000f)
-    {                            // logo - coin/start - 2D
+    {
+        // logo - coin/start - 2D
         if (curTextureID == 497) // right
         {
             x -= OffsetX;
@@ -1334,10 +1338,7 @@ void glVertex3f2SP(GLfloat x, GLfloat y, GLfloat z)
             x *= scaleX;
             y *= scaleY;
         }
-        else if (curTextureID == 498)
-        { // deadend
-        }
-        else
+        else if (curTextureID != 498) // We skip deadend
         {
             x += OffsetX;
             y -= OffsetY;
@@ -1347,7 +1348,8 @@ void glVertex3f2SP(GLfloat x, GLfloat y, GLfloat z)
         }
     }
     else if (z == -1.460000f)
-    { // 2D title
+    {
+        // 2D title
         x += AdjOffsetX;
         y -= AdjOffsetY;
 
@@ -1355,7 +1357,8 @@ void glVertex3f2SP(GLfloat x, GLfloat y, GLfloat z)
         y *= scaleY;
     }
     else if (z == -1.490000f)
-    { // 2D title
+    {
+        // 2D title
         x += AdjOffsetX;
         y -= AdjOffsetY;
 
@@ -1363,7 +1366,8 @@ void glVertex3f2SP(GLfloat x, GLfloat y, GLfloat z)
         y *= scaleY;
     }
     else if (z == -1.500000f)
-    { // 2D title
+    {
+        // 2D title
         x += AdjOffsetX;
         y -= AdjOffsetY;
 
@@ -1371,7 +1375,8 @@ void glVertex3f2SP(GLfloat x, GLfloat y, GLfloat z)
         y *= scaleY;
     }
     else if (z == -1.310000f)
-    { // 2D
+    {
+        // 2D
         x += AdjOffsetX;
         y -= AdjOffsetY;
 
@@ -1379,7 +1384,8 @@ void glVertex3f2SP(GLfloat x, GLfloat y, GLfloat z)
         y *= scaleY;
     }
     else if (z == -1.210000f)
-    { // 2D
+    {
+        // 2D
         x += AdjOffsetX;
         y -= AdjOffsetY;
 
@@ -1387,7 +1393,8 @@ void glVertex3f2SP(GLfloat x, GLfloat y, GLfloat z)
         y *= scaleY;
     }
     else if (z == -1.5109999180f)
-    { // 2D
+    {
+        // 2D
         x += AdjOffsetX;
         y -= AdjOffsetY;
 
@@ -1395,11 +1402,11 @@ void glVertex3f2SP(GLfloat x, GLfloat y, GLfloat z)
         y *= scaleY;
     }
     else if (z == -1.200000f)
-    { // target -  select
-
+    {
+        // target -  select
         if (curTextureID == 454 || curTextureID == 461 || curTextureID == 456)
-        { // 457  X  - 454 461 456 O
-
+        {
+            // 457  X  - 454 461 456 O
             if (myEnableScaling)
             {
                 x += AdjOffsetX;
@@ -1411,7 +1418,8 @@ void glVertex3f2SP(GLfloat x, GLfloat y, GLfloat z)
         }
     }
     else if (z == -1.710000f)
-    { // 2D
+    {
+        // 2D
         x += AdjOffsetX;
         y -= AdjOffsetY;
 
@@ -1419,15 +1427,13 @@ void glVertex3f2SP(GLfloat x, GLfloat y, GLfloat z)
         y *= scaleY;
     }
     else if (z > -1.85f)
-    { // 2d
+    {
+        // 2d
         x += AdjOffsetX;
         y -= AdjOffsetY;
 
         x *= scaleX;
         y *= scaleY;
-    }
-    else
-    {
     }
 
     _glVertex3f(x, y, z);
