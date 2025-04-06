@@ -28,8 +28,8 @@ finish-args:
   - --share=network
   - --socket=x11
   - --socket=wayland
-  - --socket=pulseaudio
   - --device=all
+  - --socket=pulseaudio
   - --filesystem=~/Games
 
 # Runtime extensions automatically downloaded and installed with the app (For some reason does not work)
