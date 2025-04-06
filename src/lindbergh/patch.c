@@ -2136,6 +2136,7 @@ int initPatch()
         detourFunction(0x084d44fc, amDipswSetLed);
         detourFunction(0x084d4485, amDipswGetData);
         patchMemory(0x0804edb2, "9090909090"); //__intel_new_proc_init_P
+        detourFunction(0x08178e6c, stubRetOne); // _ZN7am_ctrl18SetNetworkAddrEth0Ejj.
 
         detourFunction(0x0804e594, gl_XGetProcAddressARB);
         srtvElfShaderPatcher();

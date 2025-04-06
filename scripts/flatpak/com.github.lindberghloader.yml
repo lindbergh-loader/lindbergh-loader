@@ -29,8 +29,8 @@ finish-args:
   - --socket=x11
   - --socket=wayland
   - --socket=pulseaudio
-    - --device=all
-    - --filesystem=~/Games
+  - --device=all
+  - --filesystem=~/Games
 
 # Runtime extensions automatically downloaded and installed with the app (For some reason does not work)
 add-extensions:

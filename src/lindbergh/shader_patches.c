@@ -1,7 +1,6 @@
 #ifndef __i386__
 #define __i386__
 
-#include "log.h"
 #include <stdint.h>
 #endif
 #undef __x86_64__

@@ -1267,6 +1267,172 @@ void glVertex3fHOD4(GLfloat x, GLfloat y, GLfloat z)
     _glVertex3f(x, y, z);
 }
 
+void tooSpicySC(uint32_t param_1, uint32_t param_2)
+{
+    myEnableScaling = true;
+    SDL_WarpMouseInWindow(SDLwindow, 1280 / 2, 768 / 2);
+    ((void (*)(uint32_t, uint32_t))0x082fa77c)(param_1, param_2);
+}
+
+void tooSpicyPR(uint32_t param_1, uint32_t param_2)
+{
+    myEnableScaling = false;
+    ((void (*)(uint32_t, uint32_t))0x081eb4d4)(param_1, param_2);
+}
+
+int tooSpicyVsprintf(char *str, const char *format, va_list arg)
+{
+    int (*_vsprintf)(char *str, const char *format, va_list arg) = dlsym(RTLD_NEXT, "vsprintf");
+
+    int res = _vsprintf(str, format, arg);
+
+    if (strcmp(str, "Additional 475") == 0)
+    {
+        myEnableScaling = false;
+    }
+
+    return res;
+}
+
+void glVertex3f2SP(GLfloat x, GLfloat y, GLfloat z)
+{
+    int (*_glVertex3f)(GLfloat x, GLfloat y, GLfloat z) = dlsym(RTLD_NEXT, "glVertex3f");
+
+    void *returnAddress = __builtin_return_address(0);
+
+    float scaleX = gWidth / 1280.0f;
+    float scaleY = gHeight / 768.0f;
+
+    float TestX = ((((gWidth - 1280.0) / 2.0) * 1.1116317809) / 1280.0) * (1.5 / scaleX);
+    float TestY = ((((gHeight - 768.0) / 2.0) * 0.666979044) / 768.0) * (1.5 / scaleX);
+
+    float OffsetX = TestX; // test
+    float OffsetY = TestY;
+
+    float scaleZ = fabs(z) / 1.510000;
+
+    float AdjOffsetX = OffsetX * scaleZ;
+    float AdjOffsetY = OffsetY * scaleZ;
+
+    if (z == -3.000000f)
+    { // videos
+    }
+    else if (z == -1.010000f)
+    { // bd main
+        x += AdjOffsetX;
+        y -= AdjOffsetY;
+
+        x *= scaleX;
+        y *= scaleY;
+    }
+    else if (z == -1.510000f)
+    {                            // logo - coin/start - 2D
+        if (curTextureID == 497) // right
+        {
+            x -= OffsetX;
+            y -= OffsetY;
+            x *= scaleX;
+            y *= scaleY;
+        }
+        else if (curTextureID == 498)
+        { // deadend
+        }
+        else
+        {
+            x += OffsetX;
+            y -= OffsetY;
+
+            x *= scaleX;
+            y *= scaleY;
+        }
+    }
+    else if (z == -1.460000f)
+    { // 2D title
+        x += AdjOffsetX;
+        y -= AdjOffsetY;
+
+        x *= scaleX;
+        y *= scaleY;
+    }
+    else if (z == -1.490000f)
+    { // 2D title
+        x += AdjOffsetX;
+        y -= AdjOffsetY;
+
+        x *= scaleX;
+        y *= scaleY;
+    }
+    else if (z == -1.500000f)
+    { // 2D title
+        x += AdjOffsetX;
+        y -= AdjOffsetY;
+
+        x *= scaleX;
+        y *= scaleY;
+    }
+    else if (z == -1.310000f)
+    { // 2D
+        x += AdjOffsetX;
+        y -= AdjOffsetY;
+
+        x *= scaleX;
+        y *= scaleY;
+    }
+    else if (z == -1.210000f)
+    { // 2D
+        x += AdjOffsetX;
+        y -= AdjOffsetY;
+
+        x *= scaleX;
+        y *= scaleY;
+    }
+    else if (z == -1.5109999180f)
+    { // 2D
+        x += AdjOffsetX;
+        y -= AdjOffsetY;
+
+        x *= scaleX;
+        y *= scaleY;
+    }
+    else if (z == -1.200000f)
+    { // target -  select
+
+        if (curTextureID == 454 || curTextureID == 461 || curTextureID == 456)
+        { // 457  X  - 454 461 456 O
+
+            if (myEnableScaling)
+            {
+                x += AdjOffsetX;
+                y -= AdjOffsetY;
+
+                x *= scaleX;
+                y *= scaleY;
+            }
+        }
+    }
+    else if (z == -1.710000f)
+    { // 2D
+        x += AdjOffsetX;
+        y -= AdjOffsetY;
+
+        x *= scaleX;
+        y *= scaleY;
+    }
+    else if (z > -1.85f)
+    { // 2d
+        x += AdjOffsetX;
+        y -= AdjOffsetY;
+
+        x *= scaleX;
+        y *= scaleY;
+    }
+    else
+    {
+    }
+
+    _glVertex3f(x, y, z);
+}
+
 void glVertex3fHarley(GLfloat x, GLfloat y, GLfloat z)
 {
     int (*_glVertex3f)(GLfloat x, GLfloat y, GLfloat z) = dlsym(RTLD_NEXT, "glVertex3f");
@@ -1286,11 +1452,6 @@ void glVertex3fHarley(GLfloat x, GLfloat y, GLfloat z)
         y *= scaleY;
     }
     void *addr = __builtin_return_address(0);
-    // printf("glVertex3f is hooked: x=%f, y=%f, z=%f\n", x, y, z);
-    // printf("z values: %.10f\n", z);
-
-    // if ( z == -3517.2272949219f){ //1360x768
-    // if ( z == -4271.795898f){ //900p
     if (z == -5300.7529296875)
     { // 1080p
         printf("glVertex3f hooked: x=%f, y=%f, z=%f, addr: %p\n", x, y, z, addr);
@@ -2655,6 +2816,23 @@ int initResolutionPatches()
         {
             break;
         }
+        setVariable(0x08785b80, gWidth); // main
+        setVariable(0x08785b84, gHeight);
+
+        patchMemory(0x082a3222, "02");
+        setVariable(0x08785ad8, 1360); // sprite res 1280x768
+        setVariable(0x08785adc, 768);
+        setVariable(0x087859b8, 1360); // sprite res 640x480
+        setVariable(0x087859bc, 768);
+
+        patchMemory(0x081775d2, "b801000000"); // target
+        patchMemory(0x0804e5d2, "909090909090");
+
+        // detourFunction(0x0804d254, glVertex3fHODEX);
+
+        setVariable(0x087aa080, gWidth); // render res
+        patchMemory(0x0804e60c, "909090909090");
+        patchMemory(0x0828cc2f, "909090909090");
     }
     break;
     case TOO_SPICY:
@@ -2669,6 +2847,16 @@ int initResolutionPatches()
         {
             break;
         }
+        setVariable(0x08202b22, gWidth); // render res
+        patchMemory(0x08202b19, "74");
+        setVariable(0x08664410, gWidth); // 1280x768
+        setVariable(0x08664414, gHeight);
+        detourFunction(0x0804d0d0, glVertex3f2SP);
+        detourFunction(0x0804dda0, myGlBindTexture);
+        replaceCallAtAddress(0x080d96ff, tooSpicySC);
+        replaceCallAtAddress(0x080da026, tooSpicyPR);
+        detourFunction(0x0804ce10, tooSpicyVsprintf);
+        patchMemory(0x081f96b9, "02"); // 5
     }
     break;
     case TOO_SPICY_TEST:

@@ -174,6 +174,8 @@ static int detectGame(uint32_t elf_crc)
         config.gameStatus = WORKING;
         config.jvsIOType = SEGA_TYPE_1;
         config.gameType = ABC;
+        config.width = 640;
+        config.height = 480;
         return 0;
     }
     break;
@@ -188,6 +190,8 @@ static int detectGame(uint32_t elf_crc)
         config.gameStatus = WORKING;
         config.jvsIOType = SEGA_TYPE_1;
         config.gameType = ABC;
+        config.width = 640;
+        config.height = 480;
         return 0;
     }
     break;
@@ -249,6 +253,8 @@ static int detectGame(uint32_t elf_crc)
         config.gameNativeResolutions = "";
         config.gameType = DRIVING;
         config.gameStatus = WORKING;
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
@@ -262,6 +268,8 @@ static int detectGame(uint32_t elf_crc)
         config.gameNativeResolutions = "1280x768";
         config.gameType = DRIVING;
         config.gameStatus = WORKING;
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
@@ -275,6 +283,8 @@ static int detectGame(uint32_t elf_crc)
         config.gameNativeResolutions = "";
         config.gameType = DRIVING;
         config.gameStatus = WORKING;
+        config.width = 1280;
+        config.height = 768;
         return 0;
     }
     break;
