@@ -19,6 +19,7 @@
 #define PRELOAD_FILE_NAME "lindbergh.so"
 #define TEAM "bobbydilley, retrofan, dkeruza-neo, doozer, francesco, rolel, caviar-x"
 #define LINDBERGH_CONFIG_PATH "LINDBERGH_CONFIG_PATH"
+#define LINDBERGH_LOADER_CURRENT_DIR "LINDBERGH_LOADER_CURRENT_DIR"
 #define MAX_PATH_LEN 1024
 
 /**
@@ -230,6 +231,19 @@ int calculateFileCRC32(const char *filename, uint32_t *crc)
     return 0;
 }
 
+bool hasSpaces(const char *str)
+{
+    if (!str)
+        return false;
+    while (*str)
+    {
+        if (*str == ' ')
+            return true;
+        str++;
+    }
+    return false;
+}
+
 /**
  * @brief Checks if the ELF file is clean based on its CRC32.
  *
@@ -237,7 +251,7 @@ int calculateFileCRC32(const char *filename, uint32_t *crc)
  * against a list of known clean ELF CRC32 values.
  * @param command The command line string containing the path to the ELF file.
  */
-void isCleanElf(char *command)
+void checkIfElfisClean(char *command)
 {
     char *last_space = strrchr(command, ' ');
     size_t length;
@@ -511,6 +525,7 @@ void setEnvironmentVariables(char *ldLibPath, char *curDir, char *gameDir, int z
         setenv("__GLX_VENDOR_LIBRARY_NAME", "nvidia", 1);
         setenv("__NV_PRIME_RENDER_OFFLOAD", "1", 1);
     }
+    setenv("LINDBERGH_LOADER_CURRENT_DIR", curDir, 1);
 }
 
 /**
@@ -690,6 +705,12 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
+    if (hasSpaces(curDir))
+    {
+        log_warn("The current path contains spaces, this most likely will cause issues.");
+        log_warn("Please, make sure you don't use spaces in the path.");
+    }
+
     char command[PATH_MAX] = {0};
     char *forcedGameDir;
     char *forcedGameElf;
@@ -796,26 +817,16 @@ int main(int argc, char *argv[])
 
     char *ldPreloadLibrary = findLDPreloadLibrary();
 
-    if (strcmp(ldPreloadLibrary, PRELOAD_FILE_NAME) == 0)
-    {
-        char lindberghSoPath[MAX_PATH_LEN];
-        if (gameDir[0] != '\0')
-            snprintf(lindberghSoPath, strlen(gameDir) + sizeof(PRELOAD_FILE_NAME) + 1, "%s/%s", gameDir, PRELOAD_FILE_NAME);
-
-        if (access(lindberghSoPath, F_OK) != 0)
-        {
-            log_error("The preload object lindbergh.so was not found.");
-            return EXIT_FAILURE;
-        }
-        ldPreloadLibrary = strdup(lindberghSoPath);
-    }
+    if (strcmp(curDir, gameDir) == 0)
+        ldPreloadLibrary = PRELOAD_FILE_NAME;
 
     // Ensure environment variables are set correctly
     setEnvironmentVariables(ldPreloadLibrary, curDir, gameDir, zink, nvidia);
 
     if (testMode)
         testModePath(command);
-    isCleanElf(command);
+
+    checkIfElfisClean(command);
 
     if (gdb)
     {
@@ -827,6 +838,11 @@ int main(int argc, char *argv[])
 
     if (extConfigPath != NULL && extConfigPath[0] != '\0')
     {
+        if (hasSpaces(extConfigPath))
+        {
+            log_warn("The config path contains spaces, this most likely will cause issues.");
+            log_warn("Please, make sure you don't use spaces in the path.");
+        }
         setenv(LINDBERGH_CONFIG_PATH, extConfigPath, 1);
     }
 

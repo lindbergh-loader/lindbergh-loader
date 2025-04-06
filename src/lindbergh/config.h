@@ -232,6 +232,7 @@ typedef struct
     int fullscreen;
     char eepromPath[MAX_PATH_LENGTH];
     char sramPath[MAX_PATH_LENGTH];
+    char libCgPath[MAX_PATH_LENGTH];
     char jvsPath[MAX_PATH_LENGTH];
     char serial1Path[MAX_PATH_LENGTH];
     char serial2Path[MAX_PATH_LENGTH];

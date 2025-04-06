@@ -1113,6 +1113,9 @@ int readConfig(FILE *configFile, EmulatorConfig *config)
         else if (strcmp(command, "SRAM_PATH") == 0)
             strcpy(config->sramPath, getNextToken(NULL, " ", &saveptr));
 
+        else if (strcmp(command, "LIBCG_PATH") == 0)
+            strcpy(config->libCgPath, getNextToken(NULL, " ", &saveptr));
+
         else if (strcmp(command, "EMULATE_RIDEBOARD") == 0) {
             int defaultValue = config->emulateRideboard;
             config->emulateRideboard = getNextIntOrAuto(saveptr, defaultValue);
@@ -1529,6 +1532,7 @@ int initConfig(const char* configFilePath)
     config.lindberghColour = YELLOW;
     strcpy(config.eepromPath, "eeprom.bin");
     strcpy(config.sramPath, "sram.bin");
+    strcpy(config.libCgPath, "");
     strcpy(config.jvsPath, "/dev/ttyUSB0");
     strcpy(config.serial1Path, "/dev/ttyS0");
     strcpy(config.serial2Path, "/dev/ttyS1");

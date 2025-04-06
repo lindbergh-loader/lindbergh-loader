@@ -1,6 +1,11 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+## [2.0.10]
+### Added
+    - Config option to specify a path for the library libCg.so required for some shader compilation.
+    - Improved folder patching for recompiled shaders (2Spicy, Rambo, Harly and HOD-EX).
+    - Cleaned a bit of lindbergh elf.
 
 ## [2.0.9]
     - lindbergh elf mostly redone to make the loader work as a stand alone mode (read guide.md).
