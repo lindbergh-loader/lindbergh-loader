@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 ### Added
     - Resolution patches for 2Spicy and HOD-Ex
     - Code clean up.
+### Fixed
+    - 2Spicy error in the scaling code.
 
 ## [2.0.10]
 ### Added
