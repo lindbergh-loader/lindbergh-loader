@@ -76,10 +76,7 @@ int initCardReader()
 
 int carReaderGetFdIdx(int fd)
 {
-    if (fd == serialFD[0].fd)
-        return 0;
-
-    return 1;
+    return (fd == serialFD[0].fd) ? 0 : 1;
 }
 
 uint8_t cardReaderGenChecksum(int fdIdx)

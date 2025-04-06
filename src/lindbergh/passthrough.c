@@ -212,8 +212,8 @@ void *readJVSFrameThread(void * arg)
  * @param fd
  * @return 0|1
  */
-int startJVSFrameThread(int * fd) {
-    int fdlocal = *((int *) fd);
+int startJVSFrameThread(int *fd)
+{
     printf("SERIAL: starting thread.\n");
 
     // Clean shared JVS frame buffer
@@ -236,17 +236,21 @@ int startJVSFrameThread(int * fd) {
  * Return a JVSFrame structure with empty or full data, no in between
  * @return
  */
-JVSFrame readJVSFrameFromThread() {
+JVSFrame readJVSFrameFromThread()
+{
     JVSFrame frame;
     // Lock while reading/writing to shared frame
     pthread_mutex_lock(&jvsBuffer_lock);
 
     // Check if we have a valid frame
-    if (jvsFrameBuffer.ready == 1) {
+    if (jvsFrameBuffer.ready == 1)
+    {
         frame = jvsFrameBuffer;
-        // It has been red, we disable this frame
+        // It has been read, we disable this frame
         jvsFrameBuffer.ready = 0;
-    } else {
+    }
+    else
+    {
         frame.ready = 0;
         frame.size = 0;
         memset(frame.buffer, 0, JVSBUFFER_SIZE);

@@ -1,4 +1,3 @@
-// #pragma once
 
 int loadNewCursor(const char *cursorFileName, void **cursor, int customWidth, int customHeight);
 void loadCursors();

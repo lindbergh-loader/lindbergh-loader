@@ -302,6 +302,7 @@ void __attribute__((constructor)) hook_init()
     }
 
     getGPUVendor();
+
     if (initPatch() != 0)
         exit(1);
 
@@ -763,6 +764,7 @@ FILE *fopen(const char *restrict pathname, const char *restrict mode)
     {
         return 0;
     }
+
     if (cachedShaderFilesLoaded)
     {
         void *addr = __builtin_return_address(0);
@@ -1079,17 +1081,11 @@ ssize_t read(int fd, void *buf, size_t count)
         return driveboardRead(fd, buf, count);
     }
 
-    if (fd == hooks[SERIAL0] && getConfig()->emulateCardreader)
+    if ((fd == hooks[SERIAL0] || fd == hooks[SERIAL1]) && getConfig()->emulateCardreader)
     {
         return cardReaderRead(fd, buf, count);
     }
 
-    if (fd == hooks[SERIAL1] && getConfig()->emulateCardreader)
-    {
-        return cardReaderRead(fd, buf, count);
-    }
-
-    // If we don't hook the serial just reply with nothing
     if (fd == hooks[SERIAL0] || fd == hooks[SERIAL1])
     {
         if (gId == PRIMEVAL_HUNT && getConfig()->emulateTouchscreen == 1)
@@ -1135,11 +1131,6 @@ size_t fread(void *buf, size_t size, size_t count, FILE *stream)
     {
         return freadReplace(buf, size, count, fileRead[FILE_RW2]);
     }
-
-    // if (stream == fileHooks[FILE_HARLEY])
-    // {
-    //     return harleyFreadReplace(buf, size, count, fileHooks[FILE_HARLEY]);
-    // }
 
     if (stream == fileHooks[FILE_FONT_ABC])
     {
@@ -1278,12 +1269,7 @@ ssize_t write(int fd, const void *buf, size_t count)
         return driveboardWrite(fd, buf, count);
     }
 
-    if (fd == hooks[SERIAL0] && getConfig()->emulateCardreader)
-    {
-        return cardReaderWrite(fd, buf, count);
-    }
-
-    if (fd == hooks[SERIAL1] && getConfig()->emulateCardreader)
+    if ((fd == hooks[SERIAL0] || fd == hooks[SERIAL1]) && getConfig()->emulateCardreader)
     {
         return cardReaderWrite(fd, buf, count);
     }
@@ -1685,7 +1671,7 @@ int setenv(const char *name, const char *value, int overwrite)
 /**
  * @brief Hook for the getenv function.
  *
- * This function iFake the TEA_DIR environment variable to games that require it to run
+ * This function "Fakes" the TEA_DIR environment variable to games that require it to run
  * @param name The name of the environment variable.
  */
 char *getenv(const char *name)

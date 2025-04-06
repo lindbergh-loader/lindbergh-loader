@@ -22,7 +22,6 @@ sdk-extensions:
 
 finish-args:
   - --env=LD_LIBRARY_PATH=/app/lib32:$LD_LIBRARY_PATH
-  - --env=LDFLAGS="-L/app/lib32"
   - --env=PATH=/app/bin:/usr/bin
   - --allow=multiarch
   - --share=ipc
