@@ -1338,7 +1338,11 @@ void glVertex3f2SP(GLfloat x, GLfloat y, GLfloat z)
             x *= scaleX;
             y *= scaleY;
         }
-        else if (curTextureID != 498) // We skip deadend
+        else if (curTextureID == 498)
+        { // deadend
+            ;
+        }
+        else
         {
             x += OffsetX;
             y -= OffsetY;
@@ -1463,6 +1467,38 @@ void glVertex3fHarley(GLfloat x, GLfloat y, GLfloat z)
         printf("glVertex3f hooked: x=%f, y=%f, z=%f, addr: %p\n", x, y, z, addr);
         x -= 350;
         y += 150;
+    }
+
+    _glVertex3f(x, y, z);
+}
+
+void glVertex3fHodEx(GLfloat x, GLfloat y, GLfloat z)
+{
+    int (*_glVertex3f)(GLfloat x, GLfloat y, GLfloat z) = dlsym(RTLD_NEXT, "glVertex3f");
+
+    float scaleX = 600.0 / gWidth;
+    float scaleY = 240.0 / gHeight;
+
+    if (z == -1.210000f && (y == 0.0035231018f || y == -0.0152667547f || y == -0.0209428426f || // coin/start
+                            y == -0.0397327021f || y == -0.0454087853f || y == -0.0641986430f || y == -0.0790739134f ||
+                            y == -0.0931663215f || y == -0.0692875385f || y == -0.0833799466f ||
+
+                            y == 0.0456045270f || y == 0.0268146675f || y == 0.0211385805f || y == 0.0023487248f || y == -0.0033273622f ||
+                            y == -0.0221172161f || y == -0.0787803382f || y == -0.0934598967f ||
+
+                            y == 0.0524549857f || y == 0.0336651318f || y == 0.0279890448f || y == 0.0091991890f
+
+                            ))
+    {
+
+        x += scaleX;
+        y -= scaleY;
+    }
+    else if (y == 0.0042380672f || y == -0.0169522688f || y == 0.0360235684f || y == 0.0148332343f)
+    { // Main bd
+
+        x += scaleX;
+        y -= scaleY;
     }
 
     _glVertex3f(x, y, z);
@@ -2833,8 +2869,6 @@ int initResolutionPatches()
 
         patchMemory(0x081775d2, "b801000000"); // target
         patchMemory(0x0804e5d2, "909090909090");
-
-        // detourFunction(0x0804d254, glVertex3fHODEX);
 
         setVariable(0x087aa080, gWidth); // render res
         patchMemory(0x0804e60c, "909090909090");
