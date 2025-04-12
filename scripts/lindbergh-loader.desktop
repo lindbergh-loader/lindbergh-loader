@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Lindbergh Loader
+Exec=lindbergh
+Icon=lindbergh-loader
+Type=Application
+Categories=Utility;ConsoleOnly;
+Terminal=true

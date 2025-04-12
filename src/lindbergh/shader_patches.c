@@ -1547,7 +1547,9 @@ char *findLibCg()
     const char *foundPath = NULL;
     FILE *libCgF = NULL;
 
-    char *pathsToCheck[] = {NULL, "/app/lib32/libCg2.so", "./libCg.so", NULL};
+    char appImageLib[MAX_PATH_LENGTH];
+    snprintf(appImageLib, MAX_PATH_LENGTH, "%s/usr/lib32/libCg2.so", getenv("APP_IMG_ROOT"));
+    char *pathsToCheck[] = {NULL, "/app/lib32/libCg2.so", appImageLib, "./libCg.so", NULL};
 
     if (strcmp(getConfig()->libCgPath, "") != 0)
     {
@@ -1559,13 +1561,13 @@ char *findLibCg()
     {
         size_t pathLen = strlen(currentDir) + strlen("/libCg.so") + 1;
         pathsToCheck[3] = malloc(pathLen);
-        if (pathsToCheck[3] != NULL)
+        if (pathsToCheck[4] != NULL)
         {
-            snprintf(pathsToCheck[3], pathLen, "%s/%s", currentDir, "libCg.so");
+            snprintf(pathsToCheck[4], pathLen, "%s/%s", currentDir, "libCg.so");
         }
     }
 
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < 5; ++i)
     {
         if (pathsToCheck[i] == NULL)
             continue;
@@ -1577,9 +1579,9 @@ char *findLibCg()
         }
     }
 
-    if (foundPath != pathsToCheck[3] && pathsToCheck[3] != NULL)
+    if (foundPath != pathsToCheck[4] && pathsToCheck[4] != NULL)
     {
-        free(pathsToCheck[3]);
+        free(pathsToCheck[4]);
     }
 
     if (foundPath == NULL)

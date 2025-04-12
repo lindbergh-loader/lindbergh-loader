@@ -1,0 +1,29 @@
+name: 🐧 Linux AppImage
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  linux-appimage:
+    name: "Build"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install Packages
+      run: scripts/appimage/install-packages.sh
+
+    - name: Compile Build
+      shell: bash
+      run: |
+        make
+        scripts/appimage/make-appimage.sh
+    - name: Upload AppImage
+      uses: actions/upload-artifact@v4
+      with:
+        name: "linux-appimage"
+        path: "lindbergh-loader.AppImage"

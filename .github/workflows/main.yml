@@ -24,10 +24,13 @@ jobs:
   linux-flatpak:
     name: 📦 Linux Flatpak
     uses: "./.github/workflows/flatpak-build.yml"
+  linux-appimage:
+    name: 📦 Linux AppImage
+    uses: "./.github/workflows/appimage-build.yml"
 
   create-release:
     name: 📤 Create Release
-    needs: [linux-build, linux-flatpak]
+    needs: [linux-build, linux-flatpak, linux-appimage]
     runs-on: ubuntu-22.04
     if: github.ref == 'refs/heads/master'
     steps:
@@ -55,3 +58,4 @@ jobs:
           files: |
             ./artifacts/linux-flatpak/lindbergh-loader.flatpak
             ./artifacts/linux-build/build.tar.gz
+            ./artifacts/linux-appimage/lindbergh-loader.AppImage

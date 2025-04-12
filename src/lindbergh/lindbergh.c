@@ -1,15 +1,14 @@
-#include <dirent.h>
-#include <libgen.h>
-#include <linux/limits.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
-#include <sys/stat.h>
-#include <time.h>
 #include <unistd.h>
+#include <libgen.h>
+#include <sys/stat.h>
+#include <limits.h>
 
+#include "config.h"
 #include "evdevinput.h"
 #include "version.h"
 #include "log.h"
@@ -20,59 +19,14 @@
 #define TEAM "bobbydilley, retrofan, dkeruza-neo, doozer, francesco, rolel, caviar-x"
 #define LINDBERGH_CONFIG_PATH "LINDBERGH_CONFIG_PATH"
 #define LINDBERGH_LOADER_CURRENT_DIR "LINDBERGH_LOADER_CURRENT_DIR"
-#define MAX_PATH_LEN 1024
-
-/**
- * @brief Calculates the CRC32 of a single byte.
- *
- * This function calculates the CRC32 value for a given byte of data.
- *
- * @param crc The current CRC32 value.
- * @param data The byte of data to calculate the CRC32 for.
- * @return The updated CRC32 value.
- */
-uint32_t calcCrc32(uint32_t crc, uint8_t data)
-{
-    crc ^= data; // No shift needed; working in LSB-first order
-    for (int i = 0; i < 8; i++)
-    {
-        if (crc & 1)
-        {
-            crc = (crc >> 1) ^ 0xEDB88320;
-        }
-        else
-        {
-            crc = (crc >> 1);
-        }
-    }
-    return crc;
-}
 
 uint32_t elf_crc = 0;
 
 // List of all lindbergh executables known, not including the test executables
-char *games[] = {"main.exe",
-                 "ramboM.elf",
-                 "vt3_Lindbergh",
-                 "hummer_Master.elf",
-                 "drive.elf",
-                 "chopperM.elf",
-                 "vsg",
-                 "Jennifer",
-                 "dsr",
-                 "abc",
-                 "hod4M.elf",
-                 "lgj_final",
-                 "vt3",
-                 "id4.elf",
-                 "id5.elf",
-                 "lgjsp_app",
-                 "gsevo",
-                 "vf5",
-                 "apacheM.elf",
-                 "hodexRI.elf",
-                  "a.elf",
-                 "END"};
+char *games[] = {"a.elf",    "abc",       "apacheM.elf", "chopperM.elf",      "drive.elf", "dsr",
+                 "gsevo",    "hod4M.elf", "hodexRI.elf", "hummer_Master.elf", "id4.elf",   "id5.elf",
+                 "Jennifer", "lgj_final", "lgjsp_app",   "main.exe",          "mj4",       "ramboM.elf",
+                 "vf5",      "vsg",       "vt3",         "vt3_Lindbergh",     "END"};
 
 /**
  * An array containin clean games elf's CRC32
@@ -129,6 +83,7 @@ uint32_t cleanElfCRC32[] = {
     0xB0A96E34, // DVP-0043  | vf5
     0xF99E5635, // DVP-0044  | drive.elf
     0x4143F6B4, // DVP-0048A | main.exe
+    0x65489691, // DVP-0049  | mj4
     0x653BC83B, // DVP-0057  | a.elf
     0x04D88552, // DVP-0057B | a.elf
     0x089D6051, // DVP-0060  | dsr
@@ -139,6 +94,7 @@ uint32_t cleanElfCRC32[] = {
     0x2E6732A3, // DVP-0070F | id5.elf
     0xF99A3CDB, // DVP-0075  | id5.elf
     0x05647A8E, // DVP-0079  | hummer_Master.elf
+    0x0AD7CF0F, // DVP-0081  | mj4
     0x4442EA15, // DVP-0083  | hummer_Master.elf
     0x8DF6BBF9, // DVP-0084  | id5.elf
     0x2AF8004E, // DVP-0084A | id5.elf
@@ -153,67 +109,30 @@ uint32_t cleanElfCRC32[] = {
 
 int cleanElfCRC32Count = sizeof(cleanElfCRC32) / sizeof(uint32_t);
 
-/**
- * @brief Looks up a CRC value in the cleanElfCRC32 table.
- *
- * This function searches for a given CRC value within the cleanElfCRC32 array.
- *
- * @param crc The CRC value to look up.
- * @return 1 if the CRC is found in the table, 0 otherwise.
- */
-int lookupCrcTable(uint32_t crc)
+uint32_t calcCrc32(uint32_t crc, uint8_t data)
 {
-    for (int x = 0; x < cleanElfCRC32Count; x++)
+    crc ^= data;
+    for (int i = 0; i < 8; i++)
     {
-        if (cleanElfCRC32[x] == crc)
-            return 1;
-    }
-    return 0;
-}
-
-/**
- * @brief Removes double quotes from a string.
- *
- * This function iterates through the input string and removes any double quote characters.
- * It modifies the string in place.
- *
- * @param str The string to remove double quotes from.
- */
-void removeDoubleQuotes(char *str)
-{
-    if (str == NULL)
-    {
-        return;
-    }
-
-    int j = 0;
-    for (int i = 0; str[i] != '\0'; i++)
-    {
-        if (str[i] != '"')
+        if (crc & 1)
         {
-            str[j] = str[i];
-            j++;
+            crc = (crc >> 1) ^ 0xEDB88320;
+        }
+        else
+        {
+            crc = (crc >> 1);
         }
     }
-    str[j] = '\0';
+    return crc;
 }
 
-/**
- * @brief Calculates the CRC32 of a file.
- *
- * This function calculates the CRC32 of the specified file.
- *
- * @param filename The path to the file.
- * @param crc The pointer to the variable that will contain the CRC32.
- * @return 0 if the CRC32 was calculated successfully, -1 otherwise.
- */
-int calculateFileCRC32(const char *filename, uint32_t *crc)
+int calculateCRC32inChunks(const char *filename, uint32_t *crc)
 {
     FILE *file = fopen(filename, "rb");
-    if (!file)
+    if (file == NULL)
     {
         log_error("Could not open file to calculate the CRC32.");
-        return -1;
+        return EXIT_FAILURE;
     }
 
     *crc = 0xFFFFFFFF;
@@ -231,32 +150,34 @@ int calculateFileCRC32(const char *filename, uint32_t *crc)
     return 0;
 }
 
-bool hasSpaces(const char *str)
+int lookupCrcTable(uint32_t crc)
 {
-    if (!str)
-        return false;
-    while (*str)
+    for (int x = 0; x < cleanElfCRC32Count; x++)
     {
-        if (*str == ' ')
-            return true;
-        str++;
+        if (cleanElfCRC32[x] == crc)
+            return 1;
     }
-    return false;
+    return 0;
 }
 
-/**
- * @brief Checks if the ELF file is clean based on its CRC32.
- *
- * This function calculates the CRC32 of the specified ELF file and compares it
- * against a list of known clean ELF CRC32 values.
- * @param command The command line string containing the path to the ELF file.
- */
-void checkIfElfisClean(char *command)
+int fileExists(const char *path)
 {
-    char *last_space = strrchr(command, ' ');
+    struct stat buffer;
+    return stat(path, &buffer) == 0;
+}
+
+int dirExists(const char *path)
+{
+    struct stat buffer;
+    return stat(path, &buffer) == 0 && S_ISDIR(buffer.st_mode);
+}
+
+void isCleanElf(char *command)
+{
+    char *lastSpace = strrchr(command, ' ');
     size_t length;
-    if (last_space != NULL && strcmp(last_space, " -t") == 0)
-        length = (size_t)(last_space - command);
+    if (lastSpace != NULL && strcmp(lastSpace, " -t") == 0)
+        length = (size_t)(lastSpace - command);
     else
         length = strlen(command);
 
@@ -264,10 +185,14 @@ void checkIfElfisClean(char *command)
     strncpy(elfName, command, length);
     elfName[length] = '\0';
 
-    removeDoubleQuotes(elfName);
+    if (dirExists(elfName))
+    {
+        log_error("There is a folder named \'%s\' in the current directory instead of a game's ELF.", elfName + 2);
+        exit(EXIT_FAILURE);
+    }
 
     uint32_t crc;
-    if (calculateFileCRC32(elfName, &crc) != 0)
+    if (calculateCRC32inChunks(elfName, &crc) != 0)
         return;
 
     crc = crc ^ 0xFFFFFFFF;
@@ -282,260 +207,142 @@ void checkIfElfisClean(char *command)
     }
 }
 
-/**
- * Tests if the game uses a seperate elf for test mode
- * and updates the command line to this elf.
- *
- * @param name The command path to run
- */
-void testModePath(char *name)
+void extractPathFromProg(const char *input, char *out_path, char *out_prog)
 {
-    printf("name: %s\n", name);
-    char *pos;
-    // Check if a different testmode elf is used
-    pos = strstr(name, "hod4M.elf");
-    if (pos != NULL)
-    {
-        strcpy(pos, "hod4testM.elf");
-        return;
-    }
-
-    pos = strstr(name, "hodexRI.elf");
-    if (pos != NULL)
-    {
-        strcpy(pos, "hodextestR.elf");
-        return;
-    }
-
-    pos = strstr(name, "/Jennifer/\"Jennifer");
-    if (pos != NULL)
-    {
-        strcpy(pos, "/Jennifer/\"../JenTest/JenTest");
-        return;
-    }
-
-    pos = strstr(name, "/Jennifer");
-    if (pos != NULL)
-    {
-        strcpy(pos, "/../JenTest/JenTest");
-        return;
-    }
-
-    pos = strstr(name, "apacheM.elf");
-    if (pos != NULL)
-    {
-        strcpy(pos, "apachetestM.elf");
-        return;
-    }
-
-    pos = strstr(name, "/vt3_Lindbergh/\"vt3_Lindbergh");
-    if (pos != NULL)
-    {
-        strcpy(pos, "/vt3_Lindbergh/\"vt3_testmode");
-        return;
-    }
-
-    pos = strstr(name, "/vt3_Lindbergh");
-    if (pos != NULL)
-    {
-        strcpy(pos, "/vt3_testmode");
-        return;
-    }
-
-    // Otherwise add the standard -t to the end
-    strcat(name, " -t");
+    char tmp1[MAX_PATH_LENGTH], tmp2[MAX_PATH_LENGTH];
+    strncpy(tmp1, input, MAX_PATH_LENGTH);
+    strncpy(tmp2, input, MAX_PATH_LENGTH);
+    strncpy(out_prog, basename(tmp1), MAX_PATH_LENGTH);
+    strncpy(out_path, dirname(tmp2), MAX_PATH_LENGTH);
 }
 
-/**
- * @brief Checks if a given path is a valid directory.
- *
- * This function uses the stat system call to determine if the provided path
- * corresponds to a directory.
- * @param path The path to check.
- */
-bool isValidDirectory(const char *path)
+void testModePath(char *program)
 {
-    struct stat statbuf;
-
-    if (stat(path, &statbuf) != 0)
-        return false;
-
-    return S_ISDIR(statbuf.st_mode);
+    if (strcmp(program, "hod4M.elf") == 0)
+        strcpy(program, "hod4testM.elf");
+    else if (strcmp(program, "hodexRI.elf") == 0)
+        strcpy(program, "hodextestR.elf");
+    else if (strcmp(program, "apacheM.elf") == 0)
+        strcpy(program, "apachetestM.elf");
+    else if (strcmp(program, "vt3_Lindbergh") == 0)
+        strcpy(program, "vt3_testmode");
+    else if (strcmp(program, "Jennifer") == 0)
+        strcpy(program, "../JenTest/JenTest");
+    else
+        strcat(program, " -t");
 }
 
-/**
- * @brief Finds a suitable 32-bit library folder.
- *
- * This function searches for a directory that is likely to contain 32-bit
- * libraries, based on a predefined list of candidate paths.
- * @return A dynamically allocated string containing the path to the found
- *         directory, or NULL if no suitable directory is found.
- */
-char *find32bLibFolder(void)
+char *findPreloadLibrary(const char *originalDir, const char *gameDir)
 {
-    const char *folderCandidates[] = {"/app/lib32", "/usr/lib/i386-linux-gnu", "/usr/lib/i686-linux-gnu", "/usr/lib32", "/usr/lib"};
-    int numCandidates = sizeof(folderCandidates) / sizeof(folderCandidates[0]);
+    static char result[MAX_PATH_LENGTH];
+    char appImageLib[MAX_PATH_LENGTH];
+    snprintf(appImageLib, MAX_PATH_LENGTH, "%s/usr/lib32", getenv("APP_IMG_ROOT"));
+    const char *folderCandidates[] = {"/app/lib32", appImageLib, originalDir, "/usr/lib/i386-linux-gnu", "/usr/lib/i686-linux-gnu",
+                                      "/usr/lib32", "/usr/lib",  NULL};
 
-    char currentPath[PATH_MAX];
-    struct stat st;
-    char *resultPath = NULL;
-
-    for (int i = 0; i < numCandidates; ++i)
+    for (int i = 0; i < sizeof(folderCandidates) / sizeof(folderCandidates[0]); i++)
     {
-        int written = snprintf(currentPath, sizeof(currentPath), "%s", folderCandidates[i]);
-
-        if (written < 0 || (size_t)written >= sizeof(currentPath))
-            continue;
-
-        if (stat(currentPath, &st) == 0 && S_ISDIR(st.st_mode))
-        {
-            size_t pathLen = strlen(currentPath);
-            resultPath = (char *)malloc(pathLen + 1);
-
-            if (resultPath == NULL)
-            {
-                log_fatal("Failed to allocate memory for result path.");
-                return NULL;
-            }
-
-            strcpy(resultPath, currentPath);
-            return resultPath;
-        }
+        snprintf(result, MAX_PATH_LENGTH, "%s/%s", folderCandidates[i], PRELOAD_FILE_NAME);
+        if (fileExists(result))
+            return result;
     }
+    if (fileExists(PRELOAD_FILE_NAME))
+        return PRELOAD_FILE_NAME;
+
     return NULL;
 }
 
-/**
- * @brief Finds the path to the LD_PRELOAD library.
- *
- * This function searches for the lindbergh.so library in various locations,
- * including the current directory and system library folders.
- * @return A dynamically allocated string containing the path to the library, or an empty string if not found.
- */
-char *findLDPreloadLibrary()
+int pathsDiffer(const char *p1, const char *p2)
 {
-    char *foundPathPtr = NULL;
-
-    char *systemLibFolder = find32bLibFolder();
-
-    if (systemLibFolder == NULL || systemLibFolder[0] == '\0')
-    {
-        log_error("Error: library folder not found.\n");
-        return "";
-    }
-
-    char fullLibPath[PATH_MAX];
-
-    int lenWritten = snprintf(fullLibPath, sizeof(fullLibPath), "%s/%s", systemLibFolder, PRELOAD_FILE_NAME);
-
-    if (lenWritten < 0 || (size_t)lenWritten >= sizeof(fullLibPath))
-    {
-        log_error("Warning: Constructed path is too long or invalid: %s/%s\n", systemLibFolder, PRELOAD_FILE_NAME);
-        return "";
-    }
-
-    if (access(PRELOAD_FILE_NAME, F_OK) == 0) // lindbergh.so in current folder
-    {
-        char curDir[MAX_PATH_LEN];
-        if (getcwd(curDir, sizeof(curDir)) == NULL)
-            return "";
-        size_t len = strlen(curDir) + strlen(PRELOAD_FILE_NAME) + 1;
-        foundPathPtr = (char *)malloc(len + 1);
-        if (foundPathPtr == NULL)
-            return "";
-        else
-            snprintf(foundPathPtr, len + 1, "%s/%s", curDir, PRELOAD_FILE_NAME);
-    }
-    else if (access(fullLibPath, F_OK) == 0) // lindbergh.so in system lib folder
-    {
-        foundPathPtr = (char *)malloc(strlen(fullLibPath) + 1);
-        if (foundPathPtr == NULL)
-            return "";
-        else
-            strcpy(foundPathPtr, fullLibPath);
-    }
-    else // lindbergh.so in the ELF folder.
-    {
-        return PRELOAD_FILE_NAME;
-    }
-    return foundPathPtr;
+    char real1[MAX_PATH_LENGTH], real2[MAX_PATH_LENGTH];
+    if (!realpath(p1, real1) || !realpath(p2, real2))
+        return 1;
+    return strcmp(real1, real2) != 0;
 }
 
-/**
- * Makes sure the environment variables are set correctly
- *
- * This function sets the LD_LIBRARY_PATH and LD_PRELOAD environment variables
- * to ensure that the game can find the necessary libraries and preload the
- * lindbergh.so library.
- *
- * @param ldLibPath The path to the LD_PRELOAD library.
- * @param curDir The current working directory.
- * @param gameDir The directory where the game is located.
- * @param zink Flag indicating whether to use Zink.
- * @param nvidia Flag indicating whether to use NVIDIA GPU.
- * to run the game.
- */
-void setEnvironmentVariables(char *ldLibPath, char *curDir, char *gameDir, int zink, int nvidia)
+bool hasSpaces(const char *path)
 {
-    // Ensure the library path is set correctly
-    char libraryPath[MAX_PATH_LEN] = {0};
+    if (strchr(path, ' '))
+        return true;
 
-    const char *currentLibraryPath = getenv(LD_LIBRARY_PATH);
-    if (currentLibraryPath != NULL)
+    return false;
+}
+
+void setEnvironmentVariables(const char *ldLibPath, const char *originalDir, const char *gameDir, int zink, int nvidia,
+                             const char *confFilePath)
+{
+    setenv("LD_PRELOAD", ldLibPath, 1);
+    if (hasSpaces(ldLibPath))
     {
-        strcat(libraryPath, currentLibraryPath);
-        strcat(libraryPath, ":");
+        log_error("The path \'%s\' where lindbergh.so is located cannot contain spaces.", ldLibPath);
+        exit(EXIT_FAILURE);
     }
 
-    strcat(libraryPath, ".:lib:../lib");
+    char *currentLibraryPath = getenv("LD_LIBRARY_PATH");
+    char newLdLibPath[MAX_PATH_LENGTH * 3] = "";
+
+    if (currentLibraryPath && strlen(currentLibraryPath) > 0)
+        snprintf(newLdLibPath, sizeof(newLdLibPath), "%s:", currentLibraryPath);
 
     char *tmpLibPath = dirname(strdup(ldLibPath));
 
     if (strcmp(tmpLibPath, ".") != 0)
     {
-        strcat(libraryPath, ":");
-        strcat(libraryPath, tmpLibPath);
+        strcat(newLdLibPath, ":");
+        strcat(newLdLibPath, tmpLibPath);
     }
 
-    if (curDir != NULL && curDir[0] != '\0' && strcmp(curDir, tmpLibPath) != 0)
+    if (originalDir != NULL && originalDir[0] != '\0' && pathsDiffer(originalDir, tmpLibPath) != 0)
     {
-        strcat(libraryPath, ":");
-        strcat(libraryPath, curDir);
+        strcat(newLdLibPath, ":");
+        strcat(newLdLibPath, originalDir);
     }
 
-    if (gameDir != NULL && gameDir[0] != '\0')
+    if (gameDir && gameDir[0] != '\0' && pathsDiffer(originalDir, gameDir) && pathsDiffer(tmpLibPath, gameDir))
     {
-        strcat(libraryPath, ":");
-        strcat(libraryPath, gameDir);
+        strcat(newLdLibPath, ":");
+        strcat(newLdLibPath, gameDir);
     }
 
-    setenv(LD_LIBRARY_PATH, libraryPath, 1);
+    strcat(newLdLibPath, ":.:lib:../lib");
 
-    // Ensure the preload path is set correctly
-    if (strcmp(ldLibPath, "") != 0)
-        setenv(LD_PRELOAD, ldLibPath, 1);
-    else
-        setenv(LD_PRELOAD, PRELOAD_FILE_NAME, 1); // Should not reach here
+    if (newLdLibPath[0] == ':')
+        memmove(newLdLibPath, newLdLibPath + 1, strlen(newLdLibPath));
+
+    setenv("LD_LIBRARY_PATH", newLdLibPath, 1);
+
+    if (strlen(confFilePath) > 0)
+    {
+        if (hasSpaces(confFilePath))
+        {
+            log_error("The path \'%s\' for the config file cannot contain spaces.", confFilePath);
+            exit(EXIT_FAILURE);
+        }
+        setenv(LINDBERGH_CONFIG_PATH, confFilePath, 1);
+    }
+
+    if (zink && nvidia)
+    {
+        log_error("Cannot pass both, zink and nvidia options at the same time.");
+        exit(EXIT_FAILURE);
+    }
 
     if (zink)
+    {
         setenv("MESA_LOADER_DRIVER_OVERRIDE", "zink", 1);
+    }
 
     if (nvidia)
     {
         setenv("__GLX_VENDOR_LIBRARY_NAME", "nvidia", 1);
         setenv("__NV_PRIME_RENDER_OFFLOAD", "1", 1);
     }
-    setenv("LINDBERGH_LOADER_CURRENT_DIR", curDir, 1);
+
+    char libglDriPath[MAX_PATH_LENGTH];
+    sprintf(libglDriPath, "%s/usr/lib32/dri", getenv("APP_IMG_ROOT"));
+    setenv("LIBGL_DRIVERS_PATH", libglDriPath, 1);
 }
 
-/**
- * @brief Prints the usage information for the Lindbergh loader.
- *
- * This function displays the command-line options and usage instructions for
- * the Lindbergh loader.
- * @param argv The command-line arguments array.
- * Prints the usage for the loader
- */
 void printUsage(char *argv[])
 {
     printf("%s [GAME_PATH] [OPTIONS]\n", argv[0]);
@@ -552,15 +359,12 @@ void printUsage(char *argv[])
     printf("  --gamepath | -g     Specifies game path without ELF name\n");
 }
 
-/**
- * @brief Lists available evdev controllers and their inputs.
- *
- * This function initializes the controller system and then iterates through
- * the available controllers, printing their names and the names of their
- * inputs.
- * @return EXIT_SUCCESS on success, EXIT_FAILURE on failure.
- * Lists available evdev controllers and their inputs
- */
+void printVersion()
+{
+    printf("Lindbergh Loader v%d.%d\n", MAJOR_VERSION, MINOR_VERSION);
+    printf("Created by: %s\n", TEAM);
+}
+
 int listControllers()
 {
     Controllers controllers;
@@ -568,7 +372,7 @@ int listControllers()
     ControllerStatus status = initControllers(&controllers);
     if (status != CONTROLLER_STATUS_SUCCESS)
     {
-        printf("Failed to list controllers\n");
+        log_error("Failed to list controllers\n");
         return EXIT_FAILURE;
     }
 
@@ -585,33 +389,16 @@ int listControllers()
             printf("  - %s\n", controller.inputs[i].inputName);
         }
     }
-    
+
     stopControllers(&controllers);
 
     return EXIT_SUCCESS;
 }
 
-/**
- * @brief Prints the version information of the Lindbergh loader.
- *
- * This function displays the version number of the Lindbergh loader and the
- * names of the team members.
- */
-void printVersion() {
-    printf("Lindbergh Loader v%d.%d\n", MAJOR_VERSION, MINOR_VERSION);
-    printf("Created by: %s\n", TEAM);
-}
-
-/**
- * Small utility to automatically detect the game and run it without
- * having to type a long string in.
- */
 int main(int argc, char *argv[])
 {
-    char gameELF[128] = {0};
-    char gameDir[MAX_PATH_LEN] = {0};
-
-    if (argc > 1 && strcmp(argv[1], "--version") == 0) {
+    if (argc > 1 && strcmp(argv[1], "--version") == 0)
+    {
         printVersion();
         return EXIT_SUCCESS;
     }
@@ -626,16 +413,18 @@ int main(int argc, char *argv[])
     {
         return listControllers();
     }
-    // Build up the command to start the game
-    int testMode = false;
-    int gdb = false;
-    int zink = false;
-    int nvidia = false;
-    int forceGame = false;
-    int segaboot = false;
-    char *extConfigPath = NULL;
-    char *passedGamePath = NULL;
-    char *forcedGamePath = NULL;
+
+    char passedGamePath[MAX_PATH_LENGTH] = "";
+    char forcedGamePath[MAX_PATH_LENGTH] = "";
+    char forcedGameDir[MAX_PATH_LENGTH] = "";
+    char gameELF[MAX_PATH_LENGTH] = "";
+    char extConfigPath[MAX_PATH_LENGTH] = "";
+    char originalDir[MAX_PATH_LENGTH] = "";
+    bool gdb = false;
+    bool testMode = false;
+    bool segaboot = false;
+    bool zink = false;
+    bool nvidia = false;
 
     for (int i = 1; i < argc; i++)
     {
@@ -675,158 +464,159 @@ int main(int argc, char *argv[])
             {
                 break;
             }
-            extConfigPath = strdup(argv[i + 1]);
+            strncpy(extConfigPath, argv[i + 1], MAX_PATH_LENGTH);
             i += 1;
             continue;
         }
 
-        if (strcmp(argv[i], "-g") == 0 || strcmp(argv[i], "--gamepath") == 0)
+        if ((strcmp(argv[i], "-g") == 0 || strcmp(argv[i], "--gamepath") == 0) && i + 1 < argc)
         {
-            if (i + 1 >= argc)
-            {
-                break;
-            }
-            passedGamePath = strdup(argv[i + 1]);
-
-            i += 1;
+            strncpy(passedGamePath, argv[i + 1], MAX_PATH_LENGTH);
+            i++;
             continue;
         }
 
-        // Treat the argument as the game name
-        forcedGamePath = strdup(argv[i]);
-        forceGame = true;
+        strncpy(forcedGamePath, argv[i], MAX_PATH_LENGTH);
     }
 
-    // We save the current dir to return to it later
-    char curDir[MAX_PATH_LEN];
-    if (getcwd(curDir, sizeof(curDir)) == NULL)
+    if (!getcwd(originalDir, sizeof(originalDir)))
     {
-        log_error("Error: could not get the current directory.");
+        perror("getcwd");
         return EXIT_FAILURE;
     }
 
-    if (hasSpaces(curDir))
-    {
-        log_warn("The current path contains spaces, this most likely will cause issues.");
-        log_warn("Please, make sure you don't use spaces in the path.");
-    }
+    int useForceCommandPath = strlen(forcedGamePath) > 0;
+    bool commandOnlyElf = useForceCommandPath && strchr(forcedGamePath, '/') == NULL;
 
-    char command[PATH_MAX] = {0};
-    char *forcedGameDir;
-    char *forcedGameElf;
-    if (forceGame)
+    if (useForceCommandPath && !commandOnlyElf)
     {
-        if (forcedGamePath != NULL)
+        if (!fileExists(forcedGamePath))
         {
-            forcedGameDir = dirname(strdup(forcedGamePath));
-            forcedGameElf = basename(strdup(forcedGamePath));
+            log_error("File does not exist: %s\n", forcedGamePath);
+            return EXIT_FAILURE;
+        }
 
-            if (strcmp(forcedGameDir, ".") == 0) // Only the ELF file name was passed.
-            {
-                if (passedGamePath[0] != '\0')
-                    snprintf(gameDir, MAX_PATH_LEN, "%s", passedGamePath);
-                else
-                    snprintf(gameDir, MAX_PATH_LEN, "./");
-            }
-            else
-            {
-                if (passedGamePath != NULL) // ELF with path and also -g option pointing to a folder
-                    log_warn("Warning: elf passed with a path, and -g option enabled. Ignoring -g option.");
+        extractPathFromProg(forcedGamePath, forcedGameDir, gameELF);
+        if (hasSpaces(forcedGameDir))
+        {
+            log_warn("The path contains spaces, this most likely will cause issues.");
+            log_warn("Please, make sure you don't use spaces in the path.");
+        }
 
-                snprintf(gameDir, MAX_PATH_LEN, "%s", forcedGameDir);
-            }
+        if (!dirExists(forcedGameDir))
+        {
+            log_error("Directory does not exist: %s\n", forcedGameDir);
+            return EXIT_FAILURE;
+        }
 
-            if (strcmp(forcedGameElf, ".") != 0)
-                strcpy(gameELF, forcedGameElf);
-            // Check if the passed folder is valid
-            if (!isValidDirectory(gameDir))
+        chdir(forcedGameDir);
+    }
+    else if (strlen(passedGamePath) > 0)
+    {
+        if (hasSpaces(passedGamePath))
+        {
+            log_warn("The path contains spaces, this most likely will cause issues.");
+            log_warn("Please, make sure you don't use spaces in the path.");
+        }
+
+        if (!dirExists(passedGamePath))
+        {
+            log_error("Directory does not exist: %s\n", passedGamePath);
+            return EXIT_FAILURE;
+        }
+
+        chdir(passedGamePath);
+
+        if (commandOnlyElf)
+        {
+            strncpy(gameELF, forcedGamePath, MAX_PATH_LENGTH);
+            if (!fileExists(gameELF))
             {
-                log_error("%s is not a valid directory here.", gameDir);
+                log_error("Program '%s' not found in %s\n", gameELF, passedGamePath);
                 return EXIT_FAILURE;
             }
+        }
+        else
+        {
+            for (int i = 0; games[i] && strcmp(games[i], "END") != 0; i++)
+            {
+                if (fileExists(games[i]))
+                {
+                    strncpy(gameELF, games[i], MAX_PATH_LENGTH);
+                    break;
+                }
+            }
+
+            if (strlen(gameELF) == 0)
+            {
+                log_error("No known game file found in %s\n", passedGamePath);
+                return EXIT_FAILURE;
+            }
+        }
+    }
+    else if (commandOnlyElf)
+    {
+        strncpy(gameELF, forcedGamePath, MAX_PATH_LENGTH);
+        if (!fileExists(gameELF))
+        {
+            log_error("'%s' not found in current directory\n", gameELF);
+            return EXIT_FAILURE;
         }
     }
     else
     {
-        // Look for the game ELF's
-        struct dirent *ent;
-        DIR *dir;
-
-        if (passedGamePath != NULL && passedGamePath[0] != '\0')
+        for (int i = 0; games[i] && strcmp(games[i], "END") != 0; i++)
         {
-            snprintf(gameDir, MAX_PATH_LEN, "%s", passedGamePath);
-
-            // Check if the passed folder is valid
-            if (!isValidDirectory(gameDir))
+            if (access(games[i], F_OK) == 0)
             {
-                log_error("%s is not a valid directory.", gameDir);
-                return EXIT_FAILURE;
+                strncpy(gameELF, games[i], sizeof(gameELF) - 1);
+                gameELF[sizeof(gameELF) - 1] = '\0';
+                printf("Auto-detected ELF: %s\n", gameELF);
+                break;
             }
-            dir = opendir(gameDir);
-        }
-        else
-        {
-            snprintf(gameDir, MAX_PATH_LEN, "%s", curDir);
-            dir = opendir(curDir);
         }
 
-        if (dir == NULL)
+        if (gameELF[0] == '\0')
         {
-            log_error("Could not list files in current directory.");
+            log_error("No game ELF found in current directory.\n");
+            printUsage(argv);
             return EXIT_FAILURE;
         }
-
-        bool found = false;
-        while ((ent = readdir(dir)) != NULL)
-        {
-            if (ent->d_type != DT_REG)
-                continue;
-
-            int index = 0;
-            while (!found)
-            {
-                if (strcmp(games[index], "END") == 0)
-                    break;
-
-                if (strcmp(ent->d_name, games[index]) == 0)
-                {
-                    strcpy(gameELF, games[index]);
-                    found = true;
-                    break;
-                }
-                index++;
-            }
-        }
-        closedir(dir);
     }
+
+    if (testMode)
+    {
+        testModePath(gameELF);
+    }
+
+    char *targetedGameDir = strlen(forcedGameDir) ? forcedGameDir : passedGamePath;
+    char *lib_path = findPreloadLibrary(originalDir, targetedGameDir);
+    if (!lib_path)
+    {
+        log_error("Error: %s not found in known locations.\n", PRELOAD_FILE_NAME);
+        return 1;
+    }
+
+    setEnvironmentVariables(lib_path, originalDir, targetedGameDir, zink, nvidia, extConfigPath);
 
     if (segaboot)
     {
-        strcpy(gameELF, "segaboot");
-        testMode = true;
+        strcpy(gameELF, "segaboot -t");
+        // testMode = true;
     }
 
-    if (gameELF[0] == '\0')
+    // Final command
+    char command[MAX_PATH_LENGTH];
+    if (strcmp(gameELF, "../JenTest/JenTest") == 0)
     {
-        log_error("No lindbergh game found in this directory.");
-        printUsage(argv);
-        return EXIT_FAILURE;
+        snprintf(command, MAX_PATH_LENGTH, "%s", gameELF);
+    }
+    else
+    {
+        snprintf(command, MAX_PATH_LENGTH, "./%s", gameELF);
     }
 
-    sprintf(command, "\"%s/\"%s", gameDir, gameELF);
-
-    char *ldPreloadLibrary = findLDPreloadLibrary();
-
-    if (strcmp(curDir, gameDir) == 0)
-        ldPreloadLibrary = PRELOAD_FILE_NAME;
-
-    // Ensure environment variables are set correctly
-    setEnvironmentVariables(ldPreloadLibrary, curDir, gameDir, zink, nvidia);
-
-    if (testMode)
-        testModePath(command);
-
-    checkIfElfisClean(command);
+    isCleanElf(command);
 
     if (gdb)
     {
@@ -836,35 +626,14 @@ int main(int argc, char *argv[])
         strcpy(command, temp);
     }
 
-    if (extConfigPath != NULL && extConfigPath[0] != '\0')
-    {
-        if (hasSpaces(extConfigPath))
-        {
-            log_warn("The config path contains spaces, this most likely will cause issues.");
-            log_warn("Please, make sure you don't use spaces in the path.");
-        }
-        setenv(LINDBERGH_CONFIG_PATH, extConfigPath, 1);
-    }
-
     log_info("Starting $ %s", command);
 
-    if (gameDir[0] != '\0')
-    {
-        if (chdir(gameDir) != 0)
-        {
-            log_error("Could not change to game path.");
-            return EXIT_FAILURE;
-        }
-    }
     int sysCmd = system(command);
 
-    if (gameDir[0] != '\0')
+    if (chdir(originalDir) != 0)
     {
-        if (chdir(curDir) != 0)
-        {
-            log_error("Could not return to the original directory.");
-            return EXIT_FAILURE;
-        }
+        log_error("Could not return to the original directory.");
+        return EXIT_FAILURE;
     }
 
     return sysCmd;

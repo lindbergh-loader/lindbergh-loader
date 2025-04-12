@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.12]
+### Added
+    - AppImage support.
+### Fixed
+    - 2Spicy error in the scaling code, again.
+    
 ## [2.0.11]
 ### Added
     - Resolution patches for 2Spicy and HOD-Ex
