@@ -13,6 +13,8 @@ declare -a ADDED_LIBS=(
 	"libGLU.so.1"
 	"libglut.so.3"
 	"libglapi.so.0"
+	"libICE.so.6"
+	"libSM.so.6"
 	"libX11.so.6"
 	"libX11-xcb.so.1"
 	"libxcb.so.1"
@@ -25,6 +27,10 @@ declare -a ADDED_LIBS=(
 	"libstdc++.so.5"
 	"libdrm.so.2"
 	"libexpat.so.1"
+	"libm.so.6"
+	"libopenal.so.0"
+	"libcrypto.so.0.9.7"
+	"libssl.so.0.9.7"
 )
 
 set -e
@@ -71,10 +77,7 @@ cp lindbergh.so $OUTPUT_FOLDER/usr/lib
 cp libposixtime.so $OUTPUT_FOLDER/usr/lib
 mv lindbergh $OUTPUT_FOLDER/usr/bin
 mkdir -p $OUTPUT_FOLDER/usr/lib/dri
-cp  /usr/lib/i386-linux-gnu/dri/* $OUTPUT_FOLDER/usr/lib/dri
-cp  ../libs/libcrypto.so.0.9.7 $OUTPUT_FOLDER/usr/lib
-cp  ../libs/libssl.so.0.9.7 $OUTPUT_FOLDER/usr/lib
-cp  ../libs/libopenal.so.0 $OUTPUT_FOLDER/usr/lib
+cp /usr/lib/i386-linux-gnu/dri/* $OUTPUT_FOLDER/usr/lib/dri
 cd ..
 
 echo "Running linuxdeploy to create AppDir..."
@@ -86,9 +89,6 @@ mv $OUTPUT_FOLDER/usr/lib/libkswapapi.so $OUTPUT_FOLDER/usr/lib32
 mv $OUTPUT_FOLDER/usr/lib/libsegaapi.so $OUTPUT_FOLDER/usr/lib32
 mv $OUTPUT_FOLDER/usr/lib/lindbergh.so $OUTPUT_FOLDER/usr/lib32
 mv $OUTPUT_FOLDER/usr/lib/libposixtime.so $OUTPUT_FOLDER/usr/lib32
-mv $OUTPUT_FOLDER/usr/lib/libcrypto.so.0.9.7 $OUTPUT_FOLDER/usr/lib32
-mv $OUTPUT_FOLDER/usr/lib/libssl.so.0.9.7 $OUTPUT_FOLDER/usr/lib32
-mv $OUTPUT_FOLDER/usr/lib/libopenal.so.0 $OUTPUT_FOLDER/usr/lib32
 mv $OUTPUT_FOLDER/usr/lib/dri $OUTPUT_FOLDER/usr/lib32
 
 unzip libs/Cg-3.1.zip -d $OUTPUT_FOLDER/usr/lib32

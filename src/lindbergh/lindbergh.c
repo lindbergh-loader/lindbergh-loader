@@ -338,9 +338,13 @@ void setEnvironmentVariables(const char *ldLibPath, const char *originalDir, con
         setenv("__NV_PRIME_RENDER_OFFLOAD", "1", 1);
     }
 
-    char libglDriPath[MAX_PATH_LENGTH];
-    sprintf(libglDriPath, "%s/usr/lib32/dri", getenv("APP_IMG_ROOT"));
-    setenv("LIBGL_DRIVERS_PATH", libglDriPath, 1);
+    char *appImgRoot = getenv("APP_IMG_ROOT");
+    if (appImgRoot != NULL)
+    {
+        char libglDriPath[MAX_PATH_LENGTH];
+        sprintf(libglDriPath, "%s/usr/lib32/dri", appImgRoot);
+        setenv("LIBGL_DRIVERS_PATH", libglDriPath, 1);
+    }
 }
 
 void printUsage(char *argv[])
