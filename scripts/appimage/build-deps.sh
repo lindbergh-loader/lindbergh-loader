@@ -14,7 +14,7 @@ cd openal-soft-openal-soft-1.17.2/build
 CFLAGS="-m32 -mstackrealign" CXXFLAGS="-m32 -std=c++14 -mstackrealign" cmake ../ -DALSOFT_BACKEND_PULSEAUDIO=ON -DALSOFT_BACKEND_ALSA=ON -DALSOFT_BACKEND_JACK=OFF -DALSOFT_BACKEND_SNDIO=ON
 
 make -j4
-cp libopenal.so.1.17.2 /usr/lib/i386-linux-gnu/libopenal.so.0
+sudo cp libopenal.so.1.17.2 /usr/lib/i386-linux-gnu/libopenal.so.0
 cd ../../
 
 # Build libSSL and libCrypto
@@ -25,6 +25,6 @@ cp ../../scripts/appimage/patches/openssl-0.9.7.patch .
 ./Configure shared 386 no-asm no-krb5 linux-pentium -m32
 patch -p1 < openssl-0.9.7.patch
 CFLAGS=-m32 make 
-cp libcrypto.so.0.9.7 /usr/lib/i386-linux-gnu
-cp libssl.so.0.9.7 /usr/lib/i386-linux-gnu
+sudo cp libcrypto.so.0.9.7 /usr/lib/i386-linux-gnu
+sudo cp libssl.so.0.9.7 /usr/lib/i386-linux-gnu
 
