@@ -1,0 +1,13 @@
+diff -ruN openssl-OpenSSL_0_9_7.orig/Makefile.ssl openssl-OpenSSL_0_9_7/Makefile.ssl
+--- openssl-OpenSSL_0_9_7.orig/Makefile.ssl     2025-04-14 05:05:11.162340308 +0000
++++ openssl-OpenSSL_0_9_7/Makefile.ssl  2025-04-14 05:06:22.261420144 +0000
+@@ -198,7 +198,7 @@
+ SHARED_SSL=libssl$(SHLIB_EXT)
+ SHARED_LIBS=$(SHARED_CRYPTO) $(SHARED_SSL)
+ SHARED_LIBS_LINK_EXTS=.so.$(SHLIB_MAJOR) .so
+-SHARED_LDFLAGS=
++SHARED_LDFLAGS=-m32
+ 
+ GENERAL=        Makefile
+ BASENAME=       openssl
+

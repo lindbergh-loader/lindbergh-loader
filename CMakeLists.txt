@@ -12,9 +12,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build)
 
 # Source files for various targets
-file(GLOB LIND_OBJS "src/lindbergh/*.c" "src/lindbergh/*.cpp")
-list(FILTER LIND_OBJS EXCLUDE REGEX "src/lindbergh/lindbergh.o")
-list(FILTER LIND_OBJS EXCLUDE REGEX "src/lindbergh/evdevinput.o")
+file(GLOB LIND_OBJS "src/lindbergh/*.c")
+list(FILTER LIND_OBJS EXCLUDE REGEX "src/lindbergh/lindbergh.c")
 
 file(GLOB XDIFF_SRCS "src/libxdiff/xdiff/*.c")
 
@@ -27,12 +26,12 @@ set(LINDBERGH_CXX_FLAGS ${LINDBERGH_C_FLAGS} -std=c++11)
 set(LIBXDIFF_C_FLAGS -DHAVE_CONFIG_H -fPIC -m32)
 set(LIBSEGAAPI_CXX_FLAGS -m32 -fPIC -shared)
 set(LIBSEGAAPI_LINKER_FLAGS -m32 -lFAudio)
-set(SHARED_LINKER_FLAGS -m32 -Wl,-z,defs -rdynamic -static-libstdc++ -static-libgcc -lc -ldl -lGL -lglut -lX11 -lSDL2 -lm -lpthread -shared -lstdc++ -nostdlib -lasound)
+set(SHARED_LINKER_FLAGS -m32 -Wl,-z,defs -rdynamic -static-libstdc++ -static-libgcc -lc -ldl -lGL -lglut -lX11 -lXcursor -lSDL2 -lm -lpthread -shared -lstdc++ -nostdlib -lasound)
 
 # Build executable for lindbergh
-add_executable(lindyloader src/lindbergh/lindbergh.c src/lindbergh/evdevinput.c src/lindbergh/evdevinput.h)
+add_executable(lindyloader src/lindbergh/lindbergh.c src/lindbergh/evdevinput.c src/lindbergh/evdevinput.h src/lindbergh/log.c src/lindbergh/log.h src/lindbergh/jvs.c src/lindbergh/jvs.h src/lindbergh/config.h src/lindbergh/config.c)
 set_target_properties(lindyloader PROPERTIES OUTPUT_NAME "lindbergh")
-set_target_properties(lindyloader PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} LINK_FLAGS "-m32")
+set_target_properties(lindyloader PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} LINK_FLAGS "-m32 -lm")
 target_compile_options(lindyloader PRIVATE ${LINDBERGH_EXE})
 
 # Build static library libxdiff.a with its own flags
