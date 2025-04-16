@@ -52,9 +52,9 @@ jobs:
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: v${{ env.NEW_RUN_NUMBER }}
+          automatic_release_tag: v${{ env.run_number }}
           prerelease: false
-          title: "Build v${{ env.NEW_RUN_NUMBER }}"
+          title: "Build v${{ env.run_number }}"
           files: |
             ./artifacts/linux-flatpak/lindbergh-loader.flatpak
             ./artifacts/linux-build/build.tar.gz
