@@ -31,6 +31,7 @@ declare -a ADDED_LIBS=(
 	"libopenal.so.0"
 	"libcrypto.so.0.9.7"
 	"libssl.so.0.9.7"
+ "libuuid.so.1"
 )
 
 set -e
