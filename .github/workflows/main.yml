@@ -32,29 +32,64 @@ jobs:
     name: 📤 Create Release
     needs: [linux-build, linux-flatpak, linux-appimage]
     runs-on: ubuntu-22.04
-    if: github.ref == 'refs/heads/master'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     steps:
+      # Step 1: Checkout the code to access Git history and tags
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Fetch all history and tags, necessary for git tag command
+          fetch-depth: 0
+
+      # Step 2: Download artifacts from previous build jobs    
       - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
           path: ./artifacts/
 
+      # Optional: Display downloaded artifacts for debugging
       - name: Display Downloaded Artifacts
         run: find ./artifacts/
 
-      - name: Add 161 to github.run_number
+      # Step 3: Calculate the next tag version
+      - name: Calculate Next Tag
+        id: calculate_tag # Give the step an ID to potentially reference outputs elsewhere if needed
         run: |
-          NEW_RUN_NUMBER=$(( ${{ github.run_number }} + 161 ))
-          echo "NEW_RUN_NUMBER=$NEW_RUN_NUMBER" >> $GITHUB_ENV
+          echo "Fetching tags..."
+          git fetch --tags # Ensure all tags are fetched
 
-      - name: Create Preview Release
-        if: github.ref == 'refs/heads/master'
+          LATEST_TAG=$(git tag --sort=-creatordate | head -n 1)
+
+          if [[ -z "$LATEST_TAG" ]]; then
+            # No tags found, start with v1
+            NEXT_TAG="v1"
+            echo "No previous tags found. Starting with $NEXT_TAG"
+          else
+            echo "Latest tag found: $LATEST_TAG"
+            # Assuming tag format is 'v' followed by a number (e.g., v1, v123)
+            # Remove 'v' prefix
+            CURRENT_VERSION=$(echo $LATEST_TAG | sed 's/^v//')
+            # Increment the version number
+            NEXT_VERSION=$((CURRENT_VERSION + 1))
+            # Add 'v' prefix back
+            NEXT_TAG="v$NEXT_VERSION"
+            echo "Calculated next tag: $NEXT_TAG"
+          fi
+
+          # Set the calculated tag as an environment variable for subsequent steps
+          echo "NEXT_TAG=$NEXT_TAG" >> $GITHUB_ENV
+
+      # Step 4: Create the release using the calculated tag
+      - name: Create Release
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: v${{ env.run_number }}
+          # Use the environment variable set in the previous step
+          automatic_release_tag: ${{ env.NEXT_TAG }}
+          # Keep prerelease as false unless you want preview releases
           prerelease: false
-          title: "Build v${{ env.run_number }}"
+          # Update the title to use the new tag
+          title: "Build ${{ env.NEXT_TAG }}"
           files: |
             ./artifacts/linux-flatpak/lindbergh-loader.flatpak
             ./artifacts/linux-build/build.tar.gz
