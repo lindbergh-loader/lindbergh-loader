@@ -1313,8 +1313,8 @@ ControllerStatus getArcadeInputByName(char *name, ArcadeInput *input)
 
 ControllerStatus startControllerThreads(Controllers *controllers)
 {
-    // Don't start EVDEV threads if SDL/X11-only mode is enabled
-    if (getConfig()->inputMode == 1) {
+    // Don't start EVDEV threads if SDL only mode is enabled
+    if (getConfig()->inputMode == 0) {
         return CONTROLLER_STATUS_SUCCESS;
     }
 
