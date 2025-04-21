@@ -9,6 +9,10 @@ BUILD = build
 XDIFF_SRCS = xdiffi.c xprepare.c xpatchi.c xmerge3.c xemit.c xmissing.c xutils.c \
              xadler32.c xbdiff.c xbpatchi.c xversion.c xalloc.c xrabdiff.c
 
+ifeq ($(PREFIX), )
+	PREFIX := /usr
+endif
+
 XDIFF_OBJS = $(patsubst %.c,src/libxdiff/xdiff/%.o,$(XDIFF_SRCS))
 
 OBJS := $(patsubst %.c,%.o,$(wildcard src/lindbergh/*.c))
@@ -44,6 +48,14 @@ libposixtime.so:
 	$(CC) -m32 src/libposixtime/libposixtime.c src/libposixtime/libposixtime.h -m32 -shared -o $(BUILD)/libposixtime.so
 	ln -s -f libposixtime.so $(BUILD)/libposixtime.so.1
 	ln -s -f libposixtime.so $(BUILD)/libposixtime.so.2.4
+
+install: all
+	install -d $(DESTDIR)$(PREFIX)/bin
+	install -m 755 $(BUILD)/lindbergh $(DESTDIR)$(PREFIX)/bin/
+	install -d $(DESTDIR)$(PREFIX)/lib
+	install -m 755 $(BUILD)/lindbergh.so $(BUILD)/libsegaapi.so $(BUILD)/libkswapapi.so $(BUILD)/libposixtime.so $(DESTDIR)$(PREFIX)/lib
+	ln -s -f $(DESTDIR)$(PREFIX)/libposixtime.so $(DESTDIR)$(PREFIX)/libposixtime.so.1
+	ln -s -f $(DESTDIR)$(PREFIX)/libposixtime.so $(DESTDIR)$(PREFIX)/libposixtime.so.2.4
 
 # Clean rule
 clean:
