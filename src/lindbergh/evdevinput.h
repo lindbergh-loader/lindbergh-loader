@@ -4,7 +4,7 @@
 
 #define SIZE 300
 #define CONTROLLER_THREAD_MAX 256
-#define MAX_INPUTS 512
+#define MAX_INPUTS 768 // KEY_MAX : some events have this
 
 typedef struct
 {
