@@ -16,6 +16,7 @@ on:
       - '**.md'
       - '.github/ISSUE_TEMPLATE/*'
       - '.docs/changelog'
+      - '.github/workflows/*'
 
 jobs:
   linux-build:
