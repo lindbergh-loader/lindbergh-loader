@@ -51,34 +51,6 @@ jobs:
       - name: Display Downloaded Artifacts
         run: find ./artifacts/
 
-      # # Step 3: Calculate the next tag version
-      # - name: Calculate Next Tag
-      #   id: calculate_tag # Give the step an ID to potentially reference outputs elsewhere if needed
-      #   run: |
-      #     echo "Fetching tags..."
-      #     git fetch --tags # Ensure all tags are fetched
-
-      #     LATEST_TAG=$(git tag --sort=-creatordate | head -n 1)
-
-      #     if [[ -z "$LATEST_TAG" ]]; then
-      #       # No tags found, start with v1
-      #       NEXT_TAG="v1"
-      #       echo "No previous tags found. Starting with $NEXT_TAG"
-      #     else
-      #       echo "Latest tag found: $LATEST_TAG"
-      #       # Assuming tag format is 'v' followed by a number (e.g., v1, v123)
-      #       # Remove 'v' prefix
-      #       CURRENT_VERSION=$(echo $LATEST_TAG | sed 's/^v//')
-      #       # Increment the version number
-      #       NEXT_VERSION=$((CURRENT_VERSION + 1))
-      #       # Add 'v' prefix back
-      #       NEXT_TAG="v$NEXT_VERSION"
-      #       echo "Calculated next tag: $NEXT_TAG"
-      #     fi
-
-      #     # Set the calculated tag as an environment variable for subsequent steps
-      #     echo "NEXT_TAG=$NEXT_TAG" >> $GITHUB_ENV
-      
       # Step 3: Extract the latest version from changelog.md
       - name: Extract Version from Changelog
         id: get_version

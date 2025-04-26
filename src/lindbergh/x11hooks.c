@@ -60,6 +60,20 @@ Display *XOpenDisplay(const char *display_name)
     return x11Display;
 }
 
+void setWindowProperties(Display *display, Window window)
+{
+    XSizeHints *hints = XAllocSizeHints();
+
+    hints->flags = PMinSize | PMaxSize;
+    hints->min_width = hints->max_width = getConfig()->width;
+    hints->min_height = hints->max_height = getConfig()->height;
+    XSetWMNormalHints(display, window, hints);
+    XFree(hints);
+    Atom hintsAtom = XInternAtom(display, "_MOTIF_WM_HINTS", False);
+    XMapWindow(display, window);
+    XFlush(display);
+}
+
 Window XCreateWindow(Display *display, Window parent, int x, int y, unsigned int width, unsigned int height, unsigned int border_width,
                      int depth, unsigned int class, Visual *visual, unsigned long valueMask, XSetWindowAttributes *attributes)
 {
@@ -98,7 +112,19 @@ Window XCreateWindow(Display *display, Window parent, int x, int y, unsigned int
     {
         window = x11Window;
     }
+
+    // Eliminate the maximize window button and no more resizing
+    if (!gettingGPUVendor && !creatingWindow)
+        setWindowProperties(display, window);
+
     return window;
+}
+
+// Here we prevent the games to change the window properties
+void XSetWMProperties(Display *display, Window w, XTextProperty *window_name, XTextProperty *icon_name, char **argv, int argc,
+                      XSizeHints *normal_hints, XWMHints *wm_hints, XClassHint *class_hints)
+{
+    return;
 }
 
 int XGrabPointer(Display *display, Window grab_window, Bool owner_events, unsigned int event_mask, int pointer_mode,
