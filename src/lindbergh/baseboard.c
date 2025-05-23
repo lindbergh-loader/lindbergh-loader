@@ -101,11 +101,15 @@ int initBaseboard()
     int day = tm_info->tm_mday;      // tm_mday is the day of the month
 
     if (month == 1 && day == 18) {
-        strcpy(serialString, "HAPPY BIRTHDAY F");
+        strcpy(serialString, "HAPPY BIRTHDAY!!");
+    }
+
+    if (month == 5 && day == 20) {
+        strcpy(serialString, "HAPPY BIRTHDAY!!");
     }
 
     if (month == 5 && day == 21) {
-        strcpy(serialString, "HAPPY BIRTHDAY B");
+        strcpy(serialString, "HAPPY BIRTHDAY!!");
     }
 
     return 0;
