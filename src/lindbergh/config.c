@@ -1238,7 +1238,7 @@ int readConfig(FILE *configFile, EmulatorConfig *config)
             config->fpsLimiter = atoi(getNextToken(NULL, " ", &saveptr));
 
         else if (strcmp(command, "FPS_TARGET") == 0)
-            config->fpsTarget = atoi(getNextToken(NULL, " ", &saveptr));
+            config->fpsTarget = atof(getNextToken(NULL, " ", &saveptr));
 
         else if (strcmp(command, "LGJ_RENDER_WITH_MESA") == 0)
             config->lgjRenderWithMesa = atoi(getNextToken(NULL, " ", &saveptr));
@@ -1274,7 +1274,7 @@ int readConfig(FILE *configFile, EmulatorConfig *config)
             config->phTouchCursorHeight = atoi(getNextToken(NULL, " ", &saveptr));
 
         else if (strcmp(command, "MJ4_ENABLED_ALL_THE_TIME") == 0)
-            config->phMode = atoi(getNextToken(NULL, " ", &saveptr));
+            config->mj4EnabledAtT = atoi(getNextToken(NULL, " ", &saveptr));
  
         else if (strcmp(command, "OR2_IP") == 0)
             strcpy(config->or2IP, getNextToken(NULL, " ", &saveptr));
@@ -1567,7 +1567,7 @@ int initConfig(const char* configFilePath)
     config.jvsIOType = SEGA_TYPE_3;
     config.GPUVendor = AUTO_DETECT_GPU;
     config.fpsLimiter = 0;
-    config.fpsTarget = 60;
+    config.fpsTarget = 60.0f;
     config.noSDL = 0;
     config.phMode = 2;
     config.disableBuiltinFont = 0;
