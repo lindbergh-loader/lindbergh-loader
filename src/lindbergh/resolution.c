@@ -183,12 +183,14 @@ void glViewport(GLint x, GLint y, GLsizei width, GLsizei height)
     case OUTRUN_2_SP_SDX_REVA_TEST:
     case OUTRUN_2_SP_SDX_REVA_TEST2:
     {
-       
-           
+        if (gWidth != 800 && gHeight != 480)
+        {
+            if ((width >= 800) && (width != 1024))
+            {
                 width = gWidth;
                 height = gHeight;
-            
-        
+            }
+        }
     }
     break;
 
@@ -290,23 +292,26 @@ void glTexImage2D(unsigned int target, int level, int internalformat, int width,
     void (*_glTexImage2D)(unsigned int target, int level, int internalformat, int width, int height, int border, unsigned int format,
                           unsigned int type, const void *pixels) = dlsym(RTLD_NEXT, "glTexImage2D");
 
-    
+    if (gWidth != 800 && gHeight != 480)
+    {
         switch (gId)
         {
         case OUTRUN_2_SP_SDX:
         case OUTRUN_2_SP_SDX_REVA:
         {
             void *addr = __builtin_return_address(0);
-           
+            if ((width >= 800) && (width != 1024) && (addr != (void *)0x80d78d5) && (addr != (void *)0x080d7941))
+            {
                 width = gWidth;
                 height = gHeight;
-            
+            }
         }
         break;
         default:
             break;
         }
-        _glTexImage2D(target, level, internalformat, width, height, border, format, type, pixels);
+    }
+    _glTexImage2D(target, level, internalformat, width, height, border, format, type, pixels);
 }
 
 void glTexParameteri(unsigned int target, unsigned int pname, int param)
@@ -2474,15 +2479,19 @@ int initResolutionPatches()
     break;
     case OUTRUN_2_SP_SDX:
     {
-      
-       
+        if (gWidth <= 800 && gHeight <= 480)
+            break;
+        // If resolution is not the native of the game this patch kind of fix the Sun when the LensGlare effect is
+        // shown.
+        if ((gWidth > 800) && (gHeight > 480))
+        {
             patchMemory(0x080e8e72, "9090909090"); // removes a call to a light function
             patchMemory(0x080e8e83, "9090909090"); // removes a call to a light function
             if (!getConfig()->outrunLensGlareEnabled)
             {
                 detourFunction(0x080e8b34, stubReturn); // Completely disables the lens glare effect
             }
-        
+        }
         setVariable(0x080b913a, 0x44200000);
         setVariable(0x081dae28, 0x44200000);
         setVariable(0x081dae30, 0x44200000);
@@ -2496,14 +2505,19 @@ int initResolutionPatches()
     break;
     case OUTRUN_2_SP_SDX_REVA:
     {
-      
+        if (gWidth <= 800 && gHeight <= 480)
+            break;
+        // If resolution is not the native of the game this patch kind of fix the Sun when the LensGlare effect is
+        // shown.
+        if ((gWidth > 800) && (gHeight > 480))
+        {
             patchMemory(0x080e8e06, "9090909090"); // removes a call to a light function
             patchMemory(0x080e8e17, "9090909090"); // removes a call to a light function
             if (!getConfig()->outrunLensGlareEnabled)
             {
                 detourFunction(0x080e8ac8, stubReturn); // Completely disables the lens glare effect
             }
-        
+        }
         setVariable(0x080b913a, 0x44200000);
         setVariable(0x081dada8, 0x44200000);
         setVariable(0x081dadb0, 0x44200000);
@@ -2529,7 +2543,8 @@ int initResolutionPatches()
     case OUTRUN_2_SP_SDX_REVA_TEST:
     case OUTRUN_2_SP_SDX_REVA_TEST2:
     {
-      
+        if (gWidth <= 800 && gHeight <= 480)
+            break;
         setVariable(0x0804a490, gWidth);
         setVariable(0x0804a4ad, gHeight);
     }
