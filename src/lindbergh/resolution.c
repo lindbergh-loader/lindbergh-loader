@@ -48,11 +48,6 @@ float newReducedWidthABC, newReducedHeightABC;
 float newHalfWidthABC, newHalfHeightABC;
 float newWidthRangeABC, newHeightRangeABC;
 double new410ABC, new330ABC, new280ABC, new200ABC;
-uint32_t *newWidthRangePtr_CEI_ABC, *newHeightRangePtr_CEI_ABC;
-uint32_t *newWidthPtrABC, *newHeightPtrABC;
-uint32_t *newReducedWidthPtrABC, *newReducedHeightPtrABC;
-uint32_t *newHalfWidthPtrABC, *newHalfHeightPtrABC;
-uint32_t *new410PtrABC, *new330PtrABC, *new280PtrABC, *new200PtrABC;
 float angleABC;
 
 float newVT3, newVT3HW, newVT3HH;
@@ -68,6 +63,9 @@ int idTextShift = 0;
 float id4NewCaptionY;
 float idShiftX = 0.0;
 float isShiftY = 0.0;
+
+float newHeightLGJ, newWidth2LGJ, newWidthHLGJ, newWidthSLGJ;
+
 bool myEnableScaling = false;
 
 int hummerRespatch()
@@ -1057,15 +1055,15 @@ void patchABCMarkers(uint32_t addrCtrlEnemyInfo, uint32_t addrCtrlPlayerRivalFon
     new280ABC = (gWidth / 2.0) - 40.0;         // 280
     new200ABC = (gHeight / 2.0) - 40.0;        // 200
 
-    newWidthPtrABC = (uint32_t *)&newWidthABC;
-    newHeightPtrABC = (uint32_t *)&newHeightABC;
+    uint32_t *newWidthPtrABC = (uint32_t *)&newWidthABC;
+    uint32_t *newHeightPtrABC = (uint32_t *)&newHeightABC;
     setVariable(addrCtrlPlayerRivalFont + 0x15b, (size_t)newWidthPtrABC);  // 640
     setVariable(addrCtrlPlayerRivalFont + 0x163, (size_t)newHeightPtrABC); // 480
     setVariable(addrCtrlEnemyPursuit2d + 0x80, (size_t)newWidthPtrABC);    // 640
     setVariable(addrCtrlEnemyPursuit2d + 0x88, (size_t)newHeightPtrABC);   // 480
 
-    newReducedWidthPtrABC = (uint32_t *)&newReducedWidthABC;
-    newReducedHeightPtrABC = (uint32_t *)&newReducedHeightABC;
+    uint32_t *newReducedWidthPtrABC = (uint32_t *)&newReducedWidthABC;
+    uint32_t *newReducedHeightPtrABC = (uint32_t *)&newReducedHeightABC;
     setVariable(addrCtrlPlayerRivalFont + 0x272, (size_t)newReducedWidthPtrABC);     // 600
     setVariable(addrCtrlPlayerRivalFont + 0x29f, (size_t)newReducedHeightPtrABC);    // 440
     setVariable(addrCtrlPlayerRivalFont + 0x8ff, *(uint32_t *)&newReducedHeightABC); // 440
@@ -1076,8 +1074,8 @@ void patchABCMarkers(uint32_t addrCtrlEnemyInfo, uint32_t addrCtrlPlayerRivalFon
     setVariable(addrCtrlEnemyPursuit2d + 0x7b3, *(uint32_t *)&newReducedHeightABC); // 440
     setVariable(addrCtrlEnemyPursuit2d + 0x812, *(uint32_t *)&newReducedHeightABC); // 440
 
-    newHalfWidthPtrABC = (uint32_t *)&newHalfWidthABC;
-    newHalfHeightPtrABC = (uint32_t *)&newHalfHeightABC;
+    uint32_t *newHalfWidthPtrABC = (uint32_t *)&newHalfWidthABC;
+    uint32_t *newHalfHeightPtrABC = (uint32_t *)&newHalfHeightABC;
     setVariable(addrCtrlPlayerRivalFont + 0x346, (size_t)newHalfWidthPtrABC);  // 320
     setVariable(addrCtrlPlayerRivalFont + 0x34e, (size_t)newHalfHeightPtrABC); // 240
     setVariable(addrCtrlPlayerRivalFont + 0x4cb, (size_t)newHalfWidthPtrABC);  // 320
@@ -1103,10 +1101,10 @@ void patchABCMarkers(uint32_t addrCtrlEnemyInfo, uint32_t addrCtrlPlayerRivalFon
     setVariable(addrCtrlEnemyPursuit2d + 0x4ea, *(uint32_t *)&newWidthRangeABC);   // 730
     setVariable(addrCtrlEnemyPursuit2d + 0x77b, *(uint32_t *)&newHeightRangeABC);  // 570
 
-    new410PtrABC = (uint32_t *)&new410ABC;
-    new330PtrABC = (uint32_t *)&new330ABC;
-    new280PtrABC = (uint32_t *)&new280ABC;
-    new200PtrABC = (uint32_t *)&new200ABC;
+    uint32_t *new410PtrABC = (uint32_t *)&new410ABC;
+    uint32_t *new330PtrABC = (uint32_t *)&new330ABC;
+    uint32_t *new280PtrABC = (uint32_t *)&new280ABC;
+    uint32_t *new200PtrABC = (uint32_t *)&new200ABC;
     setVariable(addrCtrlPlayerRivalFont + 0x40e, (size_t)new410PtrABC); // 410
     setVariable(addrCtrlPlayerRivalFont + 0x44a, (size_t)new330PtrABC); // 330
     setVariable(addrCtrlPlayerRivalFont + 0x5de, (size_t)new280PtrABC); // 280
@@ -2431,23 +2429,18 @@ int initResolutionPatches()
 
         setVariable(0x080d6ea0, gWidth);  // 800
         setVariable(0x080d6eaa, gHeight); // 600
+        patchMemory(0x08303c27, "01");      // FSAA
 
-        setVariable(0x080cf6ac, gWidth);  // 800
-        setVariable(0x080cf6b9, gHeight); // 600
-        patchMemory(0x08303c27, "01");    // FSAA
-
-        float newWidthLGJ = (float)gWidth;
-        float newHeightLGJ = (float)gHeight;
-        uint32_t *newWidthPtrLGJ = (uint32_t *)&newWidthLGJ;
+        newHeightLGJ = (float)gHeight;
         uint32_t *newHeightPtrLGJ = (uint32_t *)&newHeightLGJ;
 
-        float newWidth2LGJ = (float)gWidth * 2.0;
+        newWidth2LGJ = (float)gWidth * 2.0;
         uint32_t *newWidth2PtrLGJ = (uint32_t *)&newWidth2LGJ;
         unsigned int address = 0x080cb730;
 
-        float newWidthHLGJ = (float)gWidth / 2.0;
+        newWidthHLGJ = (float)gWidth / 2.0;
         uint32_t *newWidthHPtrLGJ = (uint32_t *)&newWidthHLGJ;
-        float newWidthSLGJ = 1360.0 / (float)gWidth;
+        newWidthSLGJ = 1360.0 / (float)gWidth;
         uint32_t *newWidthSPtrLGJ = (uint32_t *)&newWidthSLGJ;
         unsigned int addressC = 0x080cb3be;
 

@@ -119,7 +119,7 @@ void initSDL(int *argcp, char **argv)
         SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 1);
     }
 
-    uint32_t windowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
+    uint32_t windowFlags = SDL_WINDOW_OPENGL;
 
     strcat(SDLgameTitle, getGameName());
 
@@ -156,6 +156,16 @@ void initSDL(int *argcp, char **argv)
         fprintf(stderr, "OpenGL context could not be created! SDL_Error: %s\n", SDL_GetError());
         exit(1);
     }
+
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f); // Your bg color
+
+    // Force initial clear
+    glClear(GL_COLOR_BUFFER_BIT);
+    SDL_GL_SwapWindow(SDLwindow);
+
+    // Now show the window
+    SDL_ShowWindow(SDLwindow);
+
     printf("  SDL RESOLUTION: %dx%d\n\n", getConfig()->width, getConfig()->height);
 
     if (getConfig()->fullscreen)

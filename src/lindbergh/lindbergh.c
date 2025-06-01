@@ -240,14 +240,15 @@ char *findPreloadLibrary(const char *originalDir, const char *gameDir)
     const char *folderCandidates[] = {"/app/lib32", appImageLib, originalDir, "/usr/lib/i386-linux-gnu", "/usr/lib/i686-linux-gnu",
                                       "/usr/lib32", "/usr/lib",  NULL};
 
+    if (fileExists(PRELOAD_FILE_NAME))
+        return PRELOAD_FILE_NAME;
+
     for (int i = 0; i < sizeof(folderCandidates) / sizeof(folderCandidates[0]); i++)
     {
         snprintf(result, MAX_PATH_LENGTH, "%s/%s", folderCandidates[i], PRELOAD_FILE_NAME);
         if (fileExists(result))
             return result;
     }
-    if (fileExists(PRELOAD_FILE_NAME))
-        return PRELOAD_FILE_NAME;
 
     return NULL;
 }

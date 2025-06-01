@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.14]
+### Added
+    - Bobby's birthday checking!
+    - FPS target to float.
+### Fixed
+    - a bub in config.c where MJ4_ENABLED_ALL_THE_TIME was using the wrong variable.
+
+## [2.0.13]
+### Added
+    
+    - Clear window when the game is loading to prevent ghosting in SDL
+    - Prevent the created windows to resize/maximize.
+    - Version in github now matches the version in the changelog.
+### Fixed
+    - Fixed a bug in Let's Go Jungle Special Resolution Patch.
+    - Cleaned unnecessary global variables in resolution.c
+    - Fixed a bug in that prevented the loader to start when the current folder contained spaces and lindbergh.so was there.
+    
 ## [2.0.12]
 ### Added
     - AppImage support.

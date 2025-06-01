@@ -16,6 +16,7 @@ on:
       - '**.md'
       - '.github/ISSUE_TEMPLATE/*'
       - '.docs/changelog'
+      - '.github/workflows/*'
 
 jobs:
   linux-build:
@@ -32,29 +33,69 @@ jobs:
     name: 📤 Create Release
     needs: [linux-build, linux-flatpak, linux-appimage]
     runs-on: ubuntu-22.04
-    if: github.ref == 'refs/heads/master'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     steps:
+      # Step 1: Checkout the code to access Git history and tags
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Fetch all history and tags, necessary for git tag command
+          fetch-depth: 0
+
+      # Step 2: Download artifacts from previous build jobs    
       - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
           path: ./artifacts/
 
+      # Optional: Display downloaded artifacts for debugging
       - name: Display Downloaded Artifacts
         run: find ./artifacts/
 
-      - name: Add 161 to github.run_number
+      # Step 3: Extract the latest version from changelog.md
+      - name: Extract Version from Changelog
+        id: get_version
         run: |
-          NEW_RUN_NUMBER=$(( ${{ github.run_number }} + 161 ))
-          echo "NEW_RUN_NUMBER=$NEW_RUN_NUMBER" >> $GITHUB_ENV
+          # Define the path to the changelog file (adjust if it's not at the root)
+          CHANGELOG_FILE="./docs/changelog"
 
-      - name: Create Preview Release
-        if: github.ref == 'refs/heads/master'
+          echo "Attempting to extract version from $CHANGELOG_FILE..."
+
+          # Check if the changelog file exists
+          if [[ ! -f "$CHANGELOG_FILE" ]]; then
+            echo "Error: Changelog file '$CHANGELOG_FILE' not found."
+            exit 1
+          fi
+
+          VERSION=$(awk '/^## \[/ { match($0, /\[([^]]+)\]/, arr); print arr[1]; exit }' "$CHANGELOG_FILE")
+
+          # Check if a version was actually extracted
+          if [[ -z "$VERSION" ]]; then
+            echo "Error: Could not find version in '$CHANGELOG_FILE'. Expected format like '## [X.Y.Z]' near the top."
+            exit 1
+          fi
+
+          echo "Found version: $VERSION"
+
+          # Set environment variables for the release step
+          # RELEASE_TAG often includes a 'v' prefix, RELEASE_VERSION is the plain version
+          echo "RELEASE_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "RELEASE_TAG=v$VERSION" >> $GITHUB_ENV # Add 'v' prefix for the tag
+          echo "Using tag: v$VERSION"
+
+      # Step 4: Create the release using the calculated tag
+      - name: Create Release
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: v${{ env.NEW_RUN_NUMBER }}
+          # Use the environment variable set in the previous step
+          # automatic_release_tag: ${{ env.NEXT_TAG }}
+          automatic_release_tag: ${{ env.RELEASE_TAG }}
+          # Keep prerelease as false unless you want preview releases
           prerelease: false
-          title: "Build v${{ env.NEW_RUN_NUMBER }}"
+          # Update the title to use the new tag
+          # title: "Build ${{ env.NEXT_TAG }}"
+          title: "Build ${{ env.RELEASE_TAG }}"
           files: |
             ./artifacts/linux-flatpak/lindbergh-loader.flatpak
             ./artifacts/linux-build/build.tar.gz
