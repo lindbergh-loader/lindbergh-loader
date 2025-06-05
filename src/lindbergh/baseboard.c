@@ -61,6 +61,8 @@ int selectReply = -1;
 int jvsFileDescriptor = -1;
 int jvsPacketSize = -1;
 
+char serialString[1024] = {0};
+
 int initBaseboard()
 {
     char *sramPath = getConfig()->sramPath;
@@ -88,6 +90,26 @@ int initBaseboard()
 
         initJVSSerial(jvsFileDescriptor);
         startJVSFrameThread(&jvsFileDescriptor);
+    }
+
+    strcpy(serialString, SERIAL_STRING);
+
+    time_t t = time(NULL);           // Get current time
+    struct tm *tm_info = localtime(&t);  // Convert to local time structure
+
+    int month = tm_info->tm_mon + 1; // tm_mon is 0-based (0 = Jan, 4 = May)
+    int day = tm_info->tm_mday;      // tm_mday is the day of the month
+
+    if (month == 1 && day == 18) {
+        strcpy(serialString, "HAPPY BIRTHDAY!!");
+    }
+
+    if (month == 5 && day == 20) {
+        strcpy(serialString, "HAPPY BIRTHDAY!!");
+    }
+
+    if (month == 5 && day == 21) {
+        strcpy(serialString, "HAPPY BIRTHDAY!!");
     }
 
     return 0;
@@ -236,7 +258,7 @@ int baseboardIoctl(int fd, unsigned int request, void *data)
 
         case BASEBOARD_GET_SERIAL:
         {
-            memcpy(&sharedMemory[serialCommand.destAddress + 96], SERIAL_STRING, strlen(SERIAL_STRING));
+            memcpy(&sharedMemory[serialCommand.destAddress + 96], serialString, strlen(serialString));
             _data[1] = 1; // Set the status to success
         }
         break;

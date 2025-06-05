@@ -261,7 +261,7 @@ typedef struct
     int hummerFlickerFix;
     int keepAspectRatio;
     int fpsLimiter;
-    int fpsTarget;
+    float fpsTarget;
     int lgjRenderWithMesa;
     int noSDL;
     int phMode;
