@@ -1,4 +1,4 @@
-[![Actions Status](https://github.com/lindbergh-loader/lindbergh-loader/actions/workflows/ci.yml/badge.svg)](https://github.com/lindbergh-loader/lindbergh-loader/actions)
+[![Actions Status](https://github.com/lindbergh-loader/lindbergh-loader/actions/workflows/main.yml/badge.svg)](https://github.com/lindbergh-loader/lindbergh-loader/actions)
 
 # SEGA Lindbergh Emulator
 
