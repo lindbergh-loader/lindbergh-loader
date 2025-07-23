@@ -1497,34 +1497,43 @@ int readConfig(FILE *configFile, EmulatorConfig *config)
 KeyMapping getDefaultKeymap()
 {
     KeyMapping defaultKeyMapping;
-    defaultKeyMapping.test = 28;
-    defaultKeyMapping.player1.start = 10;
-    defaultKeyMapping.player1.service = 39;
-    defaultKeyMapping.player1.coin = 14;
-    defaultKeyMapping.player1.up = 111;
-    defaultKeyMapping.player1.down = 116;
-    defaultKeyMapping.player1.left = 113;
-    defaultKeyMapping.player1.right = 114;
-    defaultKeyMapping.player1.button1 = 24;
-    defaultKeyMapping.player1.button2 = 25;
-    defaultKeyMapping.player1.button3 = 26;
+
+    // Test key
+    defaultKeyMapping.test = 28; // T
+
+    // Player 1 controls
+    defaultKeyMapping.player1.start = 10; // 1
+    defaultKeyMapping.player1.service = 39; // S
+    defaultKeyMapping.player1.coin = 14; // 5
+    defaultKeyMapping.player1.up = 111; // Up arrow
+    defaultKeyMapping.player1.down = 116; // Down arrow
+    defaultKeyMapping.player1.left = 113; // Left arrow
+    defaultKeyMapping.player1.right = 114; // Right arrow
+    defaultKeyMapping.player1.button1 = 24; // Q
+    defaultKeyMapping.player1.button2 = 25; // W
+    defaultKeyMapping.player1.button3 = 26; // E
     defaultKeyMapping.player1.button4 = 27; // R
     defaultKeyMapping.player1.button5 = 40; // D
-    defaultKeyMapping.player1.button6 = 41;
-    defaultKeyMapping.player1.button7 = 42;
-    defaultKeyMapping.player1.button8 = 43;
-    defaultKeyMapping.player2.start = 60;
-    defaultKeyMapping.player2.service = 61;
-    defaultKeyMapping.player2.coin = 15;
-    defaultKeyMapping.player2.up = 54;
-    defaultKeyMapping.player2.down = 53;
-    defaultKeyMapping.player2.left = 55;
-    defaultKeyMapping.player2.right = 56;
-    defaultKeyMapping.player2.button1 = 52;
-    defaultKeyMapping.player2.button2 = 57;
-    defaultKeyMapping.player2.button3 = 58;
+    defaultKeyMapping.player1.button6 = 41; // F
+    defaultKeyMapping.player1.button7 = 42; // G
+    defaultKeyMapping.player1.button8 = 43; // H
+
+    // Player 2 controls
+    defaultKeyMapping.player2.start = 60; // .
+    defaultKeyMapping.player2.service = 61; // /
+    defaultKeyMapping.player2.coin = 15; // 6
+    defaultKeyMapping.player2.up = 54; // C
+    defaultKeyMapping.player2.down = 53; // X
+    defaultKeyMapping.player2.left = 55; // V
+    defaultKeyMapping.player2.right = 56; // B
+    defaultKeyMapping.player2.button1 = 52; // Z
+    defaultKeyMapping.player2.button2 = 57; // N
+    defaultKeyMapping.player2.button3 = 58; // M
     defaultKeyMapping.player2.button4 = 59; // ,
-    defaultKeyMapping.player2.button5 = 37; // CTRL
+    defaultKeyMapping.player2.button5 = 37; // Left Ctrl
+    defaultKeyMapping.player2.button6 = 65; // Space bar
+    defaultKeyMapping.player2.button7 = 38; // A
+
     return defaultKeyMapping;
 }
 
