@@ -938,11 +938,16 @@ static ControllerStatus listControllers(Controllers *controllers)
 
         if (test_bit(EV_ABS, bit[0]))
         {
-            ioctl(controller, EVIOCGBIT(EV_ABS, KEY_MAX), bit[EV_ABS]);
-            for (int code = 0; code < KEY_MAX; code++)
+            ioctl(controller, EVIOCGBIT(EV_ABS, ABS_MAX), bit[EV_ABS]);
+            for (int code = 0; code < ABS_MAX; code++)
             {
                 if (test_bit(code, bit[EV_ABS]))
                 {
+                    if(controllers->controller[i].inputCount >= MAX_INPUTS) { // the number of input is limited
+		      fprintf(stderr, "warning, maximum number of inputs reached !\n");
+		      break;
+                    }
+
                     controllers->controller[i].enabled = 1;
                     ControllerInput *controllerInput =
                         &controllers->controller[i].inputs[controllers->controller[i].inputCount++];
