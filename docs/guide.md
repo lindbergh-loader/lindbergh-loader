@@ -31,6 +31,7 @@ The follow list of games are supported. It is worth noting that there are multip
 | Initial D 5 EXP 2.0                              | SBTS    | DVP-0084  | ✓      | ✓            | ✓          |                   |
 | Initial D 5 EXP 2.0 Rev A                        | SBQN    | DVP-0084A | ✓      | ✓            | ✓          |                   |
 | Initial D Arcade Stage 5 Rev A                   | SBQZ    | DVP-0070A | ✓      | ✓            | ✓          |                   |
+| Initial D Arcade Stage 5 Rev C                   | SBQZ    | DVP-0070C | ✓      | ✓            | ✓          |                   |
 | Initial D Arcade Stage 5 Rev F                   | SBQZ    | DVP-0070F | ✓      | ✓            | ✓          |                   |
 | Let's Go Jungle                                  | SBLU    | DVP-0011  | ✓      | ✓            | ✓          |                   |
 | Let's Go Jungle!  Rev A                          | SBLU    | DVP-0011A | ✓      | ✓            | ✓          |                   |
@@ -41,6 +42,7 @@ The follow list of games are supported. It is worth noting that there are multip
 | Outrun 2 SP SDX Rev A                            | SBMB    | DVP-0015A | ✓      | ✓            | ✓          | ✓                 |
 | Primeval Hunt                                    | SBPP    | DVP-0048  | ✓      | ✓            | ✓          | ✓                 |
 | Rambo                                            | SBQL    | DVP-0069  | ✓      | ✓            | ✓          | ✓                 |
+| Rambo (China)                                    | SBSS    | DVP-0078  | ✓      | ✓            | ✓          | ✓                 |
 | R-Tuned                                          | SBQW    | DVP-0060  | ✓      | ✓            | ✓          | ✓                 |
 | Sega Race TV                                     | SBPF    | DVP-0044  | ✓      | ✓            | ✓          | ✓                 |
 | The House of the Dead 4 Rev A                    | SBLC    | DVP-0003A | ✓      | ✓            | ✓          | ✓                 |
@@ -88,15 +90,15 @@ sudo ln -s /lib/i386-linux-gnu/libglut.so /lib/i386-linux-gnu/libglut.so.3
 
 ### Outrun 2 SP SDX
 
-- You need to set `SKIP_OUTRUN_CABINET_CHECK` to 1 in `lindbergh.conf` to play in DX, SDX or Standard cabinet types.
+- You need to set `SKIP_OUTRUN_CABINET_CHECK` to 1 in `lindbergh.ini` to play in DX, SDX or Standard cabinet types.
 
 ### Hummer (all versions)
 
 The games will ask for libGLcore.so.1 and libnvidia-tls.so.1 you can copy for example libkswapapi.so as libGLcore.so.1 and libnvidia-tls.so.1 and the game will work fine.
 
-## Configuration File : lindbergh.conf
+## Configuration File : lindbergh.ini
 
-All configurable options are set and explained in the [`lindbergh.conf`](lindbergh.conf) file itself, and should be reasonably easy to understand. This chapter further explains some of those setup options.
+All configurable options are set and explained in the [`lindbergh.ini`](lindbergh.ini) file itself, and should be reasonably easy to understand. This chapter further explains some of those setup options.
 
 You will see the value `AUTO` by default for some of the config options. This is present when the emulator might set that config value to multiple different things itself. For example rideboard emulation is set to `AUTO` so that the emulator doesn't enable it for all games, and only turns it on for the special games that require it. If it was set to `1` it would always emulate the rideboard on serial port 2, and if it was set to `0` it would never emulate it.
 
@@ -268,3 +270,13 @@ The loader will try to find the files.
 
 If by mistake, you pass both, a full path including an ELF and a path with -g option, the path passed with -g option will be omitted.
 Remember that if the path containg spaces, which is not recommended, pass the path inside double quotes or `\` before the space.
+
+## Creating lindbergh.ini or controls.ini
+
+```
+./lindbergh --create --help
+```
+
+Will give you instructions on how to use the new commands.
+
+

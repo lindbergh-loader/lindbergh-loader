@@ -6,6 +6,7 @@ tmp/
 *.bin
 /*.conf
 src/lindbergh/*.o
+src/lindbergh/shaderWork/*.o
 src/libxdiff/xdiff/*.o
 src/libxdiff/*.a
 src/libkswapapi/*.o

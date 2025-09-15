@@ -14,10 +14,20 @@ jobs:
       options: --privileged
     timeout-minutes: 60
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download version.h artifact
+      uses: actions/download-artifact@v4
       with:
-        fetch-depth: 0
-        set-safe-directory: ${{ env.GITHUB_WORKSPACE }}
+        name: version-file
+        path: src/lindbergh/
+
+    - name: Download SDL3 libs
+      uses: actions/download-artifact@v4
+      with:
+        name: SDL3-FAudio
+        path: libs/
 
     # Work around container ownership issue
     - name: Set Safe Directory

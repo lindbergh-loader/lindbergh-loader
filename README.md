@@ -1,4 +1,4 @@
-[![Actions Status](https://github.com/lindbergh-loader/lindbergh-loader/actions/workflows/main.yml/badge.svg)](https://github.com/lindbergh-loader/lindbergh-loader/actions)
+[![Actions Status](https://github.com/lindbergh-loader/lindbergh-loader/actions/workflows/ci.yml/badge.svg)](https://github.com/lindbergh-loader/lindbergh-loader/actions)
 
 # SEGA Lindbergh Emulator
 
@@ -10,13 +10,16 @@ If you need any help please ask the community in the [arcade community discord](
 
 ## Building & Running
 
-In order to build the loader you will need to install the following dependencies in a Linux environment. We recommend Ubuntu 22.04 LTS as default, but it may work in various configurations like WSL2, Debian, etc.  
+In order to build the loader you will need to install the following dependencies in a Linux environment. We recommend Ubuntu 22.04 LTS, but it will run in almost any modern distro using the AppImage or the Flatpak..  
 Please note other dependencies might be required to run games (see the [guide](docs/guide.md)).
 
 ```shell
 sudo dpkg --add-architecture i386
 sudo apt update
-sudo apt install git build-essential gcc-multilib freeglut3-dev:i386 libsdl2-dev:i386 libfaudio-dev:i386
+sudo apt install build-essential gcc-multilib g++-multilib cmake fuse freeglut3-dev:i386 libvdpau1:i386 libstdc++5:i386 libxmu6:i386 \
+  libpcsclite1:i386 libncurses5:i386 unzip libsndio-dev libsndio-dev:i386 pulseaudio-utils:i386 zlib1g:i386 libgpg-error0:i386 \
+  libasound2 libasound2-dev libasound2:i386 libasound2-dev:i386 libfreetype6-dev:i386 libdbus-1-dev libpulse-dev libdbus-1-dev:i386 \
+  libudev-dev:i386 libxcursor-dev:i386 libxfixes-dev:i386 libxi-dev:i386 libxrandr-dev:i386 libxss-dev:i386 libxxf86vm-dev:i386 git
 ```
 
 This emulator will need access to the input devices and serial devices on your computer. You should add your user account to the following groups and then _restart your computer_.
@@ -30,8 +33,10 @@ Then you should clone the repository, change directory into it and run make.
 ```shell
 git clone git@github.com:lindbergh-loader/lindbergh-loader.git
 cd lindbergh-loader
+./scripts/appimage/build-deps.sh
 make
 ```
+
 
 You should then copy the contents of the build directory to your game directory and run `./lindbergh` for the game, or `./lindbergh -t` for test mode. Please note you might need to set the game executable as "executable" using `chmod +x`.
 

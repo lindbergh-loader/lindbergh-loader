@@ -12,27 +12,28 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build)
 
 # Source files for various targets
-file(GLOB LIND_OBJS "src/lindbergh/*.c")
+file(GLOB LIND_OBJS "src/lindbergh/*.c" "src/lindbergh/shaderWork/*.c")
 list(FILTER LIND_OBJS EXCLUDE REGEX "src/lindbergh/lindbergh.c")
 
 file(GLOB XDIFF_SRCS "src/libxdiff/xdiff/*.c")
 
 # Custom compiler and linker flags
-set(LINDBERGH_EXE -m32)
+set(LINDBERGH_EXE -m32 -DCOMPILING_LINDBERGH_ELF)
 set(LINDBERGH_C_FLAGS -g -fPIC -m32 -Wall -Werror -Wno-unused-variable -Wno-unused-function -D_GNU_SOURCE)
 #SET(CMAKE_C_FLAGS_DEBUG -g)
 SET(CMAKE_C_FLAGS_RELEASE -O3)
-set(LINDBERGH_CXX_FLAGS ${LINDBERGH_C_FLAGS} -std=c++11)
 set(LIBXDIFF_C_FLAGS -DHAVE_CONFIG_H -fPIC -m32)
-set(LIBSEGAAPI_CXX_FLAGS -m32 -fPIC -shared)
-set(LIBSEGAAPI_LINKER_FLAGS -m32 -lFAudio)
-set(SHARED_LINKER_FLAGS -m32 -Wl,-z,defs -rdynamic -static-libstdc++ -static-libgcc -lc -ldl -lGL -lglut -lX11 -lXcursor -lSDL2 -lm -lpthread -shared -lstdc++ -nostdlib -lasound)
+set(LIBSEGAAPI_C_FLAGS -m32 -fPIC -shared)
+set(LIBSEGAAPI_LINKER_FLAGS -m32 -Wl,-Bstatic -lFAudio -Wl,-Bdynamic -lm)
+set(SHARED_LINKER_FLAGS -m32 -Wl,-z,defs -rdynamic -static-libstdc++ -static-libgcc -lc -ldl -lGL -lglut -lX11 -lXcursor -lSDL3 -lSDL3_ttf -lSDL3_image -ludev -lm -lpthread -shared -lstdc++ -nostdlib)
 
 # Build executable for lindbergh
-add_executable(lindyloader src/lindbergh/lindbergh.c src/lindbergh/evdevinput.c src/lindbergh/evdevinput.h src/lindbergh/log.c src/lindbergh/log.h src/lindbergh/jvs.c src/lindbergh/jvs.h src/lindbergh/config.h src/lindbergh/config.c)
+add_executable(lindyloader src/lindbergh/lindbergh.c src/lindbergh/iniParser.c src/lindbergh/sdlInput.c src/lindbergh/controlIniGen.c src/lindbergh/log.c src/lindbergh/jvs.c src/lindbergh/config.c src/lindbergh/evdevInput.c src/lindbergh/gameData.c src/lindbergh/configIni.c)
 set_target_properties(lindyloader PROPERTIES OUTPUT_NAME "lindbergh")
-set_target_properties(lindyloader PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} LINK_FLAGS "-m32 -lm")
+# set_target_properties(lindyloader PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} LINK_FLAGS "-m32 -lm -lSDL3")
 target_compile_options(lindyloader PRIVATE ${LINDBERGH_EXE})
+# target_link_libraries(lindyloader "-m32 -lm -sdl3")
+target_link_libraries(lindyloader PRIVATE lindbergh m SDL3)
 
 # Build static library libxdiff.a with its own flags
 add_library(xdiff STATIC ${XDIFF_SRCS})
@@ -43,12 +44,12 @@ target_compile_options(xdiff PRIVATE ${LIBXDIFF_C_FLAGS})
 add_library(lindbergh SHARED ${LIND_OBJS})
 set_target_properties(lindbergh PROPERTIES PREFIX "")
 target_link_libraries(lindbergh xdiff ${SHARED_LINKER_FLAGS})
-target_compile_options(lindbergh PRIVATE ${LINDBERGH_EXE})
+target_compile_options(lindbergh PRIVATE ${LINDBERGH_C_FLAGS})
 
 # Build shared library libsegaapi.so
 add_library(segaapi SHARED src/libsegaapi/libsegaapi.c)
-target_link_libraries(segaapi FAudio ${LIBSEGAAPI_LINKER_FLAGS})
-target_compile_options(segaapi PRIVATE ${LIBSEGAAPI_CXX_FLAGS})
+target_link_libraries(segaapi ${LIBSEGAAPI_LINKER_FLAGS})
+target_compile_options(segaapi PRIVATE ${LIBSEGAAPI_C_FLAGS})
 
 # Build shared library libkswapapi.so
 add_library(kswapapi SHARED src/libkswapapi/libkswapapi.c)
@@ -63,12 +64,10 @@ add_custom_command(TARGET posixtime POST_BUILD
     COMMAND ln -s -f libposixtime.so ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libposixtime.so.2.4)
 target_compile_options(posixtime PRIVATE ${LINDBERGH_C_FLAGS})
 
-# Custom clean rule
-add_custom_target(cleanall
-    COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/build
-    COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/src/lindbergh/*.o
-    COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/src/libsegaapi/*.o
-    COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/src/libkswapapi/*.o
-    COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/src/libxdiff/*.a
-    COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/src/libxdiff/xdiff/*.o
+# Example: List of extra files and directories to remove during 'make clean'
+set(MY_EXTRA_CLEAN_STUFF
+    "${CMAKE_BINARY_DIR}/build/libposixtime.so.1"          # A specific log file
+    "${CMAKE_BINARY_DIR}/build/libposixtime.so.2.4"  # A directory with generated reports
 )
+
+set_directory_properties(PROPERTIES ADDITIONAL_CLEAN_FILES "${MY_EXTRA_CLEAN_STUFF}")

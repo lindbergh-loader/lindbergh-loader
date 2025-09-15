@@ -4,6 +4,7 @@ APPIMAGENAME=lindbergh-loader
 APPIMAGEDIRNAME=lindbergh-loader.AppDir
 
 declare -a ADDED_LIBS=(
+	"libfreetype.so.6"
 	"libOpenGL.so.0"
 	"libGLdispatch.so.0"
 	"libGLX.so"
@@ -22,16 +23,18 @@ declare -a ADDED_LIBS=(
 	"libxcb-dri3.so.0"
 	"libxcb-glx.so.0"
 	"libXmu.so.6"
+	"libXrandr.so.2"
 	"libncurses.so.5"
 	"libpcsclite.so.1"
 	"libstdc++.so.5"
 	"libdrm.so.2"
 	"libexpat.so.1"
 	"libm.so.6"
-	"libopenal.so.0"
-	"libcrypto.so.0.9.7"
-	"libssl.so.0.9.7"
- "libuuid.so.1"
+	"libz.so.1"
+	"libgpg-error.so.0"
+	"libstdc++.so.6"
+	"libudev.so.1"
+	"libsndio.so.7"
 )
 
 set -e
@@ -55,6 +58,7 @@ for lib in "${ADDED_LIBS[@]}"; do
 	ADDED_LIBS_ARGS+=("--library=/usr/lib/i386-linux-gnu/$lib")
 done 
 
+ADDED_LIBS_ARGS+=("--library=/usr/lib/i386-linux-gnu/pulseaudio/libpulsedsp.so")
 
 echo "Copying files into AppDir..."
 mkdir -p "$OUTPUT_FOLDER/usr/bin"
@@ -76,7 +80,7 @@ cp libkswapapi.so $OUTPUT_FOLDER/usr/lib
 cp libsegaapi.so $OUTPUT_FOLDER/usr/lib
 cp lindbergh.so $OUTPUT_FOLDER/usr/lib
 cp libposixtime.so $OUTPUT_FOLDER/usr/lib
-mv lindbergh $OUTPUT_FOLDER/usr/bin
+cp lindbergh $OUTPUT_FOLDER/usr/bin
 mkdir -p $OUTPUT_FOLDER/usr/lib/dri
 cp /usr/lib/i386-linux-gnu/dri/* $OUTPUT_FOLDER/usr/lib/dri
 cd ..
@@ -93,11 +97,15 @@ mv $OUTPUT_FOLDER/usr/lib/libposixtime.so $OUTPUT_FOLDER/usr/lib32
 mv $OUTPUT_FOLDER/usr/lib/dri $OUTPUT_FOLDER/usr/lib32
 
 unzip libs/Cg-3.1.zip -d $OUTPUT_FOLDER/usr/lib32
-cp  libs/libCg.so $OUTPUT_FOLDER/usr/lib32/libCg2.so
+cp libs/libCg.so $OUTPUT_FOLDER/usr/lib32/libCg2.so
+cp libs/libopenal.so.0 $OUTPUT_FOLDER/usr/lib32/libopenal.so.0
+cp libs/libcrypto.so.0.9.7 $OUTPUT_FOLDER/usr/lib32/libcrypto.so.0.9.7
+cp libs/libssl.so.0.9.7 $OUTPUT_FOLDER/usr/lib32/libssl.so.0.9.7
 ln -s -f libposixtime.so $OUTPUT_FOLDER/usr/lib32/libposixtime.so.1
 ln -s -f libposixtime.so $OUTPUT_FOLDER/usr/lib32/libposixtime.so.2.4
 ln -s -f libkswapapi.so $OUTPUT_FOLDER/usr/lib32/libGLcore.so.1
 ln -s -f libkswapapi.so $OUTPUT_FOLDER/usr/lib32/libnvidia-tls.so.1
+ln -s -f libGLX.so $OUTPUT_FOLDER/usr/lib32/libGLX.so.0
 
 echo "Generating AppImage..."
 rm -f "$APPIMAGENAME.AppImage"

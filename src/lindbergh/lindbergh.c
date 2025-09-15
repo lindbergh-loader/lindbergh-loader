@@ -3,30 +3,39 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include <libgen.h>
 #include <sys/stat.h>
-#include <limits.h>
 
-#include "config.h"
-#include "evdevinput.h"
-#include "version.h"
+#include "configIni.h"
+#include "evdevInput.h"
 #include "log.h"
+#include "version.h"
+#include "controlIniGen.h"
+#include "sdlInput.h"
 
 #define LD_LIBRARY_PATH "LD_LIBRARY_PATH"
 #define LD_PRELOAD "LD_PRELOAD"
 #define PRELOAD_FILE_NAME "lindbergh.so"
-#define TEAM "bobbydilley, retrofan, dkeruza-neo, doozer, francesco, rolel, caviar-x"
+#define PRELOAD_OPENAL "libopenal.so.0"
+#define TEAM "bobbydilley, retrofan, dkeruza-neo, francesco"
+#define COLLABORATORS "doozer, rolel, caviar-X"
+#define SPECIAL_THANKS "Francesco"
 #define LINDBERGH_CONFIG_PATH "LINDBERGH_CONFIG_PATH"
+#define LINDBERGH_CONTROLS_PATH "LINDBERGH_CONTROLS_PATH"
+#define LINDBERGH_CONTROLS_DB_PATH "LINDBERGH_CONTROLS_DB_PATH"
 #define LINDBERGH_LOADER_CURRENT_DIR "LINDBERGH_LOADER_CURRENT_DIR"
+#define MAX_PATH_LENGTH 1024
 
 uint32_t elf_crc = 0;
 
 // List of all lindbergh executables known, not including the test executables
-char *games[] = {"a.elf",    "abc",       "apacheM.elf", "chopperM.elf",      "drive.elf", "dsr",
-                 "gsevo",    "hod4M.elf", "hodexRI.elf", "hummer_Master.elf", "id4.elf",   "id5.elf",
-                 "Jennifer", "lgj_final", "lgjsp_app",   "main.exe",          "mj4",       "ramboM.elf",
-                 "vf5",      "vsg",       "vt3",         "vt3_Lindbergh",     "END"};
+char *games[] = {"a.elf",    "abc",     "apacheM.elf",   "chopperM.elf", "drive.elf",
+                 "dsr",      "gsevo",   "hod4M.elf",     "hodexRI.elf",  "hummer_Master.elf",
+                 "id4.elf",  "id5.elf", "Jennifer",      "lgj_final",    "lgjsp_app",
+                 "main.exe", "mj4",     "q2satl_lind",   "ramboM.elf",   "vf5",
+                 "vsg",      "vt3",     "vt3_Lindbergh", "END"};
 
 /**
  * An array containin clean games elf's CRC32
@@ -71,6 +80,7 @@ uint32_t cleanElfCRC32[] = {
     0x2D2A18C1, // DVP-0019C | id4.elf
     0x9BFD0D98, // DVP-0019D | id4.elf
     0x9CF9BBCC, // DVP-0019G | id4.elf
+    0xDCAD8ABA, // DVP-0025H | q2satl_lind
     0xFA0F6AB0, // DVP-0027A | apacheM.elf
     0x5A7F315E, // DVP-0027A | apachetestM.elf
     0x9D414D18, // DVP-0029A | vsg
@@ -91,13 +101,16 @@ uint32_t cleanElfCRC32[] = {
     0x3A5EEC69, // DVP-0063  | hodextestR.elf
     0x81E02850, // DVP-0069  | ramboM.elf
     0xE4F202BB, // DVP-0070A | id5.elf
+    0x400C09CD, // DVP-0070C | id5.elf
     0x2E6732A3, // DVP-0070F | id5.elf
     0xF99A3CDB, // DVP-0075  | id5.elf
+    0xDCC1f8E7, // DVP-0078  | ramboM.elf
     0x05647A8E, // DVP-0079  | hummer_Master.elf
     0x0AD7CF0F, // DVP-0081  | mj4
     0x4442EA15, // DVP-0083  | hummer_Master.elf
     0x8DF6BBF9, // DVP-0084  | id5.elf
     0x2AF8004E, // DVP-0084A | id5.elf
+    0xCB663DD0, // DVP-0087D | q2satl_lind
     0xB95528F4, // DVP-5004  | vf5
     0x012E4898, // DVP-5004D | vf5
     0x74465F9F, // DVP-5004G | vf5
@@ -196,7 +209,6 @@ void isCleanElf(char *command)
         return;
 
     crc = crc ^ 0xFFFFFFFF;
-
     if (!lookupCrcTable(crc))
     {
         printf("\033[1;31m");
@@ -232,7 +244,7 @@ void testModePath(char *program)
         strcat(program, " -t");
 }
 
-char *findPreloadLibrary(const char *originalDir, const char *gameDir)
+char *findPreloadLibrary(const char *originalDir, char *preloadFileName)
 {
     static char result[MAX_PATH_LENGTH];
     char appImageLib[MAX_PATH_LENGTH];
@@ -240,17 +252,17 @@ char *findPreloadLibrary(const char *originalDir, const char *gameDir)
     const char *folderCandidates[] = {"/app/lib32", appImageLib, originalDir, "/usr/lib/i386-linux-gnu", "/usr/lib/i686-linux-gnu",
                                       "/usr/lib32", "/usr/lib",  NULL};
 
-    if (fileExists(PRELOAD_FILE_NAME))
-        return PRELOAD_FILE_NAME;
-
     for (int i = 0; i < sizeof(folderCandidates) / sizeof(folderCandidates[0]); i++)
     {
-        snprintf(result, MAX_PATH_LENGTH, "%s/%s", folderCandidates[i], PRELOAD_FILE_NAME);
+        snprintf(result, MAX_PATH_LENGTH, "%s/%s", folderCandidates[i], preloadFileName);
         if (fileExists(result))
             return result;
     }
 
-    return NULL;
+    if (fileExists(preloadFileName))
+        return preloadFileName;
+
+    return "";
 }
 
 int pathsDiffer(const char *p1, const char *p2)
@@ -270,9 +282,20 @@ bool hasSpaces(const char *path)
 }
 
 void setEnvironmentVariables(const char *ldLibPath, const char *originalDir, const char *gameDir, int zink, int nvidia,
-                             const char *confFilePath)
+                             const char *confFilePath, const char *contFilePath, const char *contDbFilePath, char *libOpenal)
 {
-    setenv("LD_PRELOAD", ldLibPath, 1);
+
+    if (libOpenal != NULL)
+    {
+        char ldpreloadEnv[MAX_PATH_LENGTH];
+        snprintf(ldpreloadEnv, sizeof(ldpreloadEnv), "%s %s", ldLibPath, libOpenal);
+        setenv("LD_PRELOAD", ldpreloadEnv, 1);
+    }
+    else
+    {
+        setenv("LD_PRELOAD", ldLibPath, 1);
+    }
+
     if (hasSpaces(ldLibPath))
     {
         log_error("The path \'%s\' where lindbergh.so is located cannot contain spaces.", ldLibPath);
@@ -317,9 +340,51 @@ void setEnvironmentVariables(const char *ldLibPath, const char *originalDir, con
         if (hasSpaces(confFilePath))
         {
             log_error("The path \'%s\' for the config file cannot contain spaces.", confFilePath);
-            exit(EXIT_FAILURE);
+            log_error("The loader will use the default configuration.");
+            confFilePath = "";
         }
+        else if(!fileExists(confFilePath))
+        {
+            log_error("The file \'%s\' does not exist, will be using default config.", confFilePath);
+            confFilePath = "";
+        }
+
         setenv(LINDBERGH_CONFIG_PATH, confFilePath, 1);
+    }
+
+    if (strlen(contFilePath) > 0)
+    {
+        if (hasSpaces(contFilePath))
+        {
+            log_error("The path \'%s\' for the controls file cannot contain spaces.", contFilePath);
+            log_error("Controls will use the default controls config.");
+            contFilePath = "";
+        }
+        else if (!fileExists(contFilePath))
+        {
+            log_error("The file \'%s\' does not exist, will try to load controls.ini from the game folder or", contFilePath);
+            log_error("will be using the default controls config.");
+            contFilePath = "";
+        }
+
+        setenv(LINDBERGH_CONTROLS_PATH, contFilePath, 1);
+    }
+
+    if (strlen(contDbFilePath) > 0)
+    {
+        if (hasSpaces(contDbFilePath))
+        {
+            log_error("The path \'%s\' for the gamecontrollerdb.txt file cannot contain spaces.", contDbFilePath);
+            log_error("Additional game controller mappings will not be added.");
+            contDbFilePath = "";
+        }
+        else if (!fileExists(contDbFilePath))
+        {
+            log_error("The file \'%s\' does not exist, additional mapping db will be omitted.", contDbFilePath);
+            contDbFilePath = "";
+        }
+
+        setenv(LINDBERGH_CONTROLS_DB_PATH, contDbFilePath, 1);
     }
 
     if (zink && nvidia)
@@ -348,33 +413,59 @@ void setEnvironmentVariables(const char *ldLibPath, const char *originalDir, con
     }
 }
 
-void printUsage(char *argv[])
+void printUsage(char *programName)
 {
-    printf("%s [GAME_PATH] [OPTIONS]\n", argv[0]);
+    printf("%s [GAME_PATH] [OPTIONS]\n", basename(programName));
     printf("Options:\n");
-    printf("  --test | -t         Runs the test mode\n");
-    printf("  --segaboot | -s     Runs segaboot\n");
-    printf("  --zink | -z         Runs with Zink\n");
-    printf("  --nvidia | -n       Runs with nVidia GPU when is as a secondary GPU in a laptop\n");
-    printf("  --gdb               Runs with GDB\n");
-    printf("  --list-controllers  Lists available controllers and inputs\n");
-    printf("  --version           Displays the version of the loader and team's names\n");
-    printf("  --help              Displays this usage text\n");
-    printf("  --config | -c       Specifies configuration path\n");
-    printf("  --gamepath | -g     Specifies game path without ELF name\n");
+    printf("  --test             | -t  Runs the test mode\n");
+    printf("  --segaboot         | -s  Runs segaboot\n");
+    printf("  --zink             | -z  Runs with Zink\n");
+    printf("  --nvidia           | -n  Runs with nVidia GPU when is as a secondary GPU in a laptop\n");
+    printf("  --gdb                    Runs with GDB\n");
+    printf("  --list-controllers | -l  Lists available controllers and inputs for EVDEV.\n");
+    printf("  --list-guids       | -lg Lists available SDL controllers GUIDs.\n");
+    printf("  --version          | -v  Displays the version of the loader and team's names\n");
+    printf("  --help             | -h  Displays this usage text\n");
+    printf("  --config           | -c  Specifies configuration ini file path\n");
+    printf("  --controls         | -o  Specifies controls ini file path\n");
+    printf("  --controlsdb       | -d  Specifies gamecontrollerdb.txt file path\n");
+    printf("  --gamepath         | -g  Specifies game path without ELF name\n");
+    printf("  --create           | -C  Creates a default config or controls file. Use '--create --help' for more info.\n");
+}
+
+void printCreateUsage(char *programName)
+{
+    printf("Usage for the --create option:\n");
+    printf("  %s --create <sub-option> [output_path] [output_filename]\n\n", basename(programName));
+    printf("Arguments:\n");
+    printf("  sub-option          The type of file to create. Can be one of:\n");
+    printf("                        config   (for lindbergh.ini)\n");
+    printf("                        controls (for controls.ini)\n");
+    printf("  output_path         (Optional) The directory where the file will be created.\n");
+    printf("                      If not provided, the file is created in the current directory.\n");
+    printf("  output_filename     (Optional) The name of the file to be created. Must end with .ini.\n");
+    printf("                      If not provided, the default name will be used (lindbergh.ini or controls.ini).\n\n");
+    printf("Examples:\n");
+    printf("  %s --create config\n", basename(programName));
+    printf("  %s --create controls ./my_game_config\n", basename(programName));
+    printf("  %s --create config ./my_game_config myconfig.ini\n", basename(programName));
+    printf("  %s --create --help\n", basename(programName));
 }
 
 void printVersion()
 {
-    printf("Lindbergh Loader v%d.%d\n", MAJOR_VERSION, MINOR_VERSION);
-    printf("Created by: %s\n", TEAM);
+    printf("Lindbergh Loader v%d.%d.%d\n", MAJOR_VERSION, MINOR_VERSION, UPDATE_VERSION);
+    printf("Lead Programming/Reversing: %s\n", TEAM);
+    printf("Collaborators: %s\n", COLLABORATORS);
+    printf("Special Thanks to: %s\n", SPECIAL_THANKS);
 }
 
-int listControllers()
+int listEvDevControllers()
 {
     Controllers controllers;
 
-    ControllerStatus status = initControllers(&controllers);
+    ControllerStatus status = loadEvdevControllers(&controllers);
+
     if (status != CONTROLLER_STATUS_SUCCESS)
     {
         log_error("Failed to list controllers\n");
@@ -395,28 +486,137 @@ int listControllers()
         }
     }
 
-    stopControllers(&controllers);
+    stopEvdevControllers(&controllers);
 
     return EXIT_SUCCESS;
 }
 
 int main(int argc, char *argv[])
 {
-    if (argc > 1 && strcmp(argv[1], "--version") == 0)
+    if (argc > 1 && (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-v") == 0))
     {
         printVersion();
         return EXIT_SUCCESS;
     }
 
-    if (argc > 1 && strcmp(argv[1], "--help") == 0)
+    if (argc > 1 && (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0))
     {
-        printUsage(argv);
+        printUsage(argv[0]);
         return EXIT_SUCCESS;
     }
 
-    if (argc > 1 && strcmp(argv[1], "--list-controllers") == 0)
+    if (argc > 1 && (strcmp(argv[1], "--list-controllers") == 0 || strcmp(argv[1], "-l") == 0))
     {
-        return listControllers();
+        return listEvDevControllers();
+    }
+
+    if (argc > 1 && (strcmp(argv[1], "--list-guids") == 0 || strcmp(argv[1], "-lg") == 0))
+    {
+        return listSdlControllers();
+    }
+    
+    if (argc > 1 && (strcmp(argv[1], "--create") == 0 || strcmp(argv[1], "-C") == 0))
+    {
+        if (argc < 3)
+        {
+            log_error("Missing arguments for --create. See usage below.\n");
+            printCreateUsage(argv[0]);
+            return EXIT_FAILURE;
+        }
+
+        if (strcmp(argv[2], "--help") == 0)
+        {
+            printCreateUsage(argv[0]);
+            return EXIT_SUCCESS;
+        }
+
+        char *subOption = argv[2];
+        char *path = ".";
+        char *filename = NULL;
+        char *argCopyForDirname = NULL;
+        char *argCopyForBasename = NULL;
+
+
+        if (strcmp(subOption, "config") != 0 && strcmp(subOption, "controls") != 0)
+        {
+            log_error("Invalid sub-option for --create: '%s'. Must be 'config' or 'controls'.\n", subOption);
+            printCreateUsage(argv[0]);
+            return EXIT_FAILURE;
+        }
+
+        if (argc > 3)
+        {
+            if (argc > 4)
+            {
+                path = argv[3];
+                filename = argv[4];
+            }
+            else
+            {
+                char *arg = argv[3];
+                const char *dot = strrchr(arg, '.');
+                if (dot && strcmp(dot, ".ini") == 0)
+                {
+                    argCopyForDirname = strdup(arg);
+                    argCopyForBasename = strdup(arg);
+                    path = dirname(argCopyForDirname);
+                    filename = basename(argCopyForBasename);
+                }
+                // if arg is a path
+                else
+                {
+                    path = arg;
+                }
+            }
+        }
+
+        if (filename)
+        {
+            const char *dot = strrchr(filename, '.');
+            if (!dot || strcmp(dot, ".ini") != 0)
+            {
+                log_error("Invalid filename: '%s'. Must have .ini extension.\n", filename);
+                if(argCopyForDirname) free(argCopyForDirname);
+                if(argCopyForBasename) free(argCopyForBasename);
+                return EXIT_FAILURE;
+            }
+        }
+
+        if (!dirExists(path))
+        {
+            log_error("Output directory does not exist: %s\n", path);
+            if(argCopyForDirname) free(argCopyForDirname);
+            if(argCopyForBasename) free(argCopyForBasename);
+            return EXIT_FAILURE;
+        }
+
+        char finalPath[MAX_PATH_LENGTH];
+
+        if (strcmp(subOption, "config") == 0)
+        {
+            if (!filename)
+            {
+                filename = "lindbergh.ini";
+            }
+            snprintf(finalPath, sizeof(finalPath), "%s/%s", path, filename);
+            createDefaultIni(finalPath);
+            log_info("Successfully created configuration file at %s\n", finalPath);
+        }
+        else if (strcmp(subOption, "controls") == 0)
+        {
+            if (!filename)
+            {
+                filename = "controls.ini";
+            }
+            snprintf(finalPath, sizeof(finalPath), "%s/%s", path, filename);
+            createDefaultControlsIni(finalPath);
+            log_info("Successfully created controls file at %s\n", finalPath);
+        }
+
+        if(argCopyForDirname) free(argCopyForDirname);
+        if(argCopyForBasename) free(argCopyForBasename);
+
+        return EXIT_SUCCESS;
     }
 
     char passedGamePath[MAX_PATH_LENGTH] = "";
@@ -424,6 +624,8 @@ int main(int argc, char *argv[])
     char forcedGameDir[MAX_PATH_LENGTH] = "";
     char gameELF[MAX_PATH_LENGTH] = "";
     char extConfigPath[MAX_PATH_LENGTH] = "";
+    char extControlsPath[MAX_PATH_LENGTH] = "";
+    char extControlsDbPath[MAX_PATH_LENGTH] = "";
     char originalDir[MAX_PATH_LENGTH] = "";
     bool gdb = false;
     bool testMode = false;
@@ -470,6 +672,28 @@ int main(int argc, char *argv[])
                 break;
             }
             strncpy(extConfigPath, argv[i + 1], MAX_PATH_LENGTH);
+            i += 1;
+            continue;
+        }
+
+        if (strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--controls") == 0)
+        {
+            if (i + 1 >= argc)
+            {
+                break;
+            }
+            strncpy(extControlsPath, argv[i + 1], MAX_PATH_LENGTH);
+            i += 1;
+            continue;
+        }
+
+        if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--controlsdb") == 0)
+        {
+            if (i + 1 >= argc)
+            {
+                break;
+            }
+            strncpy(extControlsDbPath, argv[i + 1], MAX_PATH_LENGTH);
             i += 1;
             continue;
         }
@@ -584,7 +808,7 @@ int main(int argc, char *argv[])
         if (gameELF[0] == '\0')
         {
             log_error("No game ELF found in current directory.\n");
-            printUsage(argv);
+            printUsage(argv[0]);
             return EXIT_FAILURE;
         }
     }
@@ -595,19 +819,29 @@ int main(int argc, char *argv[])
     }
 
     char *targetedGameDir = strlen(forcedGameDir) ? forcedGameDir : passedGamePath;
-    char *lib_path = findPreloadLibrary(originalDir, targetedGameDir);
-    if (!lib_path)
+    char *libPath = strdup(findPreloadLibrary(originalDir, PRELOAD_FILE_NAME));
+    if (strcmp(libPath, "") == 0)
     {
         log_error("Error: %s not found in known locations.\n", PRELOAD_FILE_NAME);
         return 1;
     }
 
-    setEnvironmentVariables(lib_path, originalDir, targetedGameDir, zink, nvidia, extConfigPath);
+    char *libOpenal = NULL;
+    if (strstr(gameELF, "q2satl_lind") != NULL)
+    {
+        libOpenal = strdup(findPreloadLibrary(originalDir, PRELOAD_OPENAL));
+        if (strcmp(libOpenal, "") == 0)
+        {
+            printf("You might not get sound because libopenal.so.0 was not found.\n");
+        }
+    }
+    
+    setEnvironmentVariables(libPath, originalDir, targetedGameDir, zink, nvidia, extConfigPath, extControlsPath, extControlsDbPath,
+                            libOpenal);
 
     if (segaboot)
     {
         strcpy(gameELF, "segaboot -t");
-        // testMode = true;
     }
 
     // Final command
@@ -626,7 +860,10 @@ int main(int argc, char *argv[])
     if (gdb)
     {
         char temp[128];
-        strcpy(temp, "gdb ");
+        if (testMode)
+            strcpy(temp, "gdb --args ");
+        else
+            strcpy(temp, "gdb ");
         strcat(temp, command);
         strcpy(command, temp);
     }

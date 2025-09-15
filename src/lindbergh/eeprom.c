@@ -1,11 +1,7 @@
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "config.h"
-#include "eeprom.h"
-#include "eeprom_settings.h"
+#include "eepromSettings.h"
 
 #define I2C_SMBUS_BLOCK_MAX 32
 #define I2C_GET_FUNCTIONS 0x705
@@ -96,7 +92,7 @@ int initEeprom()
         break;
     case OUTRUN_2_SP_SDX:
     case OUTRUN_2_SP_SDX_REVA:
-        if (strcmp(getConfig()->or2IP, "") != 0)
+        if (getConfig()->enableNetworkPatches && strcmp(getConfig()->or2IP, "") != 0 && strcmp(getConfig()->or2Netmask, "") != 0)
         {
             if (setIP(eeprom, getConfig()->or2IP, getConfig()->or2Netmask) != 0)
             {

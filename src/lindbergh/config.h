@@ -1,5 +1,6 @@
 #pragma once
 
+#include <SDL3/SDL_keycode.h>
 #include <stdint.h>
 #include <sys/types.h>
 
@@ -18,7 +19,7 @@
 #define HUMMER 0x4e6d5c64                                    // DVP-0057B
 #define HUMMER_SDLX 0xf3778f44                               // DVP-0057
 #define HUMMER_EXTREME 0x7129c32b                            // DVP-0079
-#define HUMMER_EXTREME_MDX 0xfeaf8484                        // DVP-0084
+#define HUMMER_EXTREME_MDX 0xfeaf8484                        // DVP-0083
 #define INITIALD_4_REVA 0x361d1cbe                           // DVP-0019A
 #define INITIALD_4_REVB 0x606914be                           // DVP-0019B
 #define INITIALD_4_REVC 0x50f1c269                           // DVP-0019C
@@ -28,6 +29,7 @@
 #define INITIALD_4_EXP_REVC 0x65ea22e3                       // DVP-0030C
 #define INITIALD_4_EXP_REVD 0x62cc73a9                       // DVP-0030D
 #define INITIALD_5_JAP_REVA 0xb3183112                       // DVP-0070A
+#define INITIALD_5_JAP_REVC 0xda04e5e0                       // DVP-0070C   
 #define INITIALD_5_JAP_REVF 0xfc3dc85d                       // DVP-0070F
 #define INITIALD_5_EXP 0x701b88cf                            // DVP-0075
 #define INITIALD_5_EXP_20 0x77c6b58b                         // DVP-0084
@@ -43,8 +45,10 @@
 #define OUTRUN_2_SP_SDX_REVA_TEST2 0x4ee20716                // DVP-0015A
 #define OUTRUN_2_SP_SDX_TEST 0xf1c89eae                      // DVP-0015
 #define PRIMEVAL_HUNT 0x6868215c                             // DVP-0048A
+#define QUIZ_AXA 0x434dee4                                   // DVP-0025H
+#define QUIZ_AXA_LIVE 0x7103fafc                             // DVP-0087D
 #define RAMBO 0x48f49dd                                      // DVP-0069
-#define RAMBO_CHINA 0x0025                                   // DVP-????
+#define RAMBO_CHINA 0xad864fec                               // DVP-0078
 #define R_TUNED 0xa68d053d                                   // DVP-0060
 #define SEGABOOT 0x0027                                      // DVP-????
 #define SEGABOOT_2_4 0x38d56318                              // DVP-????
@@ -112,11 +116,30 @@ typedef enum
 {
     SHOOTING,
     DRIVING,
-    HARLEY,
-    FIGHTING,
+    DIGITAL,
     ABC,
     MAHJONG
 } GameType;
+
+typedef enum
+{
+    GROUP_ABC,
+    GROUP_HOD4,
+    GROUP_HOD4_TEST,
+    GROUP_HOD4_SP,
+    GROUP_HOD4_SP_TEST,
+    GROUP_HUMMER,
+    GROUP_ID4_EXP,
+    GROUP_ID4_JAP,
+    GROUP_ID5,
+    GROUP_LGJ,
+    GROUP_OUTRUN,
+    GROUP_OUTRUN_TEST,
+    GROUP_RAMBO,
+    GROUP_VF5,
+    GROUP_VT3,
+    GROUP_VT3_TEST
+} GameGroup;
 
 typedef enum
 {
@@ -224,7 +247,7 @@ typedef struct
     int emulateRideboard;
     int emulateDriveboard;
     int emulateMotionboard;
-    int emulateCardreader;
+    int emulateHW210CardReader;
     int emulateTouchscreen;
     char cardFile1[MAX_PATH_LENGTH];
     char cardFile2[MAX_PATH_LENGTH];
@@ -242,6 +265,7 @@ typedef struct
     Colour lindberghColour;
     GameStatus gameStatus;
     GameType gameType;
+    GameGroup gameGroup;
     KeyMapping keymap;
     uint32_t crc32;
     GameRegion region;
@@ -249,6 +273,7 @@ typedef struct
     int showDebugMessages;
     char *gameID;
     char *gameTitle;
+    char *gameShortTitle;
     char *gameDVP;
     Colour gameLindberghColour;
     char  *gameReleaseYear;
@@ -263,40 +288,54 @@ typedef struct
     int fpsLimiter;
     float fpsTarget;
     int lgjRenderWithMesa;
-    int noSDL;
-    int phMode;
+    int ramboGunsSwitch;
+    int id5ChineseLanguage;
+    float idSteeringPercentageReduction;
+    int phScreenMode;
+    int phTestScreenSingle;
     int disableBuiltinFont;
     int disableBuiltinLogos;
     int hideCursor;
+    int customCursorEnabled;
     char customCursor[MAX_PATH_LENGTH];
     int customCursorWidth;
     int customCursorHeight;
-    char phTouchCursor[MAX_PATH_LENGTH];
-    int phTouchCursorWidth;
-    int phTouchCursorHeight;
+    char touchCursor[MAX_PATH_LENGTH];
+    int touchCursorWidth;
+    int touchCursorHeight;
     int mj4EnabledAtT;
+    int enableNetworkPatches;
+    char idIpSeat1[16];
+    char idIpSeat2[16];
+    char nicName[20];
     char or2IP[16];
     char or2Netmask[16];
+    char IpCab1[16];
+    char IpCab2[16];
+    char IpCab3[16];
+    char IpCab4[16];
+    char tooSpicyIpCab1[16];
+    char tooSpicyIpCab2[16];
+    char srtvIP[16];
     float cpuFreqGhz;
     ArcadeInputs arcadeInputs;
-    int inputMode;  // 0 = both, 1 = SDL/X11 only, 2 = EVDEV only
+    int inputMode;  // 0 = both, 1 = SDL, 2 = EVDEV only
     int skipOutrunCabinetCheck;
     float whiteBorderPercentage;
     float blackBorderPercentage;
     int borderEnabled;
 } EmulatorConfig;
 
-uint32_t get_crc32(const char *s, ssize_t n);
-KeyMapping getDefaultKeymap();
 int initConfig(const char* configFilePath);
+void setDefaultValues(EmulatorConfig *cfg);
 EmulatorConfig *getConfig();
 char *getGameName();
-char *getDVPName();
-char *getGameID();
+char *getDvpName();
+char *getGameId();
 int getGameLindberghColour();
 char *getGameReleaseYear();
 char *getGameNativeResolutions();
 const char *getLindberghColourString(Colour lindberghColour);
 const char *getGameRegionString(GameRegion region);
 const char *getGpuTypeString(GpuType gpuType);
-
+extern SDL_Keycode getSDLKeycode(const char *input);

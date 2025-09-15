@@ -1,10 +1,8 @@
-#include "jvs.h"
-
-#include "config.h"
-
-#include <string.h>
 #include <math.h>
 #include <pthread.h> /* POSIX threads API to create and manage threads in the program */
+
+#include "jvs.h"
+#include "config.h"
 
 /* The in and out packets used to read and write to and from*/
 JVSPacket inputPacket, outputPacket;

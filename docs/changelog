@@ -2,23 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.0.14]
+## [2.1.0]
 ### Added
+    - Rambo DVP-0078 (China version) support.
+    - ID5 DVP-0070C support.
+    - AxA games added.
+    - An option to set a percentage to reduce the travel in ID games steering wheel.
+    - An option to change the language in ID5 EXP (DVP-0084 and DVP-0084A) to Chinese.
+    - An option to change the way the Guns are shown in Rambo.
+    - New controls guide in pdf format inside docs folder.
+    - Change the Outrun Testmode font to a built in font that scales with the resolution set.
+    - An option in lindberg elf to specify a comunity built game controller database.
+    - An option in lindberg elf to generate a default controls.ini.
+    - An option to in lindberg elf generate a default lindbergh.ini file.
+    - SDL controls configuration using logical names.
+    - SDL input remade with separate configuration file.
+    - Option to make Primeval Hunt test mode load as a single screen.
+    - Blitting to support stretching with fullscreen on the fly. (F11 to switch from / to fullscreen).
     - Bobby's birthday checking!
-    - FPS target to float.
-### Fixed
-    - a bub in config.c where MJ4_ENABLED_ALL_THE_TIME was using the wrong variable.
-
-## [2.0.13]
-### Added
-    
-    - Clear window when the game is loading to prevent ghosting in SDL
-    - Prevent the created windows to resize/maximize.
-    - Version in github now matches the version in the changelog.
-### Fixed
-    - Fixed a bug in Let's Go Jungle Special Resolution Patch.
+    - Prevent the created windows to resize/maximize in LGJ games and PH (Cause issues).
+### Code changes
+    - config file format changed to ini (TOML format).
+    - Removed X11 completely and only SDL is used to create windows and handle controls.
+    - Cleaned the shader patches files.
+    - Moved all the network related code to a new file.
+    - Moved all the shader caching to a new file.
+    - Refactored config.c to make it more readable.
+    - Cleaned the code, fixed all the variables, functions and file names to use the same naming convention.
     - Cleaned unnecessary global variables in resolution.c
-    - Fixed a bug in that prevented the loader to start when the current folder contained spaces and lindbergh.so was there.
+    - Replaced stb_image with SDL_image.
+    - Switched to SDL3
+    - Version in github now matches the version in the changelog.
+    - FPS target to float.
+    - Clear window background when the game is loading to prevent ghosting in SDL
+### Fixed
+    - a bug in config.c where MJ4_ENABLED_ALL_THE_TIME was using the wrong variable.
+    - Fixed a bug in Let's Go Jungle Special Resolution Patch.
+    - Fixed a bug that prevented the loader to start when the current folder contained spaces and lindbergh.so was there.
     
 ## [2.0.12]
 ### Added

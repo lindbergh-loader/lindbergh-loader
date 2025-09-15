@@ -1,78 +1,50 @@
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
-#include <libgen.h>
-#include <stdint.h>
-#include <time.h>
 #endif
-
 #ifndef __i386__
 #define __i386__
 #endif
-
 #undef __x86_64__
-#include <arpa/inet.h>
-#include <dlfcn.h>
-#include <link.h>
-#include <linux/sockios.h>
-#include <math.h>
-#include <netinet/in.h>
-#include <semaphore.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <ucontext.h>
-#include <unistd.h>
-#include <signal.h>
-#include <ifaddrs.h>
+#include <ctype.h>
 #include <dirent.h>
+#include <link.h>
+#include <math.h>
+#include <net/if.h>
+#include <signal.h>
+#include <SDL3/SDL.h>
+#include <sys/stat.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <sys/ioctl.h>
 
-#include "baseboard.h"
+#include "cardReader.h"
+#include "baseBoard.h"
 #include "config.h"
-#include "driveboard.h"
+#include "driveBoard.h"
 #include "eeprom.h"
-#include "gpuvendor.h"
-#include "input.h"
+#include "evdevInput.h"
+#include "fpsLimiter.h"
+#include "gpuVendor.h"
+#include "hook.h"
 #include "jvs.h"
-#include "patch.h"
-#include "pcidata.h"
-#include "resolution.h"
-#include "rideboard.h"
-#include "securityboard.h"
-#include "shader_patches.h"
-#include "fps_limiter.h"
-#include "evdevinput.h"
-#include "card_reader.h"
-#include "touchscreen.h"
 #include "log.h"
-#include "resources/font.h"
+#include "patch.h"
+#include "pciData.h"
+#include "resolution.h"
 #include "resources/logo.h"
+#include "resources/font.h"
+#include "rideBoard.h"
+#include "sdlCalls.h"
+#include "sdlInput.h"
+#include "securityBoard.h"
+#include "shaderCache.h"
+#include "touchScreen.h"
 
 #define HOOK_FILE_NAME "/dev/zero"
 
-#define BASEBOARD 0
-#define EEPROM 1
-#define SERIAL0 2
-#define SERIAL1 3
-#define PCI_CARD_000 4
-
-#define CPUINFO 0
-#define OSRELEASE 1
-#define PCI_CARD_1F0 2
-#define FILE_RW1 3
-#define FILE_RW2 4
-#define FILE_HARLEY 5
-#define FILE_FONT_ABC 6
-#define FILE_FONT_TGA 7
-#define FILE_LOGO_TGA 8
-#define ROUTE 9
-
-int hooks[5] = {-1, -1, -1, -1, -1};
+DeviceType hooks[5] = {-1, -1, -1, -1, -1};
 FILE *fileHooks[10] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
-int fileRead[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+FileTypes fileRead[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 char envpath[100];
 
 int fontABCidx = 0;
@@ -82,14 +54,21 @@ int logoTGAidx = 0;
 uint32_t elf_crc = 0;
 
 uint32_t gId = 0;
+int gGrp = -1;
+
+int gWidth;
+int gHeight;
 
 extern int hummerExtremeShaderFileIndex;
 extern bool cachedShaderFilesLoaded;
 extern char vf5StageNameAbbr[5];
 bool phShowCursorInGame = false;
 
-extern fps_limit fpsLimit;
+extern FpsLimit fpsLimit;
 Controllers controllers = {0};
+extern SDLControllers sdlJoysticks;
+
+char *configFolder = {0};
 
 static int callback(struct dl_phdr_info *info, size_t size, void *data);
 
@@ -114,73 +93,92 @@ static void handleSegfault(int signal, siginfo_t *info, void *ptr)
     // Get the address of the instruction causing the segfault
     // uint8_t *code = (uint8_t *)ctx->uc_mcontext.gregs[REG_EIP];
     greg_t eip_value = ctx->uc_mcontext.gregs[REG_EIP];
-    uint8_t *code = (uint8_t *)(uintptr_t)eip_value; // Use uintptr_t to ensure proper alignment
+    uint8_t *code = (uint8_t *)(size_t)eip_value; // Use uintptr_t to ensure proper alignment
 
     switch (*code)
     {
-    case 0xED: // IN
+        case 0xED: // IN
+        {
+            // Get the port number from the EDX register
+            uint16_t port = ctx->uc_mcontext.gregs[REG_EDX] & 0xFFFF;
+
+            // The first port called is usually random, but everything after that
+            // is a constant offset, so this is a hack to fix that.
+            // When run as sudo it works fine!?
+
+            if (basePortAddress == 0xFFFF)
+                basePortAddress = port;
+
+            // Adjust the port number if necessary
+            if (port > 0x38)
+                port = port - basePortAddress;
+
+            // Call the security board input function with the port number and data
+            securityBoardIn(port, (uint32_t *)&(ctx->uc_mcontext.gregs[REG_EAX]));
+
+            ctx->uc_mcontext.gregs[REG_EIP]++;
+            return;
+        }
+        break;
+
+        case 0xE7: // OUT IMMEDIATE
+        {
+            // Increment the instruction pointer by two to skip over this instruction
+            ctx->uc_mcontext.gregs[REG_EIP] += 2;
+            return;
+        }
+        break;
+
+        case 0xE6: // OUT IMMEDIATE
+        {
+            // Increment the instruction pointer by two to skip over this instruction
+            ctx->uc_mcontext.gregs[REG_EIP] += 2;
+            return;
+        }
+        break;
+
+        case 0xEE: // OUT
+        {
+            uint16_t port = ctx->uc_mcontext.gregs[REG_EDX] & 0xFFFF;
+            uint8_t data = ctx->uc_mcontext.gregs[REG_EAX] & 0xFF;
+            ctx->uc_mcontext.gregs[REG_EIP]++;
+            return;
+        }
+        break;
+
+        case 0xEF: // OUT
+        {
+            uint16_t port = ctx->uc_mcontext.gregs[REG_EDX] & 0xFFFF;
+            ctx->uc_mcontext.gregs[REG_EIP]++;
+            return;
+        }
+        break;
+
+        default:
+            // repeat_printf("Skipping SEGFAULT %X\n", *code);
+            log_warn("Skipping SEGFAULT %X\n", *code);
+            ctx->uc_mcontext.gregs[REG_EIP]++;
+            // abort();
+    }
+}
+
+uint32_t getCrc32(const char *s, ssize_t n)
+{
+    uint32_t crc = 0xFFFFFFFF;
+
+    for (size_t i = 0; i < n; i++)
     {
-        // Get the port number from the EDX register
-        uint16_t port = ctx->uc_mcontext.gregs[REG_EDX] & 0xFFFF;
-
-        // The first port called is usually random, but everything after that
-        // is a constant offset, so this is a hack to fix that.
-        // When run as sudo it works fine!?
-
-        if (basePortAddress == 0xFFFF)
-            basePortAddress = port;
-
-        // Adjust the port number if necessary
-        if (port > 0x38)
-            port = port - basePortAddress;
-
-        // Call the security board input function with the port number and data
-        securityBoardIn(port, (uint32_t *)&(ctx->uc_mcontext.gregs[REG_EAX]));
-
-        ctx->uc_mcontext.gregs[REG_EIP]++;
-        return;
+        char ch = s[i];
+        for (size_t j = 0; j < 8; j++)
+        {
+            uint32_t b = (ch ^ crc) & 1;
+            crc >>= 1;
+            if (b)
+                crc = crc ^ 0xEDB88320;
+            ch >>= 1;
+        }
     }
-    break;
-
-    case 0xE7: // OUT IMMEDIATE
-    {
-        // Increment the instruction pointer by two to skip over this instruction
-        ctx->uc_mcontext.gregs[REG_EIP] += 2;
-        return;
-    }
-    break;
-
-    case 0xE6: // OUT IMMEDIATE
-    {
-        // Increment the instruction pointer by two to skip over this instruction
-        ctx->uc_mcontext.gregs[REG_EIP] += 2;
-        return;
-    }
-    break;
-
-    case 0xEE: // OUT
-    {
-        uint16_t port = ctx->uc_mcontext.gregs[REG_EDX] & 0xFFFF;
-        uint8_t data = ctx->uc_mcontext.gregs[REG_EAX] & 0xFF;
-        ctx->uc_mcontext.gregs[REG_EIP]++;
-        return;
-    }
-    break;
-
-    case 0xEF: // OUT
-    {
-        uint16_t port = ctx->uc_mcontext.gregs[REG_EDX] & 0xFFFF;
-        ctx->uc_mcontext.gregs[REG_EIP]++;
-        return;
-    }
-    break;
-
-    default:
-        // repeat_printf("Skipping SEGFAULT %X\n", *code);
-        log_warn("Skipping SEGFAULT %X\n", *code);
-        ctx->uc_mcontext.gregs[REG_EIP]++;
-        // abort();
-    }
+    return ~crc;
 }
 
 /**
@@ -276,6 +274,9 @@ bool checkOS_ID()
  */
 void __attribute__((constructor)) hook_init()
 {
+    // We force x11 for SDL so the window do not scale in wayland.
+    setenv("SDL_VIDEODRIVER", "x11", 1);
+
     // Get offsets of the Game's ELF and calculate CRC32.
     dl_iterate_phdr(callback, NULL);
 
@@ -289,21 +290,23 @@ void __attribute__((constructor)) hook_init()
     initConfig(envPath);
 
     gId = getConfig()->crc32;
+    gGrp = getConfig()->gameGroup;
+    gWidth = getConfig()->width;
+    gHeight = getConfig()->height;
 
     if (!checkOS_ID())
     {
         log_warn("Seems like you're not in debian-like system. There might be unexpected issues.");
     }
 
-    if (getConfig()->fpsLimiter == 1)
-    {
-        fpsLimit.targetFrameTime = 1000000 / getConfig()->fpsTarget;
-        fpsLimit.frameEnd = Clock_now();
-    }
+    initFpsLimiter();
 
     getGPUVendor();
 
     if (initPatch() != 0)
+        exit(1);
+
+    if (initSDL() != 0)
         exit(1);
 
     if (initResolutionPatches() != 0)
@@ -333,24 +336,25 @@ void __attribute__((constructor)) hook_init()
             exit(1);
     }
 
-    if (getConfig()->emulateCardreader)
+    if (getConfig()->emulateHW210CardReader)
     {
         if (initCardReader() != 0)
             exit(1);
     }
 
-    if (initInput() != 0)
+    envPath = getenv("LINDBERGH_CONTROLS_PATH");
+    if (initSdlInput(envPath) != 0)
         exit(1);
 
-    if (initControllers(&controllers) != 0)
+    if (initEvdevControllers(&controllers) != 0)
         exit(1);
 
     securityBoardSetDipResolution(getConfig()->width, getConfig()->height);
 
     printf("\nSEGA Lindbergh Emulator\nBy the Lindbergh Development Team 2025\n\n");
     printf("  GAME:        %s\n", getGameName());
-    printf("  GAME ID:     %s\n", getGameID());
-    printf("  DVP:         %s\n", getDVPName());
+    printf("  GAME ID:     %s\n", getGameId());
+    printf("  DVP:         %s\n", getDvpName());
     printf("  GPU VENDOR:  %s\n", getConfig()->GPUVendorString);
 
     for (int i = 0; i < controllers.count; i++)
@@ -362,25 +366,29 @@ void __attribute__((constructor)) hook_init()
     }
     printf("\n");
 
-    switch (gId)
+    for (int i = 0; i < MAX_JOYSTICKS; i++)
     {
-    case LETS_GO_JUNGLE:
-    case LETS_GO_JUNGLE_REVA:
-    case LETS_GO_JUNGLE_SPECIAL:
-    case AFTER_BURNER_CLIMAX:
-    case AFTER_BURNER_CLIMAX_REVA:
-    case AFTER_BURNER_CLIMAX_REVB:
-    case AFTER_BURNER_CLIMAX_SDX:
-    case AFTER_BURNER_CLIMAX_SDX_REVA:
-    case AFTER_BURNER_CLIMAX_SE:
-    case AFTER_BURNER_CLIMAX_SE_REVA:
-    case INITIALD_5_JAP_REVA:
-    case INITIALD_5_JAP_REVF:
-    case INITIALD_5_EXP_20:
-    case INITIALD_5_EXP_20A:
-        if (getConfig()->GPUVendor == ATI_GPU)
+        SDL_Joystick *joy = NULL;
+        if (sdlJoysticks.controllers[i])
+            joy = SDL_GetGamepadJoystick(sdlJoysticks.controllers[i]);
+        else if (sdlJoysticks.joysticks[i])
+            joy = sdlJoysticks.joysticks[i];
+
+        if (joy != NULL)
+            printf("  SDL CONTROLLER %d: %s\n", i, SDL_GetJoystickName(joy));
+    }
+    printf("\n");
+
+    switch (gGrp)
+    {
+        case GROUP_LGJ:
+        case GROUP_ABC:
+        case GROUP_ID5:
         {
-            printf("WARNING: Game %s is unsupported in AMD GPU with ATI driver\n", getGameName());
+            if (getConfig()->GPUVendor == ATI_GPU)
+            {
+                printf("WARNING: Game %s is unsupported in AMD GPU with ATI driver\n", getGameName());
+            }
         }
     }
 }
@@ -396,33 +404,15 @@ DIR *opendir(const char *dirname)
 {
     DIR *(*_opendir)(const char *dirname) = dlsym(RTLD_NEXT, "opendir");
 
-    switch (gId)
+    if (strcmp(dirname, "/tmp/") == 0 && gGrp == GROUP_ID5)
     {
-    case INITIALD_5_EXP:
-    case INITIALD_5_EXP_20:
-    case INITIALD_5_EXP_20A:
-    case INITIALD_5_JAP_REVA:
-    case INITIALD_5_JAP_REVF:
-        if (strcmp(dirname, "/tmp/") == 0)
-        {
-            return _opendir(dirname + 1);
-        }
+        return _opendir(dirname + 1);
     }
 
     // Fix for Outrun high scores
-    switch (gId)
+    if (strcmp(dirname, "/home/disk1/rankingdata") == 0 && (gGrp == GROUP_OUTRUN || gGrp == GROUP_OUTRUN_TEST))
     {
-    case OUTRUN_2_SP_SDX:
-    case OUTRUN_2_SP_SDX_REVA:
-    case OUTRUN_2_SP_SDX_TEST:
-    case OUTRUN_2_SP_SDX_REVA_TEST:
-    case OUTRUN_2_SP_SDX_REVA_TEST2:
-    {
-        if (strcmp(dirname, "/home/disk1/rankingdata") == 0)
-        {
-            return _opendir("./rankingdata");
-        }
-    }
+        return _opendir("./rankingdata");
     }
     return _opendir(dirname);
 }
@@ -438,19 +428,9 @@ int remove(const char *path)
 {
     int (*_remove)(const char *path) = dlsym(RTLD_NEXT, "remove");
 
-    switch (gId)
+    if (strcmp(path, "/home/disk1/rankingdata/%s") == 0 && (gGrp == GROUP_OUTRUN || gGrp == GROUP_OUTRUN_TEST))
     {
-    case OUTRUN_2_SP_SDX:
-    case OUTRUN_2_SP_SDX_REVA:
-    case OUTRUN_2_SP_SDX_TEST:
-    case OUTRUN_2_SP_SDX_REVA_TEST:
-    case OUTRUN_2_SP_SDX_REVA_TEST2:
-    {
-        if (strcmp(path, "/home/disk1/rankingdata/%s") == 0)
-        {
-            return _remove("./rankingdata/%s");
-        }
-    }
+        return _remove("./rankingdata/%s");
     }
     return _remove(path);
 }
@@ -466,19 +446,9 @@ int mkdir(const char *path, mode_t mode)
 {
     int (*_mkdir)(const char *path, mode_t mode) = dlsym(RTLD_NEXT, "mkdir");
 
-    switch (gId)
+    if (strcmp(path, "/home/disk1/rankingdata") == 0 && (gGrp == GROUP_OUTRUN || gGrp == GROUP_OUTRUN_TEST))
     {
-    case OUTRUN_2_SP_SDX:
-    case OUTRUN_2_SP_SDX_REVA:
-    case OUTRUN_2_SP_SDX_TEST:
-    case OUTRUN_2_SP_SDX_REVA_TEST:
-    case OUTRUN_2_SP_SDX_REVA_TEST2:
-    {
-        if (strcmp(path, "/home/disk1/rankingdata") == 0)
-        {
-            return _mkdir("./rankingdata", mode);
-        }
-    }
+        return _mkdir("./rankingdata", mode);
     }
     return _mkdir(path, mode);
 }
@@ -531,19 +501,19 @@ int open(const char *pathname, int flags, ...)
 
     if (strcmp(pathname, "/dev/ttyS0") == 0 || strcmp(pathname, "/dev/tts/0") == 0)
     {
-        if (getConfig()->emulateDriveboard == 0 && getConfig()->emulateRideboard == 0 && getConfig()->emulateCardreader == 0 &&
+        if (getConfig()->emulateDriveboard == 0 && getConfig()->emulateRideboard == 0 && getConfig()->emulateHW210CardReader == 0 &&
             getConfig()->emulateTouchscreen == 0)
             return _open(getConfig()->serial1Path, flags, mode);
 
-        if (hooks[SERIAL0] != -1 && getConfig()->emulateCardreader && gId != R_TUNED)
+        if (hooks[SERIAL0] != -1 && getConfig()->emulateHW210CardReader && gId != R_TUNED)
         {
             return hooks[SERIAL0];
         }
 
         hooks[SERIAL0] = _open(HOOK_FILE_NAME, flags, mode);
-        printf("Warning: SERIAL0 Opened %d\n", hooks[SERIAL0]);
+        log_warn("SERIAL0 Opened %d\n", hooks[SERIAL0]);
 
-        if (getConfig()->emulateCardreader == 1 && gId != R_TUNED)
+        if (getConfig()->emulateHW210CardReader == 1 && gId != R_TUNED)
             cardReaderSetFd(0, hooks[SERIAL0], getConfig()->cardFile1);
 
         return hooks[SERIAL0];
@@ -551,10 +521,11 @@ int open(const char *pathname, int flags, ...)
 
     if (strcmp(pathname, "/dev/ttyS1") == 0 || strcmp(pathname, "/dev/tts/1") == 0)
     {
-        if (getConfig()->emulateDriveboard == 0 && getConfig()->emulateMotionboard == 0 && getConfig()->emulateCardreader == 0)
+        if (getConfig()->emulateDriveboard == 0 && getConfig()->emulateMotionboard == 0 && getConfig()->emulateHW210CardReader == 0 &&
+            getConfig()->emulateTouchscreen == 0)
             return _open(getConfig()->serial2Path, flags, mode);
 
-        if (hooks[SERIAL1] != -1 && getConfig()->emulateCardreader && gId != R_TUNED)
+        if (hooks[SERIAL1] != -1 && getConfig()->emulateHW210CardReader && gId != R_TUNED)
         {
             return hooks[SERIAL1];
         }
@@ -562,7 +533,7 @@ int open(const char *pathname, int flags, ...)
         hooks[SERIAL1] = _open(HOOK_FILE_NAME, flags, mode);
         log_warn("SERIAL1 opened %d\n", hooks[SERIAL1]);
 
-        if (getConfig()->emulateCardreader == 1)
+        if (getConfig()->emulateHW210CardReader == 1)
             cardReaderSetFd(1, hooks[SERIAL1], getConfig()->cardFile2);
 
         return hooks[SERIAL1];
@@ -744,19 +715,9 @@ FILE *fopen(const char *restrict pathname, const char *restrict mode)
     }
 
     // Fix for Outrun high scores
-    switch (gId)
+    if ((newPathname = strstr(pathname, "/home/disk1")) != NULL && (gGrp == GROUP_OUTRUN || gGrp == GROUP_OUTRUN_TEST))
     {
-    case OUTRUN_2_SP_SDX:
-    case OUTRUN_2_SP_SDX_REVA:
-    case OUTRUN_2_SP_SDX_TEST:
-    case OUTRUN_2_SP_SDX_REVA_TEST:
-    case OUTRUN_2_SP_SDX_REVA_TEST2:
-    {
-        if ((newPathname = strstr(pathname, "/home/disk1")) != NULL)
-        {
-            pathname = newPathname + 12;
-        }
-    }
+        pathname = newPathname + 12;
     }
 
     // This forces LGJ games and ID games to not use the pre-compiled shaders.
@@ -797,17 +758,9 @@ FILE *fopen(const char *restrict pathname, const char *restrict mode)
         }
     }
 
-    switch (gId)
+    if (strncmp(pathname, "/tmp/", 5) == 0 && gGrp == GROUP_ID5)
     {
-    case INITIALD_5_EXP:
-    case INITIALD_5_EXP_20:
-    case INITIALD_5_EXP_20A:
-    case INITIALD_5_JAP_REVA:
-    case INITIALD_5_JAP_REVF:
-        if (strncmp(pathname, "/tmp/", 5) == 0)
-        {
-            return fopen(pathname + 1, mode);
-        }
+        return fopen(pathname + 1, mode);
     }
 
     if (gId == PRIMEVAL_HUNT)
@@ -825,9 +778,6 @@ FILE *fopen(const char *restrict pathname, const char *restrict mode)
         else if (strstr(pathname, "/data/lua/stage/bonus_0") != NULL)
             phShowCursorInGame = true;
     }
-
-    // printf("Path= %s\n", pathname);
-
     return _fopen(pathname, mode);
 }
 
@@ -907,34 +857,33 @@ FILE *fopen64(const char *pathname, const char *mode)
     }
 
     int idx;
-    switch (gId)
+
+    if (gGrp == GROUP_HUMMER)
     {
-    case HUMMER:
-    case HUMMER_SDLX:
-    case HUMMER_EXTREME:
-    case HUMMER_EXTREME_MDX:
         if (shaderFileInList(pathname, &idx))
         {
             hummerExtremeShaderFileIndex = idx;
         }
-        break;
-    case VIRTUA_FIGHTER_5_FINAL_SHOWDOWN_REVA:
-    case VIRTUA_FIGHTER_5_FINAL_SHOWDOWN_REVB:
-    case VIRTUA_FIGHTER_5_FINAL_SHOWDOWN_REVB_6000:
-        if (getConfig()->GPUVendor != NVIDIA_GPU && getConfig()->GPUVendor != ATI_GPU)
-        {
-            char *filename = basename((char *)pathname);
-            if (strstr(filename, "light_") || strstr(filename, "glow_"))
-            {
-                char *start = strchr(filename, '_') + 1;
-                char *end = strstr(filename, ".txt");
-                strncpy(vf5StageNameAbbr, start, end - start);
-                vf5StageNameAbbr[end - start] = '\0';
-            }
-        }
+        return _fopen64(pathname, mode);
     }
 
-    // printf("fopen64 %s\n", pathname);
+    switch (gId)
+    {
+        case VIRTUA_FIGHTER_5_FINAL_SHOWDOWN_REVA:
+        case VIRTUA_FIGHTER_5_FINAL_SHOWDOWN_REVB:
+        case VIRTUA_FIGHTER_5_FINAL_SHOWDOWN_REVB_6000:
+            if (getConfig()->GPUVendor != NVIDIA_GPU && getConfig()->GPUVendor != ATI_GPU)
+            {
+                char *filename = basename((char *)pathname);
+                if (strstr(filename, "light_") || strstr(filename, "glow_"))
+                {
+                    char *start = strchr(filename, '_') + 1;
+                    char *end = strstr(filename, ".txt");
+                    strncpy(vf5StageNameAbbr, start, end - start);
+                    vf5StageNameAbbr[end - start] = '\0';
+                }
+            }
+    }
     return _fopen64(pathname, mode);
 }
 
@@ -979,8 +928,8 @@ int openat(int dirfd, const char *pathname, int flags, ...)
     int (*_openat)(int dirfd, const char *pathname, int flags) = dlsym(RTLD_NEXT, "openat");
     // printf("openat %s\n", pathname);
 
-    if (strcmp(pathname, "/dev/ttyS0") == 0 || strcmp(pathname, "/dev/ttyS1") == 0 ||
-        strcmp(pathname, "/dev/tts/0") == 0 || strcmp(pathname, "/dev/tts/1") == 0)
+    if (strcmp(pathname, "/dev/ttyS0") == 0 || strcmp(pathname, "/dev/ttyS1") == 0 || strcmp(pathname, "/dev/tts/0") == 0 ||
+        strcmp(pathname, "/dev/tts/1") == 0)
     {
         return open(pathname, flags);
     }
@@ -1044,7 +993,6 @@ char *fgets(char *str, int n, FILE *stream)
         if (getConfig()->lindberghColour == RED || getConfig()->lindberghColour == REDEX)
             strcpy(contents[3], "model name	: Intel(R) Celeron(R) CPU 2.80GHz");
 
-
         if (fileRead[CPUINFO] == 4)
             return NULL;
 
@@ -1065,7 +1013,7 @@ char *fgets(char *str, int n, FILE *stream)
 ssize_t read(int fd, void *buf, size_t count)
 {
     int (*_read)(int fd, void *buf, size_t count) = dlsym(RTLD_NEXT, "read");
-
+    void *addr = __builtin_return_address(0);
     if (fd == hooks[BASEBOARD])
     {
         return baseboardRead(fd, buf, count);
@@ -1081,7 +1029,7 @@ ssize_t read(int fd, void *buf, size_t count)
         return driveboardRead(fd, buf, count);
     }
 
-    if ((fd == hooks[SERIAL0] || fd == hooks[SERIAL1]) && getConfig()->emulateCardreader)
+    if ((fd == hooks[SERIAL0] || fd == hooks[SERIAL1]) && getConfig()->emulateHW210CardReader)
     {
         return cardReaderRead(fd, buf, count);
     }
@@ -1202,14 +1150,14 @@ int fseek(FILE *stream, long int offset, int whence)
     {
         switch (whence)
         {
-        case SEEK_CUR:
-            break;
-        case SEEK_SET:
-            fontABCidx = 0;
-            break;
-        case SEEK_END:
-            fontABCidx = fontABClen;
-            break;
+            case SEEK_CUR:
+                break;
+            case SEEK_SET:
+                fontABCidx = 0;
+                break;
+            case SEEK_END:
+                fontABCidx = fontABClen;
+                break;
         }
         return fontABCidx;
     }
@@ -1247,7 +1195,7 @@ void rewind(FILE *stream)
 ssize_t write(int fd, const void *buf, size_t count)
 {
     int (*_write)(int fd, const void *buf, size_t count) = dlsym(RTLD_NEXT, "write");
-
+    void *addr = __builtin_return_address(0);
     if (fd == hooks[BASEBOARD])
     {
         return baseboardWrite(fd, buf, count);
@@ -1260,16 +1208,16 @@ ssize_t write(int fd, const void *buf, size_t count)
 
     if (fd == hooks[SERIAL0] && getConfig()->emulateDriveboard)
     {
-        // printf("Write addr: %p\n", addr);
         return driveboardWrite(fd, buf, count);
     }
 
-    if (fd == hooks[SERIAL1] && getConfig()->emulateDriveboard && gId != R_TUNED)
+    if (fd == hooks[SERIAL1] && getConfig()->emulateDriveboard)
     {
-        return driveboardWrite(fd, buf, count);
+        if (gGrp != GROUP_OUTRUN && gGrp != GROUP_OUTRUN_TEST && gId != R_TUNED)
+            return driveboardWrite(fd, buf, count);
     }
 
-    if ((fd == hooks[SERIAL0] || fd == hooks[SERIAL1]) && getConfig()->emulateCardreader)
+    if ((fd == hooks[SERIAL0] || fd == hooks[SERIAL1]) && getConfig()->emulateHW210CardReader)
     {
         return cardReaderWrite(fd, buf, count);
     }
@@ -1284,33 +1232,46 @@ ssize_t write(int fd, const void *buf, size_t count)
  * devices based on the file descriptor.
  * @param fd The file descriptor to perform the ioctl on.
  */
-int ioctl(int fd, unsigned int request, void *data)
+int ioctl(int fd, unsigned long int request, ...)
 {
+    va_list args;
+    va_start(args, request);
+    void *argp = va_arg(args, void *);
+    va_end(args);
+
     int (*_ioctl)(int fd, int request, void *data) = dlsym(RTLD_NEXT, "ioctl");
 
     if (fd == hooks[EEPROM])
     {
         if (request == 0xC04064A0)
-            return _ioctl(fd, request, data);
-        return eepromIoctl(fd, request, data);
+            return _ioctl(fd, request, argp);
+        return eepromIoctl(fd, request, argp);
     }
 
     if (fd == hooks[BASEBOARD])
     {
-        return baseboardIoctl(fd, request, data);
+        return baseboardIoctl(fd, request, argp);
     }
 
     if (fd == hooks[SERIAL0] || fd == hooks[SERIAL1])
     {
-        if (request == 0x541b && gId == R_TUNED && fd == hooks[SERIAL1])
+        if (request == 0x541b && (gId == R_TUNED) && fd == hooks[SERIAL1])
         {
             uint8_t d = 1;
-            memcpy(data, &d, sizeof(uint8_t));
+            memcpy(argp, &d, sizeof(uint8_t));
         }
         return 0;
     }
 
-    return _ioctl(fd, request, data);
+    // Replace "eth0" with your interface name set in the config file.
+    if ((gGrp == GROUP_ID4_EXP || gId == INITIALD_5_EXP_20 || gId == INITIALD_5_EXP_20A ) &&
+        (request == SIOCGIFFLAGS || request == SIOCGIFADDR) && getConfig()->enableNetworkPatches && strcmp(getConfig()->nicName, "") != 0)
+    {
+        struct ifreq *ifr = (struct ifreq *)argp;
+        strncpy(ifr->ifr_name, getConfig()->nicName, IFNAMSIZ);
+    }
+
+    return _ioctl(fd, request, argp);
 }
 
 /**
@@ -1419,12 +1380,11 @@ int cfsetospeed(struct termios *termios_p, speed_t speed)
  * @brief Hook for the select function.
  *
  * This function intercepts calls to select and redirects them to different
- * devices based on the file descriptor.
+ * devices based on the file descriptor.c7 45 c8 65 74 68 30
  * @param nfds The highest file descriptor number plus one.
  * @param readfds The file descriptors to check for readability.
  */
-int select(int nfds, fd_set *restrict readfds, fd_set *restrict writefds, fd_set *restrict exceptfds,
-           struct timeval *restrict timeout)
+int select(int nfds, fd_set *restrict readfds, fd_set *restrict writefds, fd_set *restrict exceptfds, struct timeval *restrict timeout)
 {
     int (*_select)(int nfds, fd_set *restrict readfds, fd_set *restrict writefds, fd_set *restrict exceptfds,
                    struct timeval *restrict timeout) = dlsym(RTLD_NEXT, "select");
@@ -1439,7 +1399,8 @@ int select(int nfds, fd_set *restrict readfds, fd_set *restrict writefds, fd_set
         return baseboardSelect(nfds, readfds, writefds, exceptfds, timeout);
     }
 
-    if (getConfig()->emulateCardreader == 1 || getConfig()->emulateDriveboard == 1)
+    if ((getConfig()->emulateHW210CardReader == 1 || getConfig()->emulateDriveboard == 1) &&
+        (gGrp != GROUP_ID5 && gGrp != GROUP_ID4_EXP && gGrp != GROUP_ID4_JAP))
     {
         return 1;
     }
@@ -1488,6 +1449,15 @@ int system(const char *command)
     if (strstr(command, "check_ip.sh") != NULL)
         return 0;
 
+    if (strcmp(command, "ifconfig eth0 10.0.0.1 netmask 255.255.255.0") == 0)
+        return 0;
+
+    if (strcmp(command, "ifconfig eth0 10.0.0.2 netmask 255.255.255.0") == 0)
+        return 0;
+
+    if (strcmp(command, "touch /tmp/segaboot/test") == 0)
+        command = "touch tmp/segaboot/test";
+
     return _system(command);
 }
 
@@ -1504,12 +1474,20 @@ char *strncpy(char *dest, const char *src, size_t n)
 
     switch (gId)
     {
-    case HARLEY_DAVIDSON:
-    case RAMBO:
-    case THE_HOUSE_OF_THE_DEAD_EX:
-    case TOO_SPICY:
-        if (getConfig()->GPUVendor != NVIDIA_GPU && (strstr(src, "../fs/compiledshader") != NULL || strstr(src, "../fs/compiled") != NULL))
-            return _strncpy(dest, "../fs/compiledmesa", n);
+        case HARLEY_DAVIDSON:
+        case RAMBO:
+        case RAMBO_CHINA:
+        case THE_HOUSE_OF_THE_DEAD_EX:
+        case TOO_SPICY:
+            if (getConfig()->GPUVendor != NVIDIA_GPU &&
+                (strstr(src, "../fs/compiledshader") != NULL || strstr(src, "../fs/compiled") != NULL))
+                return _strncpy(dest, "../fs/compiledmesa", n);
+            break;
+        case QUIZ_AXA:
+        case QUIZ_AXA_LIVE:
+            if (getConfig()->GPUVendor != NVIDIA_GPU && strstr(src, "../../data/compiledshader") != NULL)
+                return _strncpy(dest, "../../data/compiledmesa", n);
+            break;
     }
     return _strncpy(dest, src, n);
 }
@@ -1547,92 +1525,6 @@ float powf(float base, float exponent)
     return (float)pow((double)base, (double)exponent);
 }
 
-/*
-int sem_wait(sem_t *sem)
-{
-    int (*original_sem_wait)(sem_t * sem) = dlsym(RTLD_NEXT, "sem_wait");
-    return 0;
-}
-*/
-
-/**
- * @brief Gets the machine's IP address.
- *
- * This function retrieves the machine's IP address and stores it in the
- * provided sockaddr_in structure.
- * @param addr The sockaddr_in structure to store the IP address in.
- */
-int get_machine_ip(struct sockaddr_in *addr)
-{
-    struct ifaddrs *ifaddr, *ifa;
-    char ip_buffer[INET_ADDRSTRLEN];
-
-    if (getifaddrs(&ifaddr) == -1)
-    {
-        perror("getifaddrs");
-        return -1;
-    }
-
-    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next)
-    {
-        if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET)
-        {
-            if (inet_ntop(AF_INET, &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr, ip_buffer, sizeof(ip_buffer)))
-            {
-                if (strcmp(ifa->ifa_name, "lo") != 0)
-                {
-                    addr->sin_addr.s_addr = inet_addr(ip_buffer);
-                    freeifaddrs(ifaddr);
-                    return 0;
-                }
-            }
-        }
-    }
-
-    freeifaddrs(ifaddr);
-    return -1;
-}
-
-/**
- * Hook function used by Harley Davidson to change IPs to localhost
- * Currently does nothing.
- * @param sockfd
- * @param addr
- * @param addrlen
- * @return
- */
-int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
-{
-    int (*_connect)(int sockfd, const struct sockaddr *addr, socklen_t addrlen) = dlsym(RTLD_NEXT, "connect");
-
-    struct sockaddr_in *in_pointer = (struct sockaddr_in *)addr;
-
-    // IP addresses to replace
-    const char *specific_ips[] = {"192.168.1.1", "192.168.1.5", "192.168.1.9"};
-    int num_specific_ips = sizeof(specific_ips) / sizeof(specific_ips[0]);
-
-    if (getConfig()->crc32 == HARLEY_DAVIDSON)
-    {
-        char *ip_address = inet_ntoa(in_pointer->sin_addr);
-        for (int i = 0; i < num_specific_ips; ++i)
-        {
-            if (strcmp(ip_address, specific_ips[i]) == 0)
-            {
-                // Change the IP to connect to 127.0.0.1
-                in_pointer->sin_addr.s_addr = inet_addr("127.0.0.1");
-                if (getConfig()->showDebugMessages)
-                {
-                    char *some_addr = inet_ntoa(in_pointer->sin_addr);
-                    printf("Connecting to %s\n", some_addr);
-                }
-                break;
-            }
-        }
-    }
-
-    return _connect(sockfd, addr, addrlen);
-}
-
 /**
  * @brief Callback function for dl_iterate_phdr.
  *
@@ -1644,7 +1536,7 @@ static int callback(struct dl_phdr_info *info, size_t size, void *data)
 {
     if ((info->dlpi_phnum >= 3) && (info->dlpi_phdr[2].p_type == PT_LOAD) && (info->dlpi_phdr[2].p_flags == 5))
     {
-        elf_crc = get_crc32((void *)(size_t)(info->dlpi_addr + info->dlpi_phdr[2].p_vaddr + 10), 0x4000);
+        elf_crc = getCrc32((void *)(size_t)(info->dlpi_addr + info->dlpi_phdr[2].p_vaddr + 10), 0x4000);
     }
     return 1;
 }
@@ -1680,18 +1572,7 @@ char *getenv(const char *name)
 
     if (strcmp(name, "TEA_DIR") == 0)
     {
-        switch (gId)
-        {
-        case VIRTUA_TENNIS_3:
-        case VIRTUA_TENNIS_3_TEST:
-        case VIRTUA_TENNIS_3_REVA:
-        case VIRTUA_TENNIS_3_REVA_TEST:
-        case VIRTUA_TENNIS_3_REVB:
-        case VIRTUA_TENNIS_3_REVB_TEST:
-        case VIRTUA_TENNIS_3_REVC:
-        case VIRTUA_TENNIS_3_REVC_TEST:
-        case RAMBO:
-        case TOO_SPICY:
+        if (gGrp == GROUP_VT3 || gGrp == GROUP_VT3_TEST || gId == RAMBO || gId == RAMBO_CHINA || gId == TOO_SPICY)
         {
             if (getcwd(envpath, 100) == NULL)
                 return "";
@@ -1701,13 +1582,11 @@ char *getenv(const char *name)
             *ptr = '\0';
             return envpath;
         }
-        break;
-        default:
+        else
         {
             if (getcwd(envpath, 100) == NULL)
                 return "";
             return envpath;
-        }
         }
     }
 
@@ -1759,14 +1638,26 @@ char *__strdup(const char *string)
  */
 struct tm *localtime_r(const time_t *timep, struct tm *result)
 {
-    struct tm *(*_localtime_r)(const time_t *, struct tm *) =
-        (struct tm * (*)(const time_t *, struct tm *)) dlsym(RTLD_NEXT, "localtime_r");
+    struct tm *(*_gmtime_r)(const time_t *, struct tm *) = (struct tm * (*)(const time_t *, struct tm *)) dlsym(RTLD_NEXT, "gmtime_r");
 
     if ((gId == MJ4_REVG || gId == MJ4_EVO) && getConfig()->mj4EnabledAtT == 1)
     {
         time_t target_time = 1735286445;
-        struct tm *res = _localtime_r(&target_time, result);
+        struct tm *res = _gmtime_r(&target_time, result);
         return res;
     }
-    return _localtime_r(timep, result);
+    return _gmtime_r(timep, result);
+}
+
+struct tm *gmtime_r(const time_t *timep, struct tm *result)
+{
+    struct tm *(*_gmtime_r)(const time_t *, struct tm *) = (struct tm * (*)(const time_t *, struct tm *)) dlsym(RTLD_NEXT, "gmtime_r");
+
+    if ((gId == QUIZ_AXA || gId == QUIZ_AXA_LIVE) && getConfig()->mj4EnabledAtT == 1)
+    {
+        time_t target_time = 1735286445;
+        struct tm *res = _gmtime_r(&target_time, result);
+        return res;
+    }
+    return _gmtime_r(timep, result);
 }
