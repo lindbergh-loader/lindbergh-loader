@@ -141,27 +141,6 @@ modules:
       arch:
         x86_64: *i386-build-options
 
-  # - name: libFAudio-Static
-  #   buildsystem: cmake-ninja
-  #   config-opts:
-  #     - -DCMAKE_BUILD_TYPE=Release
-  #     - -DCMAKE_INSTALL_PREFIX=/app
-  #     - -DBUILD_SHARED_LIBS=off
-  #     - -DCMAKE_INSTALL_LIBDIR=/app/lib32
-  #   build-options:
-  #     arch:
-  #       x86_64: *i386-build-options
-  #     env:
-  #       CFLAGS: "-m32 -mstackrealign"
-  #       CXXFLAGS: "-m32 -mstackrealign"
-  #       LDFLAGS: "-m32  -mstackrealign"
-  #       PKG_CONFIG_PATH: "/app/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig"
-  #       LD_LIBRARY_PATH: "/app/lib32:/usr/lib/i386-linux-gnu/pkgconfig:$LD_LIBRARY_PATH"
-  #   sources:
-  #     - type: git
-  #       url: https://github.com/FNA-XNA/FAudio.git
-  #       branch: "master"
-
   - name: libxmu
     buildsystem: autotools
     config-opts:
@@ -210,7 +189,7 @@ modules:
       - --without-debug
     sources:
       - type: archive
-        url: https://ftp.gnu.org/pub/gnu/ncurses/ncurses-5.9.tar.gz
+        url: https://invisible-island.net/archives/ncurses/ncurses-5.9.tar.gz
         sha256: 9046298fb440324c9d4135ecea7879ffed8546dd1b58e59430ea07a4633f563b
       - type: patch
         path: ./assets/ncurses-5.9.patch
