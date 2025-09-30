@@ -37,19 +37,18 @@ add-extensions:
   org.freedesktop.Platform.Compat.i386:
     directory: lib/i386-linux-gnu
     version: *runtime-version
-    no-autodownload: true
 
   org.freedesktop.Platform.Compat.i386.Debug:
     directory: lib/debug/lib/i386-linux-gnu
     version: *runtime-version
-    no-autodownload: true
+    # no-autodownload: true
 
   org.freedesktop.Platform.GL32:
     directory: lib/i386-linux-gnu/GL
     version: *gl-version
     versions: *gl-versions
     subdirectories: true
-    no-autodownload: true
+    # no-autodownload: true
     autodelete: false
     add-ld-path: lib
     merge-dirs: *gl-merge-dirs
@@ -61,8 +60,8 @@ add-extensions:
     directory: lib/debug/lib/i386-linux-gnu/GL
     version: *gl-version
     versions: *gl-versions
-    subdirectories: true
-    no-autodownload: true
+    # subdirectories: true
+    # no-autodownload: true
     merge-dirs: *gl-merge-dirs
     enable-if: active-gl-driver
     autoprune-unless: active-gl-driver
@@ -77,7 +76,7 @@ modules:
       - type: file
         path: ./assets/libstdc++.so.5
 
-  - name: SDL3-FAudio
+  - name: SDL3-FAudio-ID
     buildsystem: simple
     build-commands:
       - tar -xf libs/libs.tar -C /app/lib32
@@ -105,10 +104,11 @@ modules:
     config-opts:
       - -DCMAKE_BUILD_TYPE=Release
       - -DCMAKE_INSTALL_PREFIX=/app
+      - -DCMAKE_POLICY_VERSION_MINIMUM=3.5
     sources:
-      - type: archive
-        url: https://downloads.sourceforge.net/freeglut/freeglut-3.2.2.tar.gz
-        sha256: c5944a082df0bba96b5756dddb1f75d0cd72ce27b5395c6c1dde85c2ff297a50
+      - type: git
+        url: https://github.com/freeglut/freeglut.git
+        branch: master
     build-options:
       arch:
         x86_64: *i386-build-options
@@ -151,11 +151,8 @@ modules:
         url: https://xorg.freedesktop.org/releases/individual/lib/libXmu-1.2.1.tar.gz
         sha256: bf0902583dd1123856c11e0a5085bd3c6e9886fbbd44954464975fd7d52eb599
     build-options:
-      env:
-        CC: /usr/lib/sdk/toolchain-i386/bin/i686-unknown-linux-gnu-gcc
-        CXX: /usr/lib/sdk/toolchain-i386/bin/i686-unknown-linux-gnu-g++
-        LD: /usr/lib/sdk/toolchain-i386/bin/i686-unknown-linux-gnu-ld
-      libdir: /app/lib32
+      arch:
+        x86_64: *i386-build-options
 
   - name: libmd
     buildsystem: autotools
@@ -180,25 +177,6 @@ modules:
     build-options:
       arch:
         x86_64: *i386-build-options
-
-  - name: ncurses
-    buildsystem: autotools
-    config-opts:
-      - --libdir=/app/lib32
-      - --with-shared
-      - --without-debug
-    sources:
-      - type: archive
-        url: https://invisible-island.net/archives/ncurses/ncurses-5.9.tar.gz
-        sha256: 9046298fb440324c9d4135ecea7879ffed8546dd1b58e59430ea07a4633f563b
-      - type: patch
-        path: ./assets/ncurses-5.9.patch
-    build-options:
-      arch:
-        x86_64: *i386-build-options
-      env:
-        CPPFLAGS: "-P"
-        CXXFLAGS: "-std=c++14"
 
   - name: nvidia-cg-toolkit
     buildsystem: simple
@@ -230,6 +208,24 @@ modules:
         url: https://pcsclite.apdu.fr/files/pcsc-lite-2.3.1.tar.xz
         sha256: a641d44d57affe1edd8365dd75307afc307e7eefb4e7ad839f6f146baa41ed56
 
+    # Build 32-bit libFAudio (static)
+  - name: libFAudio-Static
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DBUILD_SHARED_LIBS=off
+      - -DCMAKE_INSTALL_PREFIX=/app
+      - -DCMAKE_INSTALL_LIBDIR=/app/lib32
+    build-options:
+      arch:
+        x86_64: *i386-build-options
+      env:
+        CFLAGS: "-m32 -mstackrealign"
+        CXXFLAGS: "-m32 -mstackrealign"
+    sources:
+      - type: git
+        url: https://github.com/FNA-XNA/FAudio.git
+        branch: master
+
   - name: lindbergh-loader
     buildsystem: simple
     build-commands:
@@ -251,6 +247,7 @@ modules:
       - ln -s -f libposixtime.so /app/lib32/libposixtime.so.2.4
       - ln -s -f libkswapapi.so /app/lib32/libGLcore.so.1
       - ln -s -f libkswapapi.so /app/lib32/libnvidia-tls.so.1
+      - ln -s -f /usr/lib/i386-linux-gnu/libncurses.so /app/lib32/libncurses.so.5
     build-options:
       arch:
         x86_64: *i386-build-options
@@ -274,10 +271,6 @@ modules:
       - find /app/lib /app/lib32 -name '*.a' -type f -delete
       - find /app/lib /app/lib32 -name '*.la' -type f -delete
       - find /app/bin -mindepth 1  ! -name "lindbergh*" -exec rm -f {} \;
-      - rm -d /app/lib/terminfo
       - rm -rf /app/lib/pkgconfig /app/lib32/pkgconfig /app/share/pkgconfig /app/lib32/cmake /app/lib/debug /app/include /app/man /app/share
-      - rm /app/lib32/libmenu.*
-      - rm /app/lib32/libform.*
-      - rm /app/lib32/libpanel.*
       - rm /app/lib32/libXmuu.*
       - rm /app/lib32/libbsd.so

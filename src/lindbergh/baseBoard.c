@@ -88,21 +88,24 @@ int initBaseboard()
 
     strcpy(serialString, SERIAL_STRING);
 
-    time_t t = time(NULL);           // Get current time
-    struct tm *tm_info = localtime(&t);  // Convert to local time structure
+    time_t t = time(NULL);              // Get current time
+    struct tm *tm_info = localtime(&t); // Convert to local time structure
 
     int month = tm_info->tm_mon + 1; // tm_mon is 0-based (0 = Jan, 4 = May)
     int day = tm_info->tm_mday;      // tm_mday is the day of the month
 
-    if (month == 1 && day == 18) {
+    if (month == 1 && day == 18)
+    {
         strcpy(serialString, "HAPPY BIRTHDAY!!");
     }
 
-    if (month == 5 && day == 20) {
+    if (month == 5 && day == 20)
+    {
         strcpy(serialString, "HAPPY BIRTHDAY!!");
     }
 
-    if (month == 5 && day == 21) {
+    if (month == 5 && day == 21)
+    {
         strcpy(serialString, "HAPPY BIRTHDAY!!");
     }
 
@@ -132,171 +135,171 @@ int baseboardIoctl(int fd, unsigned long request, void *data)
     switch (request)
     {
 
-    case BASEBOARD_GET_VERSION:
-    {
-        uint8_t versionData[4] = {0x00, 0x19, 0x20, 0x07};
-        memcpy(data, versionData, 4);
-        return 0;
-    }
-    break;
-
-    case BASEBOARD_INIT:
-    {
-        // selectReply = -1; Considering adding this in
-        return 0;
-    }
-    break;
-
-    case BASEBOARD_READY: // Not sure if this is what it should be called
-    {
-        selectReply = 0;
-        return 0;
-    }
-    break;
-
-    case BASEBOARD_SEEK_SHM:
-    {
-        sharedMemoryIndex = (size_t)data;
-        return 0;
-    }
-    break;
-
-    case BASEBOARD_READ_SRAM:
-    {
-        readData_t *_data = data;
-        fseek(sram, _data->offset, SEEK_SET);
-        fread(_data->data, 1, _data->size, sram);
-        return 0;
-    }
-    break;
-
-    case BASEBOARD_WRITE_SRAM:
-    {
-        writeData_t *_data = data;
-        fseek(sram, _data->offset, SEEK_SET);
-        fwrite(_data->data, 1, _data->size, sram);
-        return 0;
-    }
-    break;
-
-    case BASEBOARD_REQUEST:
-    {
-        uint32_t *_data = data;
-
-        switch (_data[0])
+        case BASEBOARD_GET_VERSION:
         {
-
-        case BASEBOARD_GET_SERIAL: // bcCmdSysInfoGetReq
-        {
-            serialCommand.destAddress = _data[1];
-            serialCommand.destSize = _data[2];
+            uint8_t versionData[4] = {0x00, 0x19, 0x20, 0x07};
+            memcpy(data, versionData, 4);
+            return 0;
         }
         break;
 
-        case BASEBOARD_WRITE_FLASH: // bcCmdSysFlashWrite
+        case BASEBOARD_INIT:
         {
-            log_warn("The game attempted to write to the baseboard flash\n");
+            // selectReply = -1; Considering adding this in
+            return 0;
         }
         break;
 
-        case BASEBOARD_PROCESS_JVS:
+        case BASEBOARD_READY: // Not sure if this is what it should be called
         {
-            jvsCommand.srcAddress = _data[1];
-            jvsCommand.srcSize = _data[2];
-            jvsCommand.destAddress = _data[3];
-            jvsCommand.destSize = _data[4];
-            memcpy(inputBuffer, &sharedMemory[jvsCommand.srcAddress], jvsCommand.srcSize);
+            selectReply = 0;
+            return 0;
+        }
+        break;
 
-            if (getConfig()->emulateJVS)
+        case BASEBOARD_SEEK_SHM:
+        {
+            sharedMemoryIndex = (size_t)data;
+            return 0;
+        }
+        break;
+
+        case BASEBOARD_READ_SRAM:
+        {
+            readData_t *_data = data;
+            fseek(sram, _data->offset, SEEK_SET);
+            fread(_data->data, 1, _data->size, sram);
+            return 0;
+        }
+        break;
+
+        case BASEBOARD_WRITE_SRAM:
+        {
+            writeData_t *_data = data;
+            fseek(sram, _data->offset, SEEK_SET);
+            fwrite(_data->data, 1, _data->size, sram);
+            return 0;
+        }
+        break;
+
+        case BASEBOARD_REQUEST:
+        {
+            uint32_t *_data = data;
+
+            switch (_data[0])
             {
-                processPacket(&jvsPacketSize);
-            }
-            else if (jvsFileDescriptor >= 0)
-            {
-                for (int i = 0; i < jvsCommand.srcSize; i++)
+
+                case BASEBOARD_GET_SERIAL: // bcCmdSysInfoGetReq
                 {
-                    write(jvsFileDescriptor, &inputBuffer[i], 1);
-                    if (inputBuffer[i] == 0xF0)
+                    serialCommand.destAddress = _data[1];
+                    serialCommand.destSize = _data[2];
+                }
+                break;
+
+                case BASEBOARD_WRITE_FLASH: // bcCmdSysFlashWrite
+                {
+                    log_warn("The game attempted to write to the baseboard flash\n");
+                }
+                break;
+
+                case BASEBOARD_PROCESS_JVS:
+                {
+                    jvsCommand.srcAddress = _data[1];
+                    jvsCommand.srcSize = _data[2];
+                    jvsCommand.destAddress = _data[3];
+                    jvsCommand.destSize = _data[4];
+                    memcpy(inputBuffer, &sharedMemory[jvsCommand.srcAddress], jvsCommand.srcSize);
+
+                    if (getConfig()->emulateJVS)
                     {
-                        setSenseLine(3);
+                        processPacket(&jvsPacketSize);
                     }
-                    else if (inputBuffer[i] == 0xF1)
+                    else if (jvsFileDescriptor >= 0)
                     {
-                        setSenseLine(1);
+                        for (int i = 0; i < jvsCommand.srcSize; i++)
+                        {
+                            write(jvsFileDescriptor, &inputBuffer[i], 1);
+                            if (inputBuffer[i] == 0xF0)
+                            {
+                                setSenseLine(3);
+                            }
+                            else if (inputBuffer[i] == 0xF1)
+                            {
+                                setSenseLine(1);
+                            }
+                        }
                     }
                 }
+                break;
+
+                case BASEBOARD_GET_SENSE_LINE:
+                    break;
+
+                default:
+                    printf("Error: Unknown baseboard command %X\n", _data[0]);
             }
+
+            // Acknowledge the command
+            _data[0] |= 0xF0000000;
+
+            return 0;
         }
         break;
 
-        case BASEBOARD_GET_SENSE_LINE:
-            break;
+        case BASEBOARD_RECEIVE:
+        {
+            uint32_t *_data = data;
+
+            switch (_data[0] & 0xFFF)
+            {
+
+                case BASEBOARD_GET_SERIAL:
+                {
+                    memcpy(&sharedMemory[serialCommand.destAddress + 96], serialString, strlen(serialString));
+                    _data[1] = 1; // Set the status to success
+                }
+                break;
+
+                case BASEBOARD_GET_SENSE_LINE:
+                {
+                    _data[2] = getSenseLine();
+                    _data[1] = 1; // Set the status to success
+                }
+                break;
+
+                case BASEBOARD_PROCESS_JVS:
+                {
+                    if (getConfig()->emulateJVS)
+                    {
+                        memcpy(&sharedMemory[jvsCommand.destAddress], outputBuffer, jvsPacketSize);
+                        _data[2] = jvsCommand.destAddress;
+                        _data[3] = jvsPacketSize;
+                        _data[1] = 1; // Set the status to success
+                    }
+                    else if (jvsFileDescriptor >= 0)
+                    {
+                        JVSFrame frame = readJVSFrameFromThread();
+                        memcpy(&sharedMemory[jvsCommand.destAddress], frame.buffer, frame.size);
+                        _data[2] = jvsCommand.destAddress;
+                        _data[3] = frame.size;
+                        _data[1] = frame.ready;
+                    }
+                }
+                break;
+
+                default:
+                    printf("Error: Unknown baseboard receive command %X\n", _data[0] & 0xFFF);
+            }
+
+            // Acknowledge the command
+            _data[0] |= 0xF0000000;
+
+            return 0;
+        }
+        break;
 
         default:
-            printf("Error: Unknown baseboard command %X\n", _data[0]);
-        }
-
-        // Acknowledge the command
-        _data[0] |= 0xF0000000;
-
-        return 0;
-    }
-    break;
-
-    case BASEBOARD_RECEIVE:
-    {
-        uint32_t *_data = data;
-
-        switch (_data[0] & 0xFFF)
-        {
-
-        case BASEBOARD_GET_SERIAL:
-        {
-            memcpy(&sharedMemory[serialCommand.destAddress + 96], serialString, strlen(serialString));
-            _data[1] = 1; // Set the status to success
-        }
-        break;
-
-        case BASEBOARD_GET_SENSE_LINE:
-        {
-            _data[2] = getSenseLine();
-            _data[1] = 1; // Set the status to success
-        }
-        break;
-
-        case BASEBOARD_PROCESS_JVS:
-        {
-            if (getConfig()->emulateJVS)
-            {
-                memcpy(&sharedMemory[jvsCommand.destAddress], outputBuffer, jvsPacketSize);
-                _data[2] = jvsCommand.destAddress;
-                _data[3] = jvsPacketSize;
-                _data[1] = 1; // Set the status to success
-            }
-            else if (jvsFileDescriptor >= 0)
-            {
-                JVSFrame frame = readJVSFrameFromThread();
-                memcpy(&sharedMemory[jvsCommand.destAddress], frame.buffer, frame.size);
-                _data[2] = jvsCommand.destAddress;
-                _data[3] = frame.size;
-                _data[1] = frame.ready;
-            }
-        }
-        break;
-
-        default:
-            printf("Error: Unknown baseboard receive command %X\n", _data[0] & 0xFFF);
-        }
-
-        // Acknowledge the command
-        _data[0] |= 0xF0000000;
-
-        return 0;
-    }
-    break;
-
-    default:
-        printf("Error: Unknown baseboard ioctl %lX\n", request);
+            printf("Error: Unknown baseboard ioctl %lX\n", request);
     }
 
     return 0;

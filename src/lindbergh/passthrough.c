@@ -11,7 +11,7 @@
 #include "passthrough.h"
 
 #define TIMEOUT_SELECT 200
-#define CTS_ON_RETRY 20
+#define CTS_ON_RETRY 100
 
 // Used to read JVS frame in a non-blocking way
 JVSFrame jvsFrameBuffer;
@@ -23,12 +23,14 @@ pthread_mutex_t jvsBuffer_lock = PTHREAD_MUTEX_INITIALIZER;
  * @param jvsPath The serial port path. Ex: "/dev/ttyS3"
  * @return A file descriptor
  */
-int openJVSSerial(char *jvsPath) {
+int openJVSSerial(char *jvsPath) 
+{
     int jvsFileDescriptor = -1;
 
     // TODO: check O_NOCTTY declaration
     jvsFileDescriptor = open(jvsPath, O_RDWR | O_NOCTTY);
-    if (jvsFileDescriptor < 0) {
+    if (jvsFileDescriptor < 0)
+    {
         printf("Failed to open '%s' for JVS.\n", jvsPath);
     }
 
@@ -41,7 +43,8 @@ int openJVSSerial(char *jvsPath) {
  * @param fd
  * @return 0|1
  */
-int initJVSSerial(int fd) {
+int initJVSSerial(int fd) 
+{
     struct termios options;
     int status;
 
@@ -94,7 +97,7 @@ int initJVSSerial(int fd) {
     options.c_cc[VMIN] = 0;
     options.c_cc[VTIME] = 1;
 
-
+    // options.c_cflag |= CREAD; // Turn on READ, let ctrl lines work
     tcsetattr(fd, TCSANOW, &options);
 
     /* No use ? Save it for later
@@ -108,22 +111,26 @@ int initJVSSerial(int fd) {
 
 
 /**
- * The DCD (Data Carrier Detect) status of a serial port indicates whether a carrier is present on the line, meaning that a connection has been established with another device.
+ * The DCD (Data Carrier Detect) status of a serial port indicates whether a carrier is present on the line, meaning that a connection has
+ * been established with another device.
  * @param fd File descriptor of JVS (serial) port
  * @return 0|1 According to control line status
  */
-int getDCD(int fd) {
+int getDCD(int fd)
+{
     int status;
     ioctl(fd, TIOCMGET, &status);
     return (status & TIOCM_CAR) != 0;
 }
 
 /**
- * The DSR (Data Set Ready) status of a serial port indicates whether the device at the other end of the connection is ready to receive data.
+ * The DSR (Data Set Ready) status of a serial port indicates whether the device at the other end of the connection is ready to receive
+ * data.
  * @param fd File descriptor of JVS (serial) port
  * @return 0|1 According to control line status
  */
-int getDSR(int fd) {
+int getDSR(int fd)
+{
     int status;
     ioctl(fd, TIOCMGET, &status);
     return (status & TIOCM_DSR) != 0;
@@ -134,7 +141,8 @@ int getDSR(int fd) {
  * @param fd File descriptor of JVS (serial) port
  * @return 0|1 According to control line status
  */
-int getCTS(int fd) {
+int getCTS(int fd)
+{
     int status;
     ioctl(fd, TIOCMGET, &status);
     return (status & TIOCM_CTS) != 0;
@@ -164,7 +172,7 @@ void *readJVSFrameThread(void * arg)
             // printf("SERIAL thread debug: trying to read byte.\n");
             // Try to read a byte from serial, this call will be blocking if VMIN > 0 and VTIME = 0
             bytesRead = read(fd, &localBuffer[byteCount], 1);
-
+            
             // If nothing on serial and CTS is ON, we try to read "CTS_ON_RETRY" times
             ctsRetry = CTS_ON_RETRY;
             while (bytesRead < 1 && --ctsRetry > 0 && jvsFrameBuffer.ready == 0) {

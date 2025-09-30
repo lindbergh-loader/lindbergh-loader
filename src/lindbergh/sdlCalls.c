@@ -35,6 +35,7 @@ SDL_GLContext sdlContext = NULL;
 Display *x11Display = NULL;
 Window x11Window;
 char sdlGameTitle[256] = {0};
+bool sdlInputInitialized = false;
 
 extern SDL_Cursor *customCursor;
 extern SDL_Cursor *touchCursor;
@@ -187,6 +188,9 @@ void startSDL(int *argcp, char **argv)
 
     initBlitting();
 
+    if (gId != PRIMEVAL_HUNT)
+        SDL_SetWindowResizable(sdlWindow, true);
+
     SDL_ShowWindow(sdlWindow);
 
     Uint64 startTime = SDL_GetTicks();
@@ -202,9 +206,6 @@ void startSDL(int *argcp, char **argv)
 
         SDL_GL_SwapWindow(sdlWindow);
     }
-
-    if (gId != PRIMEVAL_HUNT)
-        SDL_SetWindowResizable(sdlWindow, true);
 
     creatingWindow = false;
 
@@ -309,8 +310,11 @@ void pollEvents()
                 break;
         }
     }
-    if (gGrp == GROUP_HOD4 || gGrp == GROUP_HOD4_TEST)
-        updateGunShake();
-    updateCombinedAxes();
-    processChangedActions();
+    if (sdlInputInitialized)
+    {
+        if (gGrp == GROUP_HOD4 || gGrp == GROUP_HOD4_TEST)
+            updateGunShake();
+        updateCombinedAxes();
+        processChangedActions();
+    }
 }

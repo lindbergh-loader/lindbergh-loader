@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.1]
+### Added
+    - Zink support in appimage (fixes Zink in the Steam Deck).
+    - Change the Mesa version on the fly to fix ID games rendering issues in the appimage. 
+### Fixed
+    - A typo in the command to load custom gamecontrollerdb (--controllerdb) to match the guide.
+    - Disable SDL input when EvDev is selected.
+    - A fix to make the Maximize window button show.
+### Missing from las changelog
+    - Harley network link support (up to 4 players)
+    - R-Tuned network link support (up to 4 players)
+    - Hummer network link support (up to 4 players)
+    - 2 Spicy network link support (up to 2 players)
+    - Sega Race TV network link support (up to 4 players)
+    - ID4 and ID5 network link support  (up to 2 players)
+
 ## [2.1.0]
 ### Added
     - Rambo DVP-0078 (China version) support.

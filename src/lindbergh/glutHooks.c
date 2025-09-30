@@ -26,7 +26,7 @@ extern SDL_Window *sdlWindow;
 extern Display *x11Display;
 extern char sdlGameTitle[];
 extern char current_text[256];
-extern double local_fps;
+extern double localFps;
 bool winHidden = true;
 
 void *displayFunc = NULL;

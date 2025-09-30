@@ -6,6 +6,7 @@
 #include <SDL3/SDL_keyboard.h>
 #include <SDL3/SDL_mouse.h>
 #include <SDL3/SDL_scancode.h>
+#include <libgen.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -58,6 +59,7 @@ extern int gHeight;
 int widthOri;
 int heightOri;
 extern SDL_Window *sdlWindow;
+extern bool sdlInputInitialized;
 
 extern Dest dest;
 
@@ -201,7 +203,7 @@ int initSdlInput(char *controlsPath)
     if (envDbPath)
     {
         SDL_AddGamepadMappingsFromFile(envDbPath);
-        printf("%s, as a controller database.\n", envDbPath);
+        printf("%s loaded as a controller database.\n", basename(envDbPath));
     }
 
     gameType = getConfig()->gameType;
@@ -378,6 +380,7 @@ int initSdlInput(char *controlsPath)
     // Apply any final game-specific mapping overrides.
     remapPerGame();
 
+    sdlInputInitialized = true;
     return 0;
 }
 
@@ -1227,6 +1230,9 @@ void addActionToDirtyList(JVSPlayer player, LogicalAction action)
  */
 void processSdlEvent(const SDL_Event *e)
 {
+    if (!sdlInputInitialized)
+        return;
+
     switch (e->type)
     {
         case SDL_EVENT_KEY_DOWN:
@@ -1522,9 +1528,9 @@ void processSdlEvent(const SDL_Event *e)
         break;
         case SDL_EVENT_MOUSE_MOTION:
         {
-            double mX = e->motion.x;
-            double mY = e->motion.y;
-            float posX, posY;
+            float mX = e->motion.x;
+            float mY = e->motion.y;
+            float posX = 0.0f, posY = 0.0f;
 
             if (gId == PRIMEVAL_HUNT)
             {
@@ -1534,8 +1540,8 @@ void processSdlEvent(const SDL_Event *e)
 
                 int motX = mX, motY = mY;
                 phTouchScreenCursor(mX, mY, &motX, &motY);
-                posX = ((double)(motX - phX) / (double)phW);
-                posY = ((double)(motY - phY) / (double)phH);
+                posX = ((float)(motX - phX) / (float)phW);
+                posY = ((float)(motY - phY) / (float)phH);
             }
             else
             {

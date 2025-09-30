@@ -21,6 +21,12 @@ jobs:
     - name: Install Packages
       run: scripts/appimage/install-packages.sh
 
+    - name: Pack ID Libs
+      run: scripts/appimage/id-libs.sh
+
+    - name: Install Kisak
+      run: scripts/appimage/install-kisak.sh
+
     - name: Build Deps
       run: scripts/appimage/build-deps.sh
 
@@ -42,7 +48,8 @@ jobs:
     - name: Upload SDL3 and FAudio
       uses: actions/upload-artifact@v4
       with:
-        name: SDL3-FAudio
+        name: SDL3-FAudio-ID
         path: |
           libs/libs.tar
           libs/includes.tar
+          libs/lib32ID.tar

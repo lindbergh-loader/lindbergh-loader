@@ -25,7 +25,7 @@ extern SDL_Window *sdlWindow;
 extern SDL_GLContext sdlContext;
 extern Display *x11Display;
 extern char sdlGameTitle[];
-double local_fps = 0.0;
+double localFps = 0.0;
 
 bool createContextCalled = false;
 int ctxCnt = 0;
@@ -49,8 +49,8 @@ void glXSwapBuffers(Display *dpy, GLXDrawable drawable)
         frameTiming();
 
     char windowTitle[512];
-    local_fps = calculateFps();
-    sprintf(windowTitle, "%s - FPS: %.2f", sdlGameTitle, local_fps);
+    localFps = calculateFps();
+    sprintf(windowTitle, "%s - FPS: %.2f", sdlGameTitle, localFps);
     SDL_SetWindowTitle(sdlWindow, windowTitle);
 }
 

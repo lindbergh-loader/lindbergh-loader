@@ -20,7 +20,7 @@ jobs:
       - name: Download SDL3 libs
         uses: actions/download-artifact@v4
         with:
-          name: SDL3-FAudio
+          name: SDL3-FAudio-ID
           path: libs/
 
       # Set up Docker Buildx
