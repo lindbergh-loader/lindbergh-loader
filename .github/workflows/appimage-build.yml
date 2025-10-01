@@ -18,6 +18,14 @@ jobs:
         name: version-file
         path: src/lindbergh/
 
+    - name: Cache APT packages
+      uses: actions/cache@v4
+      with:
+        path: /var/cache/apt/archives
+        key: ${{ runner.os }}-apt-${{ hashFiles('**/install-packages.sh') }}
+        restore-keys: |
+          ${{ runner.os }}-apt-
+
     - name: Install Packages
       run: scripts/appimage/install-packages.sh
 
@@ -38,6 +46,15 @@ jobs:
       run: |
         make
         scripts/appimage/make-appimage.sh
+
+    - name: Compress build directory
+      run: tar -czvf build.tar.gz -C ./build .
+
+    - name: Upload build.tar.gz artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: "linux-build" 
+        path: "build.tar.gz"
 
     - name: Upload AppImage
       uses: actions/upload-artifact@v4

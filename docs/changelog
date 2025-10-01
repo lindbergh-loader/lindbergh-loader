@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [2.1.1]
 ### Added
+    - HOD4 Boss battle targets should be fine now.
+    - Discord Bot.
     - Zink support in appimage (fixes Zink in the Steam Deck).
     - Change the Mesa version on the fly to fix ID games rendering issues in the appimage. 
 ### Fixed

@@ -1127,7 +1127,7 @@ void glVertex3fHOD4(GLfloat x, GLfloat y, GLfloat z)
     else if (z == -1.510000f)
     { // logo  2d elemtents target
 
-        if (curTextureID != 262) // target boss fight // Added 2 because of the crosshairs.
+        if (curTextureID != 260) // target boss fight // Added 2 because of the crosshairs.
         {
             x += OffsetX;
             y -= OffsetY;
@@ -1218,7 +1218,6 @@ void glVertex3fHOD4(GLfloat x, GLfloat y, GLfloat z)
     }
     else
     {
-
         if (curTextureID != 26)
         { // gun effect
             if (z > -1.8f && z < -1.0f)

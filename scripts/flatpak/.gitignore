@@ -1,5 +1,4 @@
 .flatpak-builder/
 build/
 repo/
-assets/lib32ID
 *.flatpak

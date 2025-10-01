@@ -33,41 +33,30 @@ jobs:
         run: |
           CHANGELOG_FILE="./docs/changelog"
           VERSION_FILE="src/lindbergh/version.h"
-
           if [[ ! -f "$CHANGELOG_FILE" ]]; then
             echo "Error: Changelog file '$CHANGELOG_FILE' not found."
             exit 1
           fi
-
           VERSION=$(awk '/^## \[/ { match($0, /\[([^]]+)\]/, arr); print arr[1]; exit }' "$CHANGELOG_FILE")
-
-          # Check if a version was actually extracted
           if [[ -z "$VERSION" ]]; then
             echo "Error: Could not find version in '$CHANGELOG_FILE'. Expected format like '## [X.Y.Z]' near the top."
             exit 1
           fi
-
           echo "Found version: $VERSION"
-
           MAJOR=$(echo $VERSION | cut -d. -f1)
           MINOR=$(echo $VERSION | cut -d. -f2)
           UPDATE=$(echo $VERSION | cut -d. -f3)
-
           if [ -z "$UPDATE" ]; then
             UPDATE=0
           fi
-
           if [[ ! -f "$VERSION_FILE" ]]; then
             echo "Error: Version file '$VERSION_FILE' not found."
             exit 1
           fi
-
           sed -i "s/\(#define MAJOR_VERSION \).*/\1$MAJOR/" "$VERSION_FILE"
           sed -i "s/\(#define MINOR_VERSION \).*/\1$MINOR/" "$VERSION_FILE"
           sed -i "s/\(#define UPDATE_VERSION \).*/\1$UPDATE/" "$VERSION_FILE"
-
           echo "Updated $VERSION_FILE with version $MAJOR.$MINOR.$UPDATE"
-          
           echo "RELEASE_VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "RELEASE_TAG=v$VERSION" >> $GITHUB_OUTPUT
 
@@ -82,21 +71,15 @@ jobs:
     needs: prepare-source
     uses: "./.github/workflows/appimage-build.yml"
 
-  linux-build:
-    name: 💻 Linux
-    needs: [prepare-source, linux-appimage]
-    uses: "./.github/workflows/linux-build.yml"
-
   linux-flatpak:
     name: 📦 Linux Flatpak
     needs: [prepare-source, linux-appimage]
     uses: "./.github/workflows/flatpak-build.yml"
 
   create-release:
-    name: 📤 Create Release
-    needs: [linux-build, linux-flatpak, linux-appimage, prepare-source]
+    name: 📤 Create Release and Notify
+    needs: [linux-flatpak, linux-appimage, prepare-source]
     runs-on: ubuntu-22.04
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -107,18 +90,66 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: ./artifacts/
-  
+
       - name: Display Downloaded Artifacts
         run: find ./artifacts/
 
-      - name: Create Release
-        uses: "marvinpinto/action-automatic-releases@latest"
-        with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: ${{ needs.prepare-source.outputs.release_tag }}
-          prerelease: false
-          title: "Build ${{ needs.prepare-source.outputs.release_tag }}"
-          files: |
+      - name: Parse Changelog and Save to File
+        id: changelog
+        run: |
+            VERSION='${{ needs.prepare-source.outputs.release_version }}'
+            awk -v version="$VERSION" '
+              $0 ~ "^## \\[" version "\\]" { in_section=1; next }
+              /^## / && in_section { exit }
+              in_section { print }
+            ' ./docs/changelog > RELEASENOTES.md
+            echo "notes_file=RELEASENOTES.md" >> $GITHUB_OUTPUT
+
+
+      - name: Create Release with GitHub CLI
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create ${{ needs.prepare-source.outputs.release_tag }} \
+            --title "Build ${{ needs.prepare-source.outputs.release_tag }}" \
+            --notes-file ${{ steps.changelog.outputs.notes_file }} \
+            ./artifacts/linux-build/build.tar.gz \
+            ./artifacts/linux-appimage/lindbergh-loader.AppImage \
             ./artifacts/linux-flatpak/lindbergh-loader.flatpak
-            ./artifacts/linux-build/build.tar.gz
-            ./artifacts/linux-appimage/lindbergh-loader.AppImage
+
+      - name: Notify Discord of New Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Fetch the asset details
+          ASSETS_JSON=$(gh release view ${{ needs.prepare-source.outputs.release_tag }} --json assets)
+          
+          # Extract each URL
+          FLATPAK_URL=$(echo "$ASSETS_JSON" | jq -r '.assets[] | select(.name=="lindbergh-loader.flatpak") | .url')
+          APPIMAGE_URL=$(echo "$ASSETS_JSON" | jq -r '.assets[] | select(.name=="lindbergh-loader.AppImage") | .url')
+          TAR_URL=$(echo "$ASSETS_JSON" | jq -r '.assets[] | select(.name=="build.tar.gz") | .url')
+          
+          # Get the changelog body (no need to escape it for jq)
+          CHANGELOG_BODY=$(cat ${{ steps.changelog.outputs.notes_file }} | head -c 2000)
+          
+          # Use jq to build the JSON payload and pipe it to curl
+          jq -n \
+            --arg content "New lindbergh loader development build **v${{ needs.prepare-source.outputs.release_version }}** has been released!" \
+            --arg changelog "$CHANGELOG_BODY" \
+            --arg flatpak_url "$FLATPAK_URL" \
+            --arg appimage_url "$APPIMAGE_URL" \
+            --arg tar_url "$TAR_URL" \
+            '{
+              "username": "Build Bot",
+              "content": $content,
+              "embeds": [{
+                "description": $changelog,
+                "color": 5814783,
+                "fields": [
+                  {
+                    "name": "Downloads",
+                    "value": "[Flatpak](\($flatpak_url))\n[AppImage](\($appimage_url))\n[Build Tarball](\($tar_url))"
+                  }
+                ]
+              }]
+            }' | curl -X POST -H "Content-Type: application/json" -d @- "${{ secrets.DISCORD_WEBHOOK_URL }}"
