@@ -1,6 +1,6 @@
-# Guide
+# 🚀 Guide
 
-## Supported Games
+## 🎮 Supported Games
 
 The follow list of games are supported. It is worth noting that there are multiple releases of these games, and some specific releases may not be supported.
 
@@ -68,19 +68,19 @@ The follow list of games are supported. It is worth noting that there are multip
 | Virtua Tennis 3 Rev B                            | SBKX    | DVP-0005B | ✓      | ✓            | ✓          | ✓                 |
 | Virtua Tennis 3 Rev C                            | SBKX    | DVP-0005C | ✓      | ✓            | ✓          | ✓                 |
 
-## Game Issues & Fixes
+## 🛠️ Game Issues & Fixes
 
 ### All Games: missing dependencies & libraries
 
 Additional libraries that you might need to install to get all games running are listed here:
 
-```
+```bash
 sudo apt install build-essential freeglut3:i386 freeglut3-dev:i386 libglew-dev xorg-dev libopenal1:i386 libopenal-dev:i386 libxmu6:i386 libstdc++5:i386 libsdl2-dev:i386 libfaudio0:i386 libfaudio-dev:i386 libncurses5:i386 libasound2-dev:i386 alsa-utils:i386 libasound2-plugins:i386
 ```
 
 On Debian, `libglut` might not be found. Adding a symbolic link will fix it.
 
-```
+```bash
 sudo ln -s /lib/i386-linux-gnu/libglut.so /lib/i386-linux-gnu/libglut.so.3
 ```
 
@@ -96,7 +96,7 @@ sudo ln -s /lib/i386-linux-gnu/libglut.so /lib/i386-linux-gnu/libglut.so.3
 
 The games will ask for libGLcore.so.1 and libnvidia-tls.so.1 you can copy for example libkswapapi.so as libGLcore.so.1 and libnvidia-tls.so.1 and the game will work fine.
 
-## Configuration File : lindbergh.ini
+## ⚙️ Configuration File : lindbergh.ini
 
 All configurable options are set and explained in the [`lindbergh.ini`](lindbergh.ini) file itself, and should be reasonably easy to understand. This chapter further explains some of those setup options.
 
@@ -120,26 +120,26 @@ In the second input mode, inputs are taken directly from the evdev library in li
 
 To list the available inputs you should type:
 
-```
+```bash
 ./lindbergh --list-controllers
 ```
 
 From there you will be able to see the controllers and all of the inputs support. Then in the config file you should map an arcade input to a controller input as follows.
 
-```
+```ini
 PLAYER_1_BUTTON_UP XBOX_CONTROLLER_BTN_UP
 ANALOGUE_1 XBOX_CONTROLLER_ABS_X
 ```
 
 You can map digital controls to analogue controls. The analogue value will be set to the digital value, such that if the button isn't pressed it will be set to 0, and if the button is pressed it will be set to MAX. This is useful if your controller doesn't have analogue accelerator or break buttons.
 
-```
+```ini
 ANALOGUE_0 XBOX_CONTROLLER_BUTTON_BR
 ```
 
 You can map analogue controls to digital controls too. For each analogue input, there are 2 more inputs created ending in _MAX and _MIN. These are digital controls that will be triggered when the analogue input is either at the minimum or maximum value. This can be useful if you'd like to use an analogue stick to control a fighting game for example.
 
-```
+```ini
 PLAYER_1_BUTTON_UP XBOX_CONTROLLER_ABS_Y_MAX
 PLAYER_1_BUTTON_DOWN XBOX_CONTROLLER_ABS_Y_MIN
 PLAYER_1_BUTTON_LEFT XBOX_CONTROLLER_ABS_X_MIN
@@ -148,7 +148,7 @@ PLAYER_1_BUTTON_RIGHT XBOX_CONTROLLER_ABS_X_MAX
 
 You can set a deadzone for analogue axis. Each anaolgue input has 3 potential deadzones: start, middle, and end. The deadzone is a percentage of the range from the start, middle, or end that should snap to its respective extreme. This is useful for input devices that don't perfectly center, or pedals that don't perfectly return to 0. For instance.
 
-```
+```ini
 ANALOGUE_DEADZONE_1 10 13 10
 ```
 
@@ -163,7 +163,7 @@ Will cause input on analogue input 1 to be clamped as follows:
 There are currently no audio options that you can set. If you have a stereo sound card installed then the audio will be downmixed to stereo. If you have a 5.1 sound card installed and the game supports surround sound, each surround channel should be passed through properly and should play sound as it was originally intended.
 
 
-## Installing and Running the Flatpak
+## 📦 Installing and Running the Flatpak
 
 ### Prerequisites
 
@@ -173,19 +173,19 @@ Before installing the main package, ensure that Flatpak is set up on your system
 
 Once downloaded, install Lindbergh Loader by running the following command in your terminal:
 
-```
+```bash
 flatpak install lindbergh-loader-dev.flatpak
 ```
 
 Additionally, install the required dependencies:
 
-```
+```bash
 flatpak install org.freedesktop.Platform.Compat.i386//24.08
 flatpak install org.freedesktop.Platform.GL32.default//24.08
 ```
 Intel GPU Users (VAAPI Support):
 
-```
+```bash
 flatpak install org.freedesktop.Platform.VAAPI.Intel.i386//24.08
 ```
 
@@ -194,12 +194,12 @@ NVIDIA GPU Users (Driver Support):
 If your system uses an NVIDIA GPU, you need to install the matching NVIDIA driver package for your system.
 To check your NVIDIA driver version, run:
 
-```
+```bash
 nvidia-smi
 ```
 Then, install the corresponding Flatpak package, replacing 570-86-16 with your actual driver version:
 
-```
+```bash
 flatpak install org.freedesktop.Platform.GL32.nvidia-570-86-16
 ```
 
@@ -207,7 +207,7 @@ flatpak install org.freedesktop.Platform.GL32.nvidia-570-86-16
 
 Once installed, launch the application with:
 
-```
+```bash
 flatpak run com.github.lindberghloader.dev
 ```
 
@@ -221,7 +221,7 @@ By default, games should be added to:
 
 If you need to add more locations, install Flatseal:
 
-```
+```bash
 flatpak install com.github.tchx84.Flatseal
 ```
 
@@ -235,29 +235,29 @@ so you can han the loader libs in any of those locations.
 
 Passing -c option you can specify the location of the .conf file like this:
 
-```
+```bash
 ./lindbergh -c /my/custom/folder/myconfig.conf
 ```
 
-## -g or --gamepath
+## 📂 -g or --gamepath
 With this new option, you can specify the location of the game, where the game's ELF resides.
 
-```
+```bash
 ./lindbergh -g /my/custom/folder/hod4/elf
 ```
 
 The loader will search for known elf files in that folder but you can also run it like this:
 
-```
+```bash
 ./lindbergh myCustom.elf -g /my/custom/folder/hod4/elf
 ```
 
 The loader will load `myCustom.elf` inside the passed folder.
 
-## Passing a folder containing an elf
+## 📁 Passing a folder containing an elf
 With this option, you pass a full path, including an ELF name like this:
 
-```
+```bash
 ./lindbergh /my/custom/folder/hod4/elf/myCustom.elf
 ```
 
@@ -271,12 +271,10 @@ The loader will try to find the files.
 If by mistake, you pass both, a full path including an ELF and a path with -g option, the path passed with -g option will be omitted.
 Remember that if the path containg spaces, which is not recommended, pass the path inside double quotes or `\` before the space.
 
-## Creating lindbergh.ini or controls.ini
+## 📝 Creating lindbergh.ini or controls.ini
 
-```
+```bash
 ./lindbergh --create --help
 ```
 
 Will give you instructions on how to use the new commands.
-
-
