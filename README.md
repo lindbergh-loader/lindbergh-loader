@@ -11,7 +11,7 @@ For detailed information on configuration and controls, please see the following
 - [**🚀 General Guide**](docs/guide.md): Information on supported games, known issues, and general configuration.
 - [**🎮 Controls Guide**](docs/CONTROLS.md): A detailed guide on how to customize your controls using the `controls.ini` file.
 
-If you'd like to support the development work of this emulator, see early development builds or get support from the authors please consider [becoming a patreon here](https://www.patreon.com/LindberghLoader).
+If you'd like to support the development work of this emulator, see early development builds or get support from the authors please consider [becoming a patreon here](https://www.patreon.com/c/LinuxLoader).
 
 If you need any help please ask the community in the [arcade community discord](https://arcade.community). Please only submit issues if they are bugs with the software, ask in the arcade community discord if you're not sure if it's a bug or you're not setting something up properly!
 
