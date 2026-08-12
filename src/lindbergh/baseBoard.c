@@ -83,7 +83,6 @@ int initBaseboard()
         }
 
         initJVSSerial(jvsFileDescriptor);
-        startJVSFrameThread(&jvsFileDescriptor);
     }
 
     strcpy(serialString, SERIAL_STRING);
@@ -209,16 +208,16 @@ int baseboardIoctl(int fd, unsigned long request, void *data)
                     jvsCommand.destAddress = _data[3];
                     jvsCommand.destSize = _data[4];
                     memcpy(inputBuffer, &sharedMemory[jvsCommand.srcAddress], jvsCommand.srcSize);
-
+               
                     if (getConfig()->emulateJVS)
                     {
                         processPacket(&jvsPacketSize);
                     }
                     else if (jvsFileDescriptor >= 0)
                     {
+                        write(jvsFileDescriptor, inputBuffer, jvsCommand.srcSize);
                         for (int i = 0; i < jvsCommand.srcSize; i++)
                         {
-                            write(jvsFileDescriptor, &inputBuffer[i], 1);
                             if (inputBuffer[i] == 0xF0)
                             {
                                 setSenseLine(3);
@@ -228,6 +227,7 @@ int baseboardIoctl(int fd, unsigned long request, void *data)
                                 setSenseLine(1);
                             }
                         }
+
                     }
                 }
                 break;
@@ -278,12 +278,23 @@ int baseboardIoctl(int fd, unsigned long request, void *data)
                     }
                     else if (jvsFileDescriptor >= 0)
                     {
-                        JVSFrame frame = readJVSFrameFromThread();
-                        memcpy(&sharedMemory[jvsCommand.destAddress], frame.buffer, frame.size);
-                        _data[2] = jvsCommand.destAddress;
-                        _data[3] = frame.size;
-                        _data[1] = frame.ready;
+                        if(getSenseLine() == 3)
+                        {
+                            char errorMessage[5] = {0xE0, 0x00, 0x02, 0x01, 0x03};
+                            memcpy(&sharedMemory[jvsCommand.destAddress], errorMessage, 5);
+                            _data[2] = jvsCommand.destAddress;
+                            _data[3] = 5;
+                            _data[1] = 1;
+                        } else {
+                            JVSFrame frame = readJVSFrameFromThread(jvsFileDescriptor);
+                            memcpy(&sharedMemory[jvsCommand.destAddress], frame.buffer, frame.size);
+                            _data[2] = jvsCommand.destAddress;
+                            _data[3] = frame.size;
+                            _data[1] = frame.ready;
+                        }
+                        
                     }
+
                 }
                 break;
 

@@ -13,6 +13,14 @@
 #define TIMEOUT_SELECT 200
 #define CTS_ON_RETRY 100
 
+#define JVS_MAX_PACKET_SIZE 255
+
+#define SYNC 0xE0
+#define ESCAPE 0xD0
+#define BROADCAST 0xFF
+#define BUS_MASTER 0x00
+#define DEVICE_ADDR_START 0x01
+
 // Used to read JVS frame in a non-blocking way
 JVSFrame jvsFrameBuffer;
 pthread_mutex_t jvsBuffer_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -95,7 +103,7 @@ int initJVSSerial(int fd)
 
     // Block until either VMIN characters have been received or VTIME **after first character** has been received
     options.c_cc[VMIN] = 0;
-    options.c_cc[VTIME] = 1;
+    options.c_cc[VTIME] = 2; // 200ms
 
     // options.c_cflag |= CREAD; // Turn on READ, let ctrl lines work
     tcsetattr(fd, TCSANOW, &options);
@@ -224,6 +232,8 @@ int startJVSFrameThread(int *fd)
 {
     printf("SERIAL: starting thread.\n");
 
+    return 0;
+
     // Clean shared JVS frame buffer
     jvsFrameBuffer.ready = 0;
     jvsFrameBuffer.size = 0;
@@ -240,30 +250,122 @@ int startJVSFrameThread(int *fd)
     return 0;
 }
 
+typedef struct
+{
+    unsigned char destination;
+    unsigned char length;
+    unsigned char data[JVS_MAX_PACKET_SIZE];
+} JVSPacket;
+
 /**
  * Return a JVSFrame structure with empty or full data, no in between
  * @return
  */
-JVSFrame readJVSFrameFromThread()
+JVSFrame readJVSFrameFromThread(int fd)
 {
-    JVSFrame frame;
-    // Lock while reading/writing to shared frame
-    pthread_mutex_lock(&jvsBuffer_lock);
 
-    // Check if we have a valid frame
-    if (jvsFrameBuffer.ready == 1)
-    {
-        frame = jvsFrameBuffer;
-        // It has been read, we disable this frame
-        jvsFrameBuffer.ready = 0;
-    }
-    else
-    {
-        frame.ready = 0;
-        frame.size = 0;
-        memset(frame.buffer, 0, JVSBUFFER_SIZE);
-    }
-    pthread_mutex_unlock(&jvsBuffer_lock);
+    JVSFrame frame;
+    JVSPacket packet = {0};
+
+    frame.size = 0;
+    frame.ready = 1;
+
+    int bytesAvailable = 0, escape = 0, phase = 0, index = 0, dataIndex = 0, finished = 0;
+	unsigned char checksum = 0x00;
+    int timeout = 3;
+
+    unsigned char inputBuffer[JVS_MAX_PACKET_SIZE];
+
+
+	while (!finished)
+	{
+		int bytesRead = read(fd, inputBuffer + bytesAvailable, JVS_MAX_PACKET_SIZE - bytesAvailable);
+
+        if(bytesRead > 0) {
+            timeout = 3;
+        } else {
+            timeout = timeout - 1;
+        }
+
+        if(timeout == 0) {
+            return frame;
+        }
+
+
+		if (bytesRead < 0)
+			return frame;
+
+		bytesAvailable += bytesRead;
+
+		while ((index < bytesAvailable) && !finished)
+		{
+			/* If we encounter a SYNC start again */
+			if (!escape && (inputBuffer[index] == SYNC))
+			{
+				phase = 0;
+				dataIndex = 0;
+				packet.data[dataIndex++] = inputBuffer[index];
+				index++;
+				continue;
+			}
+
+			/* If we encounter an ESCAPE byte escape the next byte */
+			if (!escape && inputBuffer[index] == ESCAPE)
+			{
+				escape = 1;
+				index++;
+				continue;
+			}
+
+			/* Escape next byte by adding 1 to it */
+			if (escape)
+			{
+				inputBuffer[index]++;
+				escape = 0;
+			}
+
+			/* Deal with the main bulk of the data */
+			switch (phase)
+			{
+			case 0: // If we have not yet got the address
+				packet.data[dataIndex++] = inputBuffer[index];
+				packet.destination = inputBuffer[index];
+				checksum = packet.destination & 0xFF;
+				phase++;
+				break;
+			case 1: // If we have not yet got the length
+				packet.length = inputBuffer[index];
+				packet.data[dataIndex++] = inputBuffer[index];
+				checksum = (checksum + packet.length) & 0xFF;
+				phase++;
+				break;
+			case 2: // If there is still data to read
+				if (dataIndex == (packet.length + 2))
+				{
+					if (checksum != inputBuffer[index]) {
+                        printf("CHEKCSUM ERROR\n");
+                        return frame; // Checksum error, return empty frame
+                    }
+
+				    packet.data[dataIndex++] = checksum;
+
+                    
+					finished = 1;
+					break;
+				}
+				packet.data[dataIndex++] = inputBuffer[index];
+				checksum = (checksum + inputBuffer[index]) & 0xFF;
+				break;
+			default:
+				return frame;
+			}
+			index++;
+		}
+	}
+
+	frame.size = dataIndex;
+    memcpy(frame.buffer, packet.data, dataIndex);
+    frame.ready = 1;
 
     return frame;
 }

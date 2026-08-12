@@ -11,7 +11,7 @@ int getDCD(int fd);
 int getDSR(int fd);
 int getCTS(int fd);
 
-JVSFrame readJVSFrameFromThread();
+JVSFrame readJVSFrameFromThread(int fd);
 int startJVSFrameThread(int * fd);
 void * readJVSFrameThread(void * arg);
 
